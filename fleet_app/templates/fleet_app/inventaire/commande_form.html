@@ -1,0 +1,212 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .card-header {
+        background-color: #f8f9fa;
+    }
+    .required-field::after {
+        content: "*";
+        color: red;
+        margin-left: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:commande_list' %}">Commandes</a></li>
+        <li class="breadcrumb-item active">{{ commande.numero|default:"Nouvelle commande" }}</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-file-invoice me-1"></i>
+            Informations de la commande
+        </div>
+        <div class="card-body">
+            <form method="post" id="commandeForm">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fas fa-building me-1"></i>
+                                Informations du fournisseur
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="{{ form.fournisseur.id_for_label }}" class="required-field">Fournisseur</label>
+                                    {{ form.fournisseur }}
+                                    {% if form.fournisseur.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.fournisseur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="{{ form.adresse_fournisseur.id_for_label }}">Adresse</label>
+                                    {{ form.adresse_fournisseur }}
+                                    {% if form.adresse_fournisseur.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.adresse_fournisseur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.telephone_fournisseur.id_for_label }}">Téléphone</label>
+                                            {{ form.telephone_fournisseur }}
+                                            {% if form.telephone_fournisseur.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.telephone_fournisseur.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.email_fournisseur.id_for_label }}">Email</label>
+                                            {{ form.email_fournisseur }}
+                                            {% if form.email_fournisseur.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.email_fournisseur.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                Dates et statut
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.date_creation.id_for_label }}" class="required-field">Date de création</label>
+                                            {{ form.date_creation }}
+                                            {% if form.date_creation.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.date_creation.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.date_livraison_prevue.id_for_label }}">Date de livraison prévue</label>
+                                            {{ form.date_livraison_prevue }}
+                                            {% if form.date_livraison_prevue.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.date_livraison_prevue.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="{{ form.statut.id_for_label }}" class="required-field">Statut</label>
+                                    {{ form.statut }}
+                                    {% if form.statut.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.statut.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="{{ form.remise.id_for_label }}">Remise (%)</label>
+                                    {{ form.remise }}
+                                    {% if form.remise.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.remise.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-comment me-1"></i>
+                        Notes
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'fleet_app:commande_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialisation de datepicker pour les champs de date
+        $('input[type="date"]').datepicker({
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+            language: 'fr',
+            todayHighlight: true
+        });
+        
+        // Validation du formulaire
+        $('#commandeForm').submit(function(e) {
+            let isValid = true;
+            
+            // Vérification du fournisseur
+            if (!$('#{{ form.fournisseur.id_for_label }}').val()) {
+                $('#{{ form.fournisseur.id_for_label }}').addClass('is-invalid');
+                isValid = false;
+            } else {
+                $('#{{ form.fournisseur.id_for_label }}').removeClass('is-invalid');
+            }
+            
+            // Vérification de la date de création
+            if (!$('#{{ form.date_creation.id_for_label }}').val()) {
+                $('#{{ form.date_creation.id_for_label }}').addClass('is-invalid');
+                isValid = false;
+            } else {
+                $('#{{ form.date_creation.id_for_label }}').removeClass('is-invalid');
+            }
+            
+            // Vérification du statut
+            if (!$('#{{ form.statut.id_for_label }}').val()) {
+                $('#{{ form.statut.id_for_label }}').addClass('is-invalid');
+                isValid = false;
+            } else {
+                $('#{{ form.statut.id_for_label }}').removeClass('is-invalid');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires.');
+            }
+        });
+    });
+</script>
+{% endblock %}

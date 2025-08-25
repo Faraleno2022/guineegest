@@ -1,0 +1,309 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Pointage Rapide{% endblock %}
+
+{% block extra_css %}
+<style>
+    .employe-card {
+        transition: all 0.3s ease;
+    }
+    
+    .employe-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .employe-name {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .employe-poste {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+    
+    .statut-select {
+        border: 2px solid #e9ecef;
+        transition: border-color 0.3s ease;
+    }
+    
+    .statut-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    
+    .statut-select.selected {
+        border-color: #28a745;
+        background-color: #f8fff9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-users-cog me-2"></i>
+            Pointage Rapide
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'fleet_app:pointage_journalier' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-calendar-alt"></i> Tableau
+            </a>
+            <a href="{% url 'fleet_app:pointage_formulaire' %}" class="btn btn-outline-primary">
+                <i class="fas fa-user-plus"></i> Individuel
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Formulaire de pointage rapide -->
+    <form method="post" id="pointageRapideForm">
+        {% csrf_token %}
+        
+        <!-- Sélection de la date -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar me-2"></i>
+                    Date de pointage
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="{{ form.date.id_for_label }}" class="form-label">
+                            {{ form.date.label }}
+                        </label>
+                        {{ form.date|add_class:"form-control" }}
+                        {% if form.date.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.date.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8 d-flex align-items-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-success" onclick="selectAllStatus('P(Am)')">
+                                <i class="fas fa-sun"></i> Tous présents (AM)
+                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="selectAllStatus('P(Pm)')">
+                                <i class="fas fa-moon"></i> Tous présents (PM)
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearAllStatus()">
+                                <i class="fas fa-eraser"></i> Effacer tout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des employés -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Employés ({{ employes.count }})
+                </h5>
+                <small class="text-muted">
+                    Sélectionnez le statut pour chaque employé
+                </small>
+            </div>
+            <div class="card-body">
+                {% if employes %}
+                    <div class="row">
+                        {% for employe in employes %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card employe-card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="flex-grow-1">
+                                            <div class="employe-name">
+                                                {{ employe.nom }} {{ employe.prenom }}
+                                            </div>
+                                            <div class="employe-poste">
+                                                {{ employe.poste|default:"Employé" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% for field in form %}
+                                        {% if field.name == 'statut_'|add:employe.id|stringformat:"s" %}
+                                        <div class="mt-2">
+                                            <label for="{{ field.id_for_label }}" class="form-label small">
+                                                Statut de présence
+                                            </label>
+                                            {{ field|add_class:"form-select statut-select" }}
+                                            {% if field.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ field.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun employé actif</h5>
+                        <p class="text-muted">
+                            Vous devez d'abord ajouter des employés pour pouvoir effectuer un pointage.
+                        </p>
+                        <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Ajouter des employés
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        {% if employes %}
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Seuls les employés avec un statut sélectionné seront pointés
+                        </small>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                            <i class="fas fa-undo"></i> Réinitialiser
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            Enregistrer les pointages
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mettre en évidence les champs sélectionnés
+    const statutSelects = document.querySelectorAll('.statut-select');
+    
+    statutSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            if (this.value) {
+                this.classList.add('selected');
+            } else {
+                this.classList.remove('selected');
+            }
+        });
+        
+        // Vérifier l'état initial
+        if (select.value) {
+            select.classList.add('selected');
+        }
+    });
+    
+    // Validation du formulaire
+    const form = document.getElementById('pointageRapideForm');
+    form.addEventListener('submit', function(e) {
+        const dateField = document.getElementById('{{ form.date.id_for_label }}');
+        
+        if (!dateField.value) {
+            e.preventDefault();
+            dateField.focus();
+            alert('Veuillez sélectionner une date');
+            return;
+        }
+        
+        // Vérifier que la date n'est pas dans le futur
+        const selectedDate = new Date(dateField.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (selectedDate > today) {
+            e.preventDefault();
+            dateField.focus();
+            alert('Impossible de pointer dans le futur');
+            return;
+        }
+        
+        // Vérifier qu'au moins un employé a un statut sélectionné
+        const hasSelection = Array.from(statutSelects).some(select => select.value);
+        
+        if (!hasSelection) {
+            e.preventDefault();
+            alert('Veuillez sélectionner au moins un statut pour un employé');
+            return;
+        }
+        
+        // Confirmation
+        const selectedCount = Array.from(statutSelects).filter(select => select.value).length;
+        if (!confirm(`Confirmer le pointage pour ${selectedCount} employé(s) ?`)) {
+            e.preventDefault();
+        }
+    });
+});
+
+// Fonction pour sélectionner un statut pour tous les employés
+function selectAllStatus(statut) {
+    const statutSelects = document.querySelectorAll('.statut-select');
+    statutSelects.forEach(select => {
+        select.value = statut;
+        select.classList.add('selected');
+        
+        // Déclencher l'événement change
+        const event = new Event('change', { bubbles: true });
+        select.dispatchEvent(event);
+    });
+}
+
+// Fonction pour effacer tous les statuts
+function clearAllStatus() {
+    const statutSelects = document.querySelectorAll('.statut-select');
+    statutSelects.forEach(select => {
+        select.value = '';
+        select.classList.remove('selected');
+        
+        // Déclencher l'événement change
+        const event = new Event('change', { bubbles: true });
+        select.dispatchEvent(event);
+    });
+}
+
+// Fonction pour réinitialiser le formulaire
+function resetForm() {
+    if (confirm('Êtes-vous sûr de vouloir réinitialiser le formulaire ?')) {
+        document.getElementById('pointageRapideForm').reset();
+        clearAllStatus();
+        
+        // Remettre la date à aujourd'hui
+        const dateField = document.getElementById('{{ form.date.id_for_label }}');
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        dateField.value = formattedDate;
+    }
+}
+</script>
+{% endblock %}

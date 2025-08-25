@@ -1,0 +1,56 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Nouvelle Alerte - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}Nouvelle Alerte{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-bell me-2"></i> Créer une nouvelle alerte
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'fleet_app:alerte_nouvelle' %}">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="titre" class="form-label">Titre de l'alerte</label>
+                <input type="text" class="form-control" id="titre" name="titre" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="niveau" class="form-label">Niveau d'urgence</label>
+                <select class="form-select" id="niveau" name="niveau">
+                    {% for code, label in niveaux %}
+                    <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="vehicule" class="form-label">Véhicule concerné (optionnel)</label>
+                <select class="form-select" id="vehicule" name="vehicule">
+                    <option value="">-- Aucun véhicule spécifique --</option>
+                    {% for vehicule in vehicules %}
+                    <option value="{{ vehicule.id_vehicule }}">{{ vehicule.immatriculation }} - {{ vehicule.marque }} {{ vehicule.modele }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'fleet_app:alerte_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

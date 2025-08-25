@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.log
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django
+*.sqlite3
+*.db
+db.sqlite3
+django_fleet.db
+parc_auto.db
+media/
+staticfiles/
+static_root/
+
+# Local settings and secrets
+.env
+*.env
+
+# Migrations cache (keep migration files tracked)
+**/__pycache__/
+
+# User-generated files
+factures/
+commandes/
+documents/
+
+# Backups / temp
+*.tmp
+*.backup*
+*.archive
+*.corrupted_backup
+
+# Reports/exports
+*.pdf
+*.xlsx
+*.xls

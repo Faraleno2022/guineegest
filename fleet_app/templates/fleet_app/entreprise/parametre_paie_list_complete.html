@@ -1,0 +1,312 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Paramètres de Paie{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-cogs me-2"></i>Paramètres de Paie
+            </h5>
+            <div>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalParametresGlobaux">
+                    <i class="fas fa-globe me-1"></i>Paramètres Globaux
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            
+            <!-- Messages d'alerte -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <!-- Statistiques -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Total Employés</div>
+                                    <div class="h5 mb-0 font-weight-bold">{{ stats.total_employes }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Salaire Moyen</div>
+                                    <div class="h5 mb-0 font-weight-bold">{{ stats.salaire_moyen|floatformat:0 }} GNF</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-money-check-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Total Sanctions</div>
+                                    <div class="h5 mb-0 font-weight-bold">{{ stats.total_sanctions|floatformat:0 }} GNF</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Total Avances</div>
+                                    <div class="h5 mb-0 font-weight-bold">{{ stats.total_avances|floatformat:0 }} GNF</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Zone de recherche dynamique -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-search me-2"></i>Recherche et Filtres</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search_matricule" class="form-label">Matricule</label>
+                            <input type="text" class="form-control" id="search_matricule" name="search_matricule" 
+                                   value="{{ search_matricule }}" placeholder="Rechercher par matricule...">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="search_nom" class="form-label">Nom/Prénom</label>
+                            <input type="text" class="form-control" id="search_nom" name="search_nom" 
+                                   value="{{ search_nom }}" placeholder="Rechercher par nom ou prénom...">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="search_fonction" class="form-label">Fonction</label>
+                            <input type="text" class="form-control" id="search_fonction" name="search_fonction" 
+                                   value="{{ search_fonction }}" placeholder="Rechercher par fonction...">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>Rechercher
+                            </button>
+                            <a href="{% url 'fleet_app:parametre_paie_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Effacer
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Tableau des paramètres de paie -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">Matricule</th>
+                            <th class="text-center">Prénom</th>
+                            <th class="text-center">Nom</th>
+                            <th class="text-center">Fonction</th>
+                            <th class="text-center">Salaire Base (GNF)</th>
+                            <th class="text-center">Avances (GNF)</th>
+                            <th class="text-center">Sanctions (GNF)</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employe in employes %}
+                        <tr>
+                            <td class="text-center"><strong>{{ employe.matricule }}</strong></td>
+                            <td class="text-center">{{ employe.prenom }}</td>
+                            <td class="text-center">{{ employe.nom }}</td>
+                            <td class="text-center">{{ employe.fonction|default:'-' }}</td>
+                            <td class="text-center">{{ employe.salaire_journalier|floatformat:0|default:'0' }}</td>
+                            <td class="text-center">{{ employe.avances|floatformat:0|default:'0' }}</td>
+                            <td class="text-center">
+                                {% if employe.sanctions %}
+                                    <span class="badge bg-danger">{{ employe.sanctions|floatformat:0 }}</span>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalModifier{{ employe.id }}"
+                                        title="Modifier les paramètres">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="12" class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-3x mb-3"></i>
+                                <p>Aucun employé trouvé avec ces critères de recherche.</p>
+                                <a href="{% url 'fleet_app:employe_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Ajouter un employé
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Paramètres Globaux -->
+<div class="modal fade" id="modalParametresGlobaux" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-globe me-2"></i>Paramètres Globaux
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="appliquer_global">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Ces paramètres seront appliqués à tous les employés.
+                    </div>
+                    <div class="mb-3">
+                        <label for="salaire_global" class="form-label">Salaire de Base Global (GNF)</label>
+                        <input type="number" class="form-control" id="salaire_global" name="salaire_global" 
+                               step="0.01" min="0" placeholder="Ex: 50000">
+                    </div>
+                    <div class="mb-3">
+                        <label for="avances_global" class="form-label">Avances Globales (GNF)</label>
+                        <input type="number" class="form-control" id="avances_global" name="avances_global" 
+                               step="0.01" min="0" placeholder="Ex: 10000">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Appliquer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modals de modification pour chaque employé -->
+{% for employe in employes %}
+<div class="modal fade" id="modalModifier{{ employe.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-edit me-2"></i>Modifier - {{ employe.prenom }} {{ employe.nom }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="modifier_parametre">
+                <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Salaire de Base (GNF)</label>
+                                <input type="number" class="form-control" name="salaire_base" 
+                                       value="{{ employe.salaire_journalier|default:'' }}" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Avances (GNF)</label>
+                                <input type="number" class="form-control" name="avances" 
+                                       value="{{ employe.avances|default:'' }}" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Sanctions (GNF)</label>
+                                <input type="number" class="form-control" name="sanctions" 
+                                       value="{{ employe.sanctions|default:'' }}" step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Recherche en temps réel
+    const searchInputs = document.querySelectorAll('input[name^="search_"]');
+    let searchTimeout;
+    
+    searchInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Auto-submit du formulaire après 500ms d'inactivité
+                this.form.submit();
+            }, 500);
+        });
+    });
+    
+    // Confirmation pour l'application globale
+    document.getElementById('modalParametresGlobaux').addEventListener('submit', function(e) {
+        const taux = document.getElementById('taux_global').value;
+        const montant = document.getElementById('montant_global').value;
+        
+        if (!taux && !montant) {
+            e.preventDefault();
+            alert('Veuillez saisir au moins un paramètre global.');
+            return;
+        }
+        
+        if (!confirm('Êtes-vous sûr de vouloir appliquer ces paramètres à tous les employés ?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% load fleet_filters %}
+<!-- Section Feuilles de Route pour le Dashboard -->
+<div class="row mt-4" id="feuilles-route-section">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-route me-2"></i> Feuilles de Route Chauffeur
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="feuillesRouteTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="recentes-tab" data-bs-toggle="tab" data-bs-target="#recentes" type="button" role="tab" aria-controls="recentes" aria-selected="true">
+                            <i class="fas fa-clock me-1"></i> Récentes
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="surconsommation-tab" data-bs-toggle="tab" data-bs-target="#surconsommation" type="button" role="tab" aria-controls="surconsommation" aria-selected="false">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Surconsommation
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="attente-tab" data-bs-toggle="tab" data-bs-target="#attente" type="button" role="tab" aria-controls="attente" aria-selected="false">
+                            <i class="fas fa-hourglass-half me-1"></i> En attente
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content p-3" id="feuillesRouteTabContent">
+                    <!-- Feuilles de route récentes -->
+                    <div class="tab-pane fade show active" id="recentes" role="tabpanel" aria-labelledby="recentes-tab">
+                        <h5 class="mb-3">Dernières feuilles de route</h5>
+                        <p class="text-muted">Les 5 dernières feuilles de route enregistrées dans le système.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Véhicule</th>
+                                        <th>Chauffeur</th>
+                                        <th>Destination</th>
+                                        <th>Distance</th>
+                                        <th>Consommation</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feuille in feuilles_route_recentes %}
+                                    <tr>
+                                        <td>{{ feuille.date_depart }}</td>
+                                        <td>{{ feuille.vehicule.immatriculation }}</td>
+                                        <td>{{ feuille.chauffeur.nom }} {{ feuille.chauffeur.prenom }}</td>
+                                        <td>{{ feuille.destination }}</td>
+                                        <td>
+                                            {% if feuille.distance_parcourue %}
+                                                {{ feuille.distance_parcourue }} km
+                                            {% else %}
+                                                <span class="text-muted">Non complété</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if feuille.consommation %}
+                                                {{ feuille.consommation }} L/100km
+                                                {% if feuille.consommation > 8 %}
+                                                    <span class="badge bg-danger">!</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Non complété</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'fleet_app:feuille_route_detail' feuille.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">Aucune feuille de route enregistrée</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-3">
+                            <a href="{% url 'fleet_app:feuille_route_list' %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-list me-1"></i> Voir toutes les feuilles de route
+                            </a>
+                            <a href="{% url 'fleet_app:feuille_route_add' %}" class="btn btn-sm btn-success">
+                                <i class="fas fa-plus me-1"></i> Nouvelle feuille de route
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Feuilles de route avec surconsommation -->
+                    <div class="tab-pane fade" id="surconsommation" role="tabpanel" aria-labelledby="surconsommation-tab">
+                        <h5 class="mb-3">Alertes de surconsommation</h5>
+                        <p class="text-muted">Feuilles de route où la consommation dépasse la consommation moyenne du constructeur.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Véhicule</th>
+                                        <th>Chauffeur</th>
+                                        <th>Consommation</th>
+                                        <th>Écart</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feuille in feuilles_route_surconsommation %}
+                                    <tr>
+                                        <td>{{ feuille.date_depart }}</td>
+                                        <td>{{ feuille.vehicule.immatriculation }}</td>
+                                        <td>{{ feuille.chauffeur.nom }} {{ feuille.chauffeur.prenom }}</td>
+                                        <td>{{ feuille.consommation }} L/100km</td>
+                                        <td class="text-danger">+{{ feuille.consommation|subtract:8 }} L/100km</td>
+                                        <td>
+                                            <a href="{% url 'fleet_app:feuille_route_detail' feuille.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-success">
+                                            <i class="fas fa-check-circle me-2"></i> Aucune surconsommation détectée
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Feuilles de route en attente -->
+                    <div class="tab-pane fade" id="attente" role="tabpanel" aria-labelledby="attente-tab">
+                        <h5 class="mb-3">Feuilles de route en attente</h5>
+                        <p class="text-muted">Feuilles de route créées mais non encore complétées par les chauffeurs.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Véhicule</th>
+                                        <th>Chauffeur</th>
+                                        <th>Destination</th>
+                                        <th>Créée le</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feuille in feuilles_route_attente %}
+                                    <tr>
+                                        <td>{{ feuille.date_depart }}</td>
+                                        <td>{{ feuille.vehicule.immatriculation }}</td>
+                                        <td>{{ feuille.chauffeur.nom }} {{ feuille.chauffeur.prenom }}</td>
+                                        <td>{{ feuille.destination }}</td>
+                                        <td>{{ feuille.date_depart }}</td>
+                                        <td>
+                                            <a href="{% url 'fleet_app:feuille_route_edit' feuille.id %}" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'fleet_app:feuille_route_detail' feuille.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-success">
+                                            <i class="fas fa-check-circle me-2"></i> Aucune feuille de route en attente
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

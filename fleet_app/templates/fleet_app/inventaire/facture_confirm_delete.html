@@ -1,0 +1,93 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Confirmer la suppression{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Confirmer la suppression</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:facture_list' %}">Factures</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:facture_detail' facture.numero %}">{{ facture.numero }}</a></li>
+        <li class="breadcrumb-item active">Supprimer</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            Confirmation de suppression
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">Attention !</h5>
+                <p>Vous êtes sur le point de supprimer définitivement la facture <strong>{{ facture.numero }}</strong>.</p>
+                <p>Cette action est irréversible et supprimera également toutes les lignes de facture associées.</p>
+                <hr>
+                <p class="mb-0">Êtes-vous sûr de vouloir continuer ?</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Informations sur la facture
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th style="width: 40%">Numéro</th>
+                                    <td>{{ facture.numero }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Date d'émission</th>
+                                    <td>{{ facture.date_emission|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Client</th>
+                                    <td>{{ facture.tiers_nom }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Montant total</th>
+                                    <td>{{ facture.montant_final|floatformat:0 }} GNF</td>
+                                </tr>
+                                <tr>
+                                    <th>Statut</th>
+                                    <td>
+                                        {% if facture.statut == 'brouillon' %}
+                                            <span class="badge bg-secondary">Brouillon</span>
+                                        {% elif facture.statut == 'validee' %}
+                                            <span class="badge bg-primary">Validée</span>
+                                        {% elif facture.statut == 'envoyee' %}
+                                            <span class="badge bg-info">Envoyée</span>
+                                        {% elif facture.statut == 'payee' %}
+                                            <span class="badge bg-success">Payée</span>
+                                        {% elif facture.statut == 'annulee' %}
+                                            <span class="badge bg-danger">Annulée</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'fleet_app:facture_detail' facture.numero %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Annuler
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>
+                        Confirmer la suppression
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

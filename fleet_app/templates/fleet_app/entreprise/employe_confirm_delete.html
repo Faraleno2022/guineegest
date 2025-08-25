@@ -1,0 +1,86 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Supprimer Employé{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Confirmation de suppression</h5>
+            <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">Attention!</h5>
+                <p>Vous êtes sur le point de supprimer l'employé <strong>{{ employe.prenom }} {{ employe.nom }}</strong> (Matricule: {{ employe.matricule }}).</p>
+                <p>Cette action est irréversible et supprimera également toutes les données associées à cet employé.</p>
+                
+                {% if stats %}
+                <div class="mt-3">
+                    <h6>Données qui seront supprimées :</h6>
+                    <ul class="mb-0">
+                        {% if stats.presences %}
+                        <li><strong>{{ stats.presences }}</strong> enregistrement{{ stats.presences|pluralize }} de présence</li>
+                        {% endif %}
+                        {% if stats.heures_supp %}
+                        <li><strong>{{ stats.heures_supp }}</strong> enregistrement{{ stats.heures_supp|pluralize }} d'heures supplémentaires</li>
+                        {% endif %}
+                        {% if stats.paies %}
+                        <li><strong>{{ stats.paies }}</strong> enregistrement{{ stats.paies|pluralize }} de paie</li>
+                        {% endif %}
+                        {% if stats.configurations %}
+                        <li><strong>{{ stats.configurations }}</strong> configuration{{ stats.configurations|pluralize }} de montants personnalisés</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <p class="mt-3 mb-0">Êtes-vous sûr de vouloir continuer?</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Informations sur l'employé</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Matricule:</div>
+                        <div class="col-sm-8">{{ employe.matricule }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Nom:</div>
+                        <div class="col-sm-8">{{ employe.nom }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Prénom:</div>
+                        <div class="col-sm-8">{{ employe.prenom }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Fonction:</div>
+                        <div class="col-sm-8">{{ employe.fonction }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Date d'embauche:</div>
+                        <div class="col-sm-8">{{ employe.date_embauche|date:"d/m/Y"|default:"Non renseignée" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Statut:</div>
+                        <div class="col-sm-8">{{ employe.statut }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash me-1"></i>Confirmer la suppression
+                </button>
+                <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

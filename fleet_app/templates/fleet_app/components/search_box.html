@@ -1,0 +1,418 @@
+{% comment %}
+    Composant de recherche dynamique réutilisable
+    Paramètres:
+    - table: nom de la table à rechercher (vehicules, chauffeurs, feuilles_route, alertes)
+    - placeholder: texte d'aide dans le champ de recherche
+    - target_div: ID du div où afficher les résultats
+{% endcomment %}
+
+<div class="card mb-4">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-search me-2"></i> Recherche</h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="search-options-toggle-{{ table }}">
+                <i class="fas fa-sliders-h"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="search-container">
+            <input type="text" id="search-input-{{ table }}" class="form-control form-control-lg mb-3" 
+                placeholder="{{ placeholder|default:'Rechercher...' }}" autocomplete="off">
+            
+            <div id="search-options-{{ table }}" class="search-options mb-3" style="display: none;">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre de résultats</label>
+                        <select id="search-limit-{{ table }}" class="form-select">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    {% if table == "vehicules" %}
+                    <div class="col-md-4">
+                        <label class="form-label">Statut</label>
+                        <select id="search-statut-{{ table }}" class="form-select">
+                            <option value="">Tous</option>
+                            <option value="Actif">Actif</option>
+                            <option value="En maintenance">En maintenance</option>
+                            <option value="Hors service">Hors service</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Catégorie</label>
+                        <select id="search-categorie-{{ table }}" class="form-select">
+                            <option value="">Toutes</option>
+                            <option value="Berline">Berline</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Utilitaire">Utilitaire</option>
+                            <option value="Camion">Camion</option>
+                        </select>
+                    </div>
+                    {% elif table == "chauffeurs" %}
+                    <div class="col-md-4">
+                        <label class="form-label">Statut</label>
+                        <select id="search-statut-{{ table }}" class="form-select">
+                            <option value="">Tous</option>
+                            <option value="Actif">Actif</option>
+                            <option value="En congé">En congé</option>
+                            <option value="Inactif">Inactif</option>
+                        </select>
+                    </div>
+                    {% elif table == "alertes" %}
+                    <div class="col-md-4">
+                        <label class="form-label">Niveau d'urgence</label>
+                        <select id="search-niveau-{{ table }}" class="form-select">
+                            <option value="">Tous</option>
+                            <option value="Faible">Faible</option>
+                            <option value="Moyen">Moyen</option>
+                            <option value="Élevé">Élevé</option>
+                            <option value="Critique">Critique</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Statut</label>
+                        <select id="search-statut-{{ table }}" class="form-select">
+                            <option value="">Tous</option>
+                            <option value="Active">Active</option>
+                            <option value="Résolue">Résolue</option>
+                            <option value="Ignorée">Ignorée</option>
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div id="{{ target_div|default:'search-results-'|add:table }}" class="search-results mt-3">
+            <!-- Les résultats seront affichés ici -->
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-search fa-2x mb-3"></i>
+                <p>Saisissez au moins 2 caractères pour lancer la recherche</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input-{{ table }}');
+        const searchResults = document.getElementById('{{ target_div|default:"search-results-"|add:table }}');
+        const searchOptionsToggle = document.getElementById('search-options-toggle-{{ table }}');
+        const searchOptions = document.getElementById('search-options-{{ table }}');
+        const searchLimit = document.getElementById('search-limit-{{ table }}');
+        {% if table == "vehicules" %}
+        const searchStatut = document.getElementById('search-statut-{{ table }}');
+        const searchCategorie = document.getElementById('search-categorie-{{ table }}');
+        {% elif table == "chauffeurs" %}
+        const searchStatut = document.getElementById('search-statut-{{ table }}');
+        {% elif table == "alertes" %}
+        const searchNiveau = document.getElementById('search-niveau-{{ table }}');
+        const searchStatut = document.getElementById('search-statut-{{ table }}');
+        {% endif %}
+        
+        let searchTimeout;
+        
+        // Afficher/masquer les options de recherche
+        searchOptionsToggle.addEventListener('click', function() {
+            if (searchOptions.style.display === 'none') {
+                searchOptions.style.display = 'block';
+                searchOptionsToggle.classList.add('active');
+            } else {
+                searchOptions.style.display = 'none';
+                searchOptionsToggle.classList.remove('active');
+            }
+        });
+        
+        // Fonction pour effectuer la recherche
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (query.length < 2) {
+                searchResults.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-search fa-2x mb-3"></i>
+                        <p>Saisissez au moins 2 caractères pour lancer la recherche</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Afficher un indicateur de chargement
+            searchResults.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="mt-2">Recherche en cours...</p>
+                </div>
+            `;
+            
+            // Construire l'URL avec les paramètres
+            let url = `/api/recherche/?q=${encodeURIComponent(query)}&table={{ table }}&limit=${searchLimit.value}`;
+            
+            {% if table == "vehicules" %}
+            if (searchStatut.value) {
+                url += `&statut=${encodeURIComponent(searchStatut.value)}`;
+            }
+            if (searchCategorie.value) {
+                url += `&categorie=${encodeURIComponent(searchCategorie.value)}`;
+            }
+            {% elif table == "chauffeurs" %}
+            if (searchStatut.value) {
+                url += `&statut=${encodeURIComponent(searchStatut.value)}`;
+            }
+            {% elif table == "alertes" %}
+            if (searchNiveau.value) {
+                url += `&niveau=${encodeURIComponent(searchNiveau.value)}`;
+            }
+            if (searchStatut.value) {
+                url += `&statut=${encodeURIComponent(searchStatut.value)}`;
+            }
+            {% endif %}
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.results.length === 0) {
+                        searchResults.innerHTML = `
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> Aucun résultat trouvé pour "${query}"
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Afficher les résultats selon le type de table
+                    if ('{{ table }}' === 'vehicules') {
+                        displayVehiculeResults(data.results);
+                    } else if ('{{ table }}' === 'chauffeurs') {
+                        displayChauffeurResults(data.results);
+                    } else if ('{{ table }}' === 'feuilles_route') {
+                        displayFeuilleRouteResults(data.results);
+                    } else if ('{{ table }}' === 'alertes') {
+                        displayAlerteResults(data.results);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la recherche:', error);
+                    searchResults.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i> Erreur lors de la recherche
+                        </div>
+                    `;
+                });
+        }
+        
+        // Fonction pour afficher les résultats de véhicules
+        function displayVehiculeResults(results) {
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Véhicule</th>
+                                <th>Immatriculation</th>
+                                <th>Catégorie</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            results.forEach(vehicule => {
+                const statusClass = vehicule.statut === 'Actif' ? 'success' : 
+                                   vehicule.statut === 'En maintenance' ? 'warning' : 'danger';
+                
+                html += `
+                    <tr>
+                        <td>${vehicule.text}</td>
+                        <td>${vehicule.text.match(/\(([^)]+)\)/)[1]}</td>
+                        <td>${vehicule.categorie}</td>
+                        <td><span class="badge bg-${statusClass}">${vehicule.statut}</span></td>
+                        <td>
+                            <a href="${vehicule.url}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted small mt-2">
+                    ${results.length} résultat(s) trouvé(s)
+                </div>
+            `;
+            
+            searchResults.innerHTML = html;
+        }
+        
+        // Fonction pour afficher les résultats de chauffeurs
+        function displayChauffeurResults(results) {
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Téléphone</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            results.forEach(chauffeur => {
+                const statusClass = chauffeur.statut === 'Actif' ? 'success' : 
+                                   chauffeur.statut === 'En congé' ? 'warning' : 'secondary';
+                
+                html += `
+                    <tr>
+                        <td>${chauffeur.text}</td>
+                        <td>${chauffeur.telephone || '-'}</td>
+                        <td><span class="badge bg-${statusClass}">${chauffeur.statut}</span></td>
+                        <td>
+                            <a href="${chauffeur.url}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted small mt-2">
+                    ${results.length} résultat(s) trouvé(s)
+                </div>
+            `;
+            
+            searchResults.innerHTML = html;
+        }
+        
+        // Fonction pour afficher les résultats de feuilles de route
+        function displayFeuilleRouteResults(results) {
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Destination</th>
+                                <th>Date</th>
+                                <th>Véhicule</th>
+                                <th>Chauffeur</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            results.forEach(feuille => {
+                html += `
+                    <tr>
+                        <td>${feuille.text.split(' - ')[1]}</td>
+                        <td>${feuille.date}</td>
+                        <td>${feuille.vehicule}</td>
+                        <td>${feuille.chauffeur}</td>
+                        <td>
+                            <a href="${feuille.url}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted small mt-2">
+                    ${results.length} résultat(s) trouvé(s)
+                </div>
+            `;
+            
+            searchResults.innerHTML = html;
+        }
+        
+        // Fonction pour afficher les résultats d'alertes
+        function displayAlerteResults(results) {
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Niveau</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            results.forEach(alerte => {
+                const niveauClass = alerte.niveau === 'Critique' ? 'danger' : 
+                                   alerte.niveau === 'Élevé' ? 'warning' : 
+                                   alerte.niveau === 'Moyen' ? 'info' : 'secondary';
+                                   
+                const statutClass = alerte.statut === 'Active' ? 'danger' : 
+                                   alerte.statut === 'Résolue' ? 'success' : 'warning';
+                
+                html += `
+                    <tr>
+                        <td>${alerte.text}</td>
+                        <td>${alerte.date}</td>
+                        <td><span class="badge bg-${niveauClass}">${alerte.niveau}</span></td>
+                        <td><span class="badge bg-${statutClass}">${alerte.statut}</span></td>
+                        <td>
+                            <a href="${alerte.url}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted small mt-2">
+                    ${results.length} résultat(s) trouvé(s)
+                </div>
+            `;
+            
+            searchResults.innerHTML = html;
+        }
+        
+        // Événement input pour la recherche en temps réel
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 500);
+        });
+        
+        // Événements pour les filtres
+        {% if table == "vehicules" %}
+        searchStatut.addEventListener('change', performSearch);
+        searchCategorie.addEventListener('change', performSearch);
+        {% elif table == "chauffeurs" %}
+        searchStatut.addEventListener('change', performSearch);
+        {% elif table == "alertes" %}
+        searchNiveau.addEventListener('change', performSearch);
+        searchStatut.addEventListener('change', performSearch);
+        {% endif %}
+        
+        searchLimit.addEventListener('change', performSearch);
+    });
+</script>

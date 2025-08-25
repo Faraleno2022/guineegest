@@ -1,0 +1,332 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Historique des Pointages{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background-color: #f8f9fa;
+        border: none;
+    }
+    
+    .statut-badge {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .statut-P-Am { background-color: #d4edda; color: #155724; }
+    .statut-P-Pm { background-color: #cce5ff; color: #004085; }
+    .statut-P-dim-Am { background-color: #fff3cd; color: #856404; }
+    .statut-P-dim-Pm { background-color: #f8d7da; color: #721c24; }
+    .statut-P-dim-Am-Pm { background-color: #e2e3e5; color: #383d41; }
+    .statut-A { background-color: #f8d7da; color: #721c24; }
+    .statut-M { background-color: #ffeaa7; color: #6c5ce7; }
+    .statut-M-Payer { background-color: #fd79a8; color: #2d3436; }
+    .statut-OFF { background-color: #74b9ff; color: #2d3436; }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,123,255,.075);
+    }
+    
+    .pagination-info {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-history me-2"></i>
+            Historique des Pointages
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'fleet_app:pointage_journalier' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-calendar-alt"></i> Tableau
+            </a>
+            <a href="{% url 'fleet_app:pointage_formulaire' %}" class="btn btn-outline-success">
+                <i class="fas fa-plus"></i> Nouveau pointage
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card filter-card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="fas fa-filter me-2"></i>
+                Filtres de recherche
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Employé</label>
+                    <select name="employe" class="form-select">
+                        <option value="">Tous les employés</option>
+                        {% for employe in employes %}
+                        <option value="{{ employe.id }}" {% if filters.employe == employe.id|stringformat:"s" %}selected{% endif %}>
+                            {{ employe.nom }} {{ employe.prenom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Date début</label>
+                    <input type="date" name="date_debut" class="form-control" value="{{ filters.date_debut }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Date fin</label>
+                    <input type="date" name="date_fin" class="form-control" value="{{ filters.date_fin }}">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Statut</label>
+                    <select name="statut" class="form-select">
+                        <option value="">Tous les statuts</option>
+                        {% for statut_code, statut_label in statut_choices %}
+                        <option value="{{ statut_code }}" {% if filters.statut == statut_code %}selected{% endif %}>
+                            {{ statut_code }} - {{ statut_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Filtrer
+                        </button>
+                        <a href="{% url 'fleet_app:historique_pointage' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Résultats -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Résultats
+                {% if page_obj.paginator.count %}
+                    <span class="badge bg-primary ms-2">{{ page_obj.paginator.count }}</span>
+                {% endif %}
+            </h6>
+            
+            {% if page_obj.paginator.count > 0 %}
+            <div class="pagination-info">
+                Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                ({{ page_obj.start_index }}-{{ page_obj.end_index }} sur {{ page_obj.paginator.count }})
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="card-body p-0">
+            {% if page_obj.object_list %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Employé</th>
+                                <th>Poste</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pointage in page_obj.object_list %}
+                            <tr>
+                                <td>
+                                    <strong>{{ pointage.date|date:"d/m/Y" }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ pointage.date|date:"l" }}</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div>
+                                            <strong>{{ pointage.employe.nom }} {{ pointage.employe.prenom }}</strong>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ pointage.employe.poste|default:"Employé" }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge statut-{{ pointage.statut|slice:':1' }}{{ pointage.statut|slice:'2:' }} statut-badge">
+                                        {{ pointage.statut }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">{{ pointage.get_statut_display }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                onclick="editPointage({{ pointage.id }}, '{{ pointage.employe.nom }} {{ pointage.employe.prenom }}', '{{ pointage.date|date:'Y-m-d' }}', '{{ pointage.statut }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                onclick="deletePointage({{ pointage.id }}, '{{ pointage.employe.nom }} {{ pointage.employe.prenom }}', '{{ pointage.date|date:'d/m/Y' }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun pointage trouvé</h5>
+                    <p class="text-muted">
+                        {% if filters.employe or filters.date_debut or filters.date_fin or filters.statut %}
+                            Essayez de modifier vos critères de recherche.
+                        {% else %}
+                            Aucun pointage n'a encore été enregistré.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'fleet_app:pointage_formulaire' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Créer un pointage
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer ce pointage ?</p>
+                <div class="alert alert-warning">
+                    <strong>Employé :</strong> <span id="delete-employe"></span><br>
+                    <strong>Date :</strong> <span id="delete-date"></span>
+                </div>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Cette action est irréversible.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete">
+                    <i class="fas fa-trash me-2"></i>Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit du formulaire de filtre quand on change la sélection
+    const filterForm = document.querySelector('form');
+    const selectFields = filterForm.querySelectorAll('select');
+    
+    selectFields.forEach(select => {
+        select.addEventListener('change', function() {
+            // Optionnel : auto-submit quand on change un filtre
+            // filterForm.submit();
+        });
+    });
+});
+
+// Fonction pour éditer un pointage (à implémenter)
+function editPointage(id, employe, date, statut) {
+    // Pour l'instant, rediriger vers le formulaire de pointage
+    // Dans une version plus avancée, on pourrait ouvrir un modal d'édition
+    alert(`Édition du pointage pour ${employe} le ${date}\nStatut actuel: ${statut}\n\nRedirection vers le formulaire...`);
+    window.location.href = '{% url "fleet_app:pointage_formulaire" %}';
+}
+
+// Fonction pour supprimer un pointage
+function deletePointage(id, employe, date) {
+    document.getElementById('delete-employe').textContent = employe;
+    document.getElementById('delete-date').textContent = date;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+    
+    // Gérer la confirmation
+    document.getElementById('confirm-delete').onclick = function() {
+        // Ici, vous pourriez implémenter la suppression via AJAX
+        // Pour l'instant, on affiche juste une alerte
+        alert(`Suppression du pointage pour ${employe} le ${date}\n\nFonctionnalité à implémenter...`);
+        modal.hide();
+    };
+}
+
+// Fonction pour exporter les données (à implémenter)
+function exportData() {
+    alert('Fonctionnalité d\'export à implémenter...');
+}
+</script>
+{% endblock %}

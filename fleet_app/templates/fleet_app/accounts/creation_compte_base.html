@@ -1,0 +1,165 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">🔐 Formulaire de Création de Compte - Guinée-Ges</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Barre de progression -->
+                    <div class="progress mb-4">
+                        <div class="progress-bar" role="progressbar" style="width: {% widthratio etape 5 100 %}%;" 
+                             aria-valuenow="{% widthratio etape 5 100 %}" aria-valuemin="0" aria-valuemax="100">
+                            Étape {{ etape }}/5
+                        </div>
+                    </div>
+                    
+                    <!-- Étapes -->
+                    <div class="d-flex justify-content-between mb-4">
+                        <div class="text-center">
+                            <div class="step-circle {% if etape >= 1 %}active{% endif %}">1</div>
+                            <div class="step-label">Type de compte</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="step-circle {% if etape >= 2 %}active{% endif %}">2</div>
+                            <div class="step-label">Informations spécifiques</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="step-circle {% if etape >= 3 %}active{% endif %}">3</div>
+                            <div class="step-label">Informations de contact</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="step-circle {% if etape >= 4 %}active{% endif %}">4</div>
+                            <div class="step-label">Conditions</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="step-circle {% if etape >= 5 %}active{% endif %}">5</div>
+                            <div class="step-label">Confirmation</div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="card-title mb-4">{{ titre }}</h5>
+                    
+                    {% block form_content %}
+                    <!-- Le contenu spécifique à chaque étape sera inséré ici -->
+                    {% endblock %}
+                </div>
+                <div class="card-footer text-center py-3">
+                    <small class="text-muted">&copy; 2025 Guinée-Ges - Tous droits réservés</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-weight: bold;
+    }
+    
+    .step-circle.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .step-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    @media (max-width: 768px) {
+        .step-label {
+            font-size: 0.7rem;
+        }
+        
+        .step-circle {
+            width: 30px;
+            height: 30px;
+        }
+    }
+</style>
+
+{% block extra_js %}{% endblock %}
+
+<script>
+    // Fonction pour sauvegarder automatiquement les données du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('form');
+        const currentEtape = {{ etape }};
+        const formStorageKey = 'creation_compte_etape_' + currentEtape;
+        
+        // Restaurer les données sauvegardées si elles existent
+        if (localStorage.getItem(formStorageKey)) {
+            try {
+                const savedData = JSON.parse(localStorage.getItem(formStorageKey));
+                
+                forms.forEach(form => {
+                    Object.keys(savedData).forEach(key => {
+                        const input = form.querySelector('[name="' + key + '"]');
+                        if (input) {
+                            if (input.type === 'checkbox') {
+                                input.checked = savedData[key];
+                            } else if (input.type === 'radio') {
+                                const radio = form.querySelector('[name="' + key + '"][value="' + savedData[key] + '"]');
+                                if (radio) radio.checked = true;
+                            } else if (input.tagName === 'SELECT') {
+                                input.value = savedData[key];
+                            } else if (input.type !== 'file') { // Ne pas restaurer les fichiers
+                                input.value = savedData[key];
+                            }
+                        }
+                    });
+                });
+            } catch (e) {
+                console.error('Erreur lors de la restauration des données sauvegardées:', e);
+            }
+        }
+        
+        // Sauvegarder les données automatiquement lors de la saisie
+        forms.forEach(form => {
+            form.addEventListener('input', function(e) {
+                const formData = {};
+                const formElements = form.elements;
+                
+                for (let i = 0; i < formElements.length; i++) {
+                    const element = formElements[i];
+                    if (element.name && element.name !== 'csrfmiddlewaretoken' && element.type !== 'file' && element.type !== 'submit') {
+                        if (element.type === 'checkbox') {
+                            formData[element.name] = element.checked;
+                        } else if (element.type === 'radio') {
+                            if (element.checked) {
+                                formData[element.name] = element.value;
+                            }
+                        } else {
+                            formData[element.name] = element.value;
+                        }
+                    }
+                }
+                
+                localStorage.setItem(formStorageKey, JSON.stringify(formData));
+            });
+        });
+        
+        // Nettoyer les données sauvegardées lors de la soumission du formulaire
+        forms.forEach(form => {
+            form.addEventListener('submit', function() {
+                // Ne pas supprimer les données immédiatement pour permettre la récupération en cas d'erreur
+                // Elles seront supprimées lors du chargement de l'étape suivante
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Accueil - Guinée-Ges{% endblock %}
+
+{% block page_title %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Suppression des marges et espacements du template de base */
+    .main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .row, .col-12 {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .d-flex.justify-content-between.align-items-center.mb-4 {
+        display: none !important;
+    }
+    
+    /* Styles pour la section hero avec image optimisée */
+    .hero-section {
+        position: relative;
+        height: 100vh; /* Hauteur plein écran */
+        width: 100vw; /* Largeur plein écran */
+        background-image: url('{{ MEDIA_URL }}images/Acces_optimized.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        margin-bottom: 0; /* Suppression de la marge */
+        margin-left: calc(-50vw + 50%); /* Pour étendre à pleine largeur */
+        margin-right: calc(-50vw + 50%); /* Pour étendre à pleine largeur */
+        padding-top: 0; /* Supprimé pour faire remonter l'image sous la navbar */
+        margin-top: -20px; /* Valeur négative pour faire remonter l'image sous la navbar */
+        will-change: transform; /* Optimisation pour le GPU */
+    }
+    
+    .hero-section::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        padding: 2rem;
+        max-width: 800px;
+        margin-top: -250px; /* Ajusté pour faire descendre le texte */
+        padding-top: 100px; /* Espace entre le contenu et la barre de navigation */
+    }
+    
+    @keyframes continuousSlide {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(100%);
+        }
+    }
+    
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        animation: continuousSlide 10s linear infinite;
+        white-space: nowrap;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.2rem; /* Taille réduite */
+        margin-bottom: 2rem;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        /* Animation supprimée */
+    }
+    
+    .feature-card {
+        transition: transform 0.3s ease;
+        height: 100%;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-10px);
+    }
+    
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1.5rem;
+        color: #3498db;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Préchargement des images optimisées -->
+<link rel="preload" href="{{ MEDIA_URL }}images/Acces_optimized.jpg" as="image" type="image/jpeg" fetchpriority="high">
+<link rel="preload" href="{{ MEDIA_URL }}images/Acces_optimized.webp" as="image" type="image/webp">
+
+<!-- Section Hero avec image d'arrière-plan en plein écran -->
+<section class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">Bienvenue dans Guinée-Ges</h1>
+        <p class="hero-subtitle">Une solution complète pour gérer votre flotte de véhicules,<br><span class="text-center d-block">chauffeurs et ressources</span></p>
+        <a href="#content" class="btn btn-light btn-lg mt-4">
+            <i class="fas fa-arrow-down"></i> Découvrir
+        </a>
+    </div>
+</section>
+
+<div id="content" class="container-fluid py-5">
+    
+    <div class="row mt-5">
+        <h2 class="text-center mb-4">Nos services principaux</h2>
+        
+        <div class="col-12 col-md-4 mb-4">
+            <div class="card feature-card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-car feature-icon"></i>
+                    <h3>Gestion de Véhicules</h3>
+                    <p>Suivez l'état, la maintenance et les performances de votre flotte de véhicules.</p>
+                    <a href="{% url 'fleet_app:vehicule_list' %}" class="btn btn-primary mt-2">
+                        <i class="fas fa-arrow-right"></i> Gérer les véhicules
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-4 mb-4">
+            <div class="card feature-card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-tasks feature-icon"></i>
+                    <h3>Management</h3>
+                    <p>Gérez efficacement vos ressources et accédez aux fonctionnalités administratives.</p>
+                    <a href="/entreprise/employes/" class="btn btn-primary mt-2">
+                        <i class="fas fa-arrow-right"></i> Accéder au management
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-4 mb-4">
+            <div class="card feature-card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes feature-icon"></i>
+                    <h3>Inventaire</h3>
+                    <p>Gérez votre stock de pièces détachées et consommables pour votre flotte.</p>
+                    <a href="#" class="btn btn-primary mt-2 disabled" title="Fonctionnalité non disponible actuellement">
+                        Gérer l'inventaire
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-5 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h2 class="mb-4">À propos de Guinée-Ges</h2>
+                            <p class="lead mb-4">
+                                Guinée-Ges est une entreprise spécialisée dans la gestion intelligente des ressources en Guinée, notamment la gestion de flottes de véhicules, la gestion du personnel, et la gestion des stocks.
+                            </p>
+                            <p class="mb-3">
+                                Nous proposons des solutions complètes et intégrées pour :
+                            </p>
+                            <ul class="mb-3">
+                                <li class="mb-2">Optimiser l'utilisation de vos véhicules : suivi en temps réel, gestion des maintenances préventives, contrôle de la consommation de carburant, et analyse des coûts d'exploitation.</li>
+                                <li class="mb-2">Gérer efficacement le personnel : système de pointage, suivi des présences et absences, élaboration automatique des fiches de paie.</li>
+                                <li class="mb-2">Suivre les bons de transport miniers : enregistrement, analyse des trajets et consommation, contrôle des affectations.</li>
+                                <li class="mb-2">Piloter vos stocks : gestion des entrées et sorties, suivi des niveaux de stock, alertes de réapprovisionnement.</li>
+                                <li class="mb-2">Gérer les commandes et les fournisseurs : création des bons de commande, gestion des factures, suivi des livraisons et paiements.</li>
+                            </ul>
+                            <p class="mb-3">
+                                Notre objectif est clair : vous aider à réduire les coûts, améliorer la productivité et prendre des décisions stratégiques grâce à des données fiables et en temps réel.
+                            </p>
+                            <div class="mt-4">
+                                <a href="#" class="btn btn-outline-primary me-2">
+                                    <i class="fas fa-info-circle"></i> En savoir plus
+                                </a>
+                                <a href="#" class="btn btn-outline-secondary">
+                                    <i class="fas fa-envelope"></i> Contactez-nous
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-center justify-content-center mt-4 mt-md-0">
+                            <div class="text-center">
+                                <i class="fas fa-building fa-5x text-primary mb-3"></i>
+                                <h4>Guinée-Ges</h4>
+                                <p class="text-muted">Votre partenaire de confiance</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Notre équipe -->
+    <div class="row mt-5 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4">Notre Équipe</h2>
+                    <p class="text-center mb-4">Découvrez les personnes qui font de Guinée-Ges une entreprise d'excellence.</p>
+                    
+                    <div class="row justify-content-center">
+                        <!-- Premier membre de l'équipe -->
+                        <div class="col-md-5 mb-4">
+                            <div class="card team-card border-0 shadow-sm">
+                                <div class="text-center p-3">
+                                    <div class="team-image-container mb-3">
+                                        <!-- Image du premier membre de l'équipe -->
+                                        <img src="{{ MEDIA_URL }}images/team/fara.png" alt="Fara" class="img-fluid rounded-circle team-image" style="width: 200px; height: 200px; object-fit: cover;">
+                                    </div>
+                                    <h4>Fara</h4>
+                                    <p class="text-muted">Directeur</p>
+                                    <p><i class="fas fa-user-tie me-2"></i>Fara est le fondateur et directeur de l'entreprise. Il assure la vision stratégique, coordonne les différentes activités, et veille au bon fonctionnement global de l'organisation. Il est aussi impliqué dans le développement des solutions et la relation client.</p>
+                                    <div class="social-links">
+                                        <a href="#" class="me-2"><i class="fab fa-linkedin"></i></a>
+                                        <a href="#" class="me-2"><i class="fab fa-twitter"></i></a>
+                                        <a href="#"><i class="fas fa-envelope"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Deuxième membre de l'équipe -->
+                        <div class="col-md-5 mb-4">
+                            <div class="card team-card border-0 shadow-sm">
+                                <div class="text-center p-3">
+                                    <div class="team-image-container mb-3">
+                                        <!-- Image du deuxième membre de l'équipe -->
+                                        <img src="{{ MEDIA_URL }}images/team/ifono.jpg" alt="Ifono" class="img-fluid rounded-circle team-image" style="width: 200px; height: 200px; object-fit: cover;">
+                                    </div>
+                                    <h4>Ifono</h4>
+                                    <p class="text-muted">Responsable technique</p>
+                                    <p><i class="fas fa-laptop-code me-2"></i>Ifono est en charge de la partie technique de l'entreprise. Il supervise la conception, le développement et la mise en œuvre des outils numériques. Il garantit la qualité des solutions proposées et accompagne l'équipe dans l'innovation technologique.</p>
+                                    <div class="social-links">
+                                        <a href="#" class="me-2"><i class="fab fa-linkedin"></i></a>
+                                        <a href="#" class="me-2"><i class="fab fa-twitter"></i></a>
+                                        <a href="#"><i class="fas fa-envelope"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

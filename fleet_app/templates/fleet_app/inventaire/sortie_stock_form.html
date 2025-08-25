@@ -1,0 +1,224 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:sortie_stock_list' %}">Inventaire - Sorties de stock</a></li>
+        <li class="breadcrumb-item active">{{ titre }}</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-arrow-circle-up me-1"></i>
+            {% if sortie %}Modifier{% else %}Ajouter{% endif %} une sortie de stock
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.id_sortie.id_for_label }}" class="form-label">{{ form.id_sortie.label }}</label>
+                            {{ form.id_sortie }}
+                            {% if form.id_sortie.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.id_sortie.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Format: SRTxxx (ex: SRT001)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.date.id_for_label }}" class="form-label">{{ form.date.label }}</label>
+                            {{ form.date }}
+                            {% if form.date.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.date.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.produit.id_for_label }}" class="form-label">{{ form.produit.label }}</label>
+                            {{ form.produit }}
+                            {% if form.produit.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.produit.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.quantite.id_for_label }}" class="form-label">{{ form.quantite.label }}</label>
+                            {{ form.quantite }}
+                            {% if form.quantite.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.quantite.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.destinataire.id_for_label }}" class="form-label">{{ form.destinataire.label }}</label>
+                            {{ form.destinataire }}
+                            {% if form.destinataire.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.destinataire.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.reference_bon.id_for_label }}" class="form-label">{{ form.reference_bon.label }}</label>
+                            {{ form.reference_bon }}
+                            {% if form.reference_bon.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.reference_bon.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Format: BONyyyy-xxxx (ex: BON2025-0001)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="{{ form.motif.id_for_label }}" class="form-label">{{ form.motif.label }}</label>
+                            {{ form.motif }}
+                            {% if form.motif.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.motif.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="alert alert-info" id="stock_info" style="display: none;">
+                            <i class="fas fa-info-circle"></i> 
+                            <span id="stock_message"></span>
+                        </div>
+                        <div class="alert alert-danger" id="stock_error" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <span id="error_message"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary" id="submit_button">
+                            <i class="fas fa-save"></i> Enregistrer
+                        </button>
+                        <a href="{% url 'fleet_app:sortie_stock_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Appliquer les classes Bootstrap aux champs du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('{{ form.id_sortie.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.date.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.produit.id_for_label }}').classList.add('form-select');
+        document.getElementById('{{ form.quantite.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.destinataire.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.reference_bon.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.motif.id_for_label }}').classList.add('form-control');
+        
+        // Vérifier le stock disponible lorsque le produit est sélectionné
+        const produitSelect = document.getElementById('{{ form.produit.id_for_label }}');
+        const quantiteInput = document.getElementById('{{ form.quantite.id_for_label }}');
+        const stockInfo = document.getElementById('stock_info');
+        const stockMessage = document.getElementById('stock_message');
+        const stockError = document.getElementById('stock_error');
+        const errorMessage = document.getElementById('error_message');
+        const submitButton = document.getElementById('submit_button');
+        
+        function checkStock() {
+            const produitId = produitSelect.value;
+            const quantite = parseFloat(quantiteInput.value) || 0;
+            
+            if (produitId) {
+                fetch(`/api/produit-info/?id_produit=${produitId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const stockActuel = parseFloat(data.stock_actuel);
+                            const seuilMin = parseFloat(data.seuil_minimum);
+                            
+                            stockInfo.style.display = 'block';
+                            stockMessage.textContent = `Stock actuel: ${stockActuel} ${data.unite} | Seuil minimum: ${seuilMin} ${data.unite}`;
+                            
+                            if (quantite > stockActuel) {
+                                stockError.style.display = 'block';
+                                errorMessage.textContent = `Quantité insuffisante en stock. Maximum disponible: ${stockActuel} ${data.unite}`;
+                                submitButton.disabled = true;
+                            } else {
+                                stockError.style.display = 'none';
+                                submitButton.disabled = false;
+                                
+                                // Avertissement si le stock descend sous le seuil après la sortie
+                                if ((stockActuel - quantite) < seuilMin) {
+                                    stockError.style.display = 'block';
+                                    errorMessage.textContent = `Attention: Cette sortie fera descendre le stock sous le seuil minimum (${seuilMin} ${data.unite})`;
+                                    submitButton.disabled = false;
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Erreur:', error));
+            } else {
+                stockInfo.style.display = 'none';
+                stockError.style.display = 'none';
+            }
+        }
+        
+        produitSelect.addEventListener('change', checkStock);
+        quantiteInput.addEventListener('input', checkStock);
+        
+        // Vérifier le stock au chargement si un produit est déjà sélectionné
+        if (produitSelect.value) {
+            checkStock();
+        }
+    });
+</script>
+{% endblock %}

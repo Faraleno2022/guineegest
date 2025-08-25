@@ -1,0 +1,67 @@
+{% extends 'fleet_app/accounts/creation_compte_base.html' %}
+{% load static %}
+
+{% block form_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-address-card me-2"></i>
+            <strong>Informations de contact</strong> - Veuillez remplir vos informations de contact et votre rôle.
+        </div>
+        
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="id_telephone" class="form-label">Téléphone <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                    <input type="tel" name="telephone" id="id_telephone" class="form-control" placeholder="Numéro de téléphone" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_email" class="form-label">E-mail <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    <input type="email" name="email" id="id_email" class="form-control" placeholder="Adresse e-mail" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_adresse" class="form-label">Adresse</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                    <textarea name="adresse" id="id_adresse" class="form-control" rows="3" placeholder="Adresse complète"></textarea>
+                </div>
+                <small class="text-muted">Optionnel</small>
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_role" class="form-label">Fonction ou Rôle dans le système <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                    <select name="role" id="id_role" class="form-select" required>
+                        <option value="" selected disabled>Sélectionnez un rôle</option>
+                        <option value="admin">Administrateur</option>
+                        <option value="standard">Utilisateur standard</option>
+                        <option value="rh">Responsable RH</option>
+                        <option value="stock">Gestionnaire stock</option>
+                        <option value="comptable">Comptable</option>
+                        <option value="autre">Autre</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-5">
+                <a href="{% url 'fleet_app:retour_etape' etape=2 %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Précédent
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    Continuer <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

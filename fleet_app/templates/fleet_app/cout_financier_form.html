@@ -1,0 +1,105 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}{{ title }} - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-edit me-2"></i> {{ title }}
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <strong>Des erreurs sont présentes dans le formulaire :</strong>
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ field.label }} : {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.vehicule.id_for_label }}" class="form-label">Véhicule</label>
+                            {{ form.vehicule }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                            {{ form.date }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.type_cout.id_for_label }}" class="form-label">Type de coût</label>
+                            {{ form.type_cout }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.montant.id_for_label }}" class="form-label">Montant (GNF)</label>
+                            {{ form.montant }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.kilometrage.id_for_label }}" class="form-label">Kilométrage actuel</label>
+                            {{ form.kilometrage }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.cout_par_km.id_for_label }}" class="form-label">Coût par km (GNF/km)</label>
+                            {{ form.cout_par_km }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="{{ form.periode_amortissement.id_for_label }}" class="form-label">Période d'amortissement (mois)</label>
+                            {{ form.periode_amortissement }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description }}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'fleet_app:kpi_couts_financiers' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Retour
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Calcul automatique du coût par km
+        const montantInput = document.getElementById('{{ form.montant.id_for_label }}');
+        const kilometrageInput = document.getElementById('{{ form.kilometrage.id_for_label }}');
+        const coutParKmInput = document.getElementById('{{ form.cout_par_km.id_for_label }}');
+        
+        function calculerCoutParKm() {
+            const montant = parseFloat(montantInput.value) || 0;
+            const kilometrage = parseFloat(kilometrageInput.value) || 0;
+            
+            if (montant > 0 && kilometrage > 0) {
+                const coutParKm = montant / kilometrage;
+                coutParKmInput.value = coutParKm.toFixed(4);
+            }
+        }
+        
+        montantInput.addEventListener('input', calculerCoutParKm);
+        kilometrageInput.addEventListener('input', calculerCoutParKm);
+    });
+</script>
+{% endblock %}

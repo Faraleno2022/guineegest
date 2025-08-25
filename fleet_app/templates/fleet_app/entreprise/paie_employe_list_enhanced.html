@@ -1,0 +1,487 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Paies Employés - {{ mois_noms|lookup:mois }} {{ annee }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+{% include 'fleet_app/components/period_selector.html' with module_name='paies' %}
+<style>
+.paie-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.paie-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 4px solid #007bff;
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.paie-table {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.coherence-ok {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.coherence-ko {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.presence-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.presence-excellent { background: #d4edda; color: #155724; }
+.presence-bon { background: #d1ecf1; color: #0c5460; }
+.presence-moyen { background: #fff3cd; color: #856404; }
+.presence-faible { background: #f8d7da; color: #721c24; }
+
+.formules-info {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #2196f3;
+}
+
+.btn-sync {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.btn-sync:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+    color: white;
+}
+
+.filters-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.employes-sans-paie {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="paie-container">
+    <!-- En-tête -->
+    <div class="paie-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="fas fa-money-bill-wave"></i> Paies Employés</h1>
+                <p class="mb-0">{{ mois_noms|lookup:mois }} {{ annee }} - Calculs automatiques de présence</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'fleet_app:synchroniser_presence_paie' %}" class="btn btn-light">
+                    <i class="fas fa-sync-alt"></i> Synchroniser
+                </a>
+                <a href="{% url 'fleet_app:dashboard_presence_paie' %}" class="btn btn-outline-light">
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formules de calcul -->
+    <div class="formules-info">
+        <h6><i class="fas fa-calculator"></i> Formules appliquées automatiquement</h6>
+        <div class="row">
+            <div class="col-md-6">
+                <small>
+                    <strong>Présence:</strong> {{ formules_calcul.jours_presence }}<br>
+                    <strong>Sundays:</strong> {{ formules_calcul.sundays }}<br>
+                    <strong>Absences:</strong> {{ formules_calcul.absent }}
+                </small>
+            </div>
+            <div class="col-md-6">
+                <small>
+                    <strong>Maladies:</strong> {{ formules_calcul.maladies }}<br>
+                    <strong>M.Payer:</strong> {{ formules_calcul.m_payer }}<br>
+                    <strong>J.Repos:</strong> {{ formules_calcul.j_repos }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ statistiques_periode.employes_avec_paie }}</div>
+            <div>Paies actives</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #28a745;">
+            <div class="stat-number" style="color: #28a745;">{{ statistiques_periode.paies_coherentes }}</div>
+            <div>Cohérentes</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #dc3545;">
+            <div class="stat-number" style="color: #dc3545;">{{ statistiques_periode.paies_incoherentes }}</div>
+            <div>À synchroniser</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #ffc107;">
+            <div class="stat-number" style="color: #ffc107;">{{ statistiques_periode.pourcentage_coherence }}%</div>
+            <div>Cohérence</div>
+        </div>
+    </div>
+
+    <!-- Employés sans paie -->
+    {% if employes_sans_paie %}
+    <div class="employes-sans-paie">
+        <h6><i class="fas fa-exclamation-triangle"></i> Employés sans paie pour {{ mois_noms|lookup:mois }} {{ annee }}</h6>
+        <div class="row">
+            {% for employe in employes_sans_paie %}
+            <div class="col-md-4 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>{{ employe.matricule }} - {{ employe.prenom }} {{ employe.nom }}</span>
+                    <form method="post" action="{% url 'fleet_app:synchroniser_paie_individuelle' employe.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="mois" value="{{ mois }}">
+                        <input type="hidden" name="annee" value="{{ annee }}">
+                        <button type="submit" class="btn btn-sm btn-sync">
+                            <i class="fas fa-plus"></i> Créer
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-3">
+            <form method="post" action="{% url 'fleet_app:creer_paies_manquantes' %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="mois" value="{{ mois }}">
+                <input type="hidden" name="annee" value="{{ annee }}">
+                <button type="submit" class="btn btn-warning">
+                    <i class="fas fa-magic"></i> Créer toutes les paies manquantes
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filtres -->
+    <div class="filters-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="employe_id" class="form-label">Employé</label>
+                <select name="employe_id" id="employe_id" class="form-select">
+                    <option value="">Tous les employés</option>
+                    {% for employe in employes %}
+                    <option value="{{ employe.id }}" {% if employe.id|stringformat:"s" == employe_id %}selected{% endif %}>
+                        {{ employe.matricule }} - {{ employe.prenom }} {{ employe.nom }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="mois" class="form-label">Mois</label>
+                <select name="mois" id="mois" class="form-select">
+                    {% for mois_num, mois_nom in mois_noms.items %}
+                    <option value="{{ mois_num }}" {% if mois_num == mois %}selected{% endif %}>
+                        {{ mois_nom }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="annee" class="form-label">Année</label>
+                <select name="annee" id="annee" class="form-select">
+                    {% for annee_option in "2023,2024,2025"|split:"," %}
+                    <option value="{{ annee_option }}" {% if annee_option|add:0 == annee %}selected{% endif %}>
+                        {{ annee_option }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label">Sync Auto</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="auto_sync" value="true" 
+                           {% if auto_sync %}checked{% endif %} id="auto_sync">
+                    <label class="form-check-label" for="auto_sync">
+                        Activé
+                    </label>
+                </div>
+            </div>
+            
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter"></i> Filtrer
+                </button>
+                <a href="{% url 'fleet_app:export_paies_csv' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-success">
+                    <i class="fas fa-download"></i> CSV
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tableau des paies -->
+    <div class="paie-table">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Employé</th>
+                        <th>Présence</th>
+                        <th>Sundays</th>
+                        <th>Absences</th>
+                        <th>Maladies</th>
+                        <th>M.Payer</th>
+                        <th>J.Repos</th>
+                        <th>Salaire Net</th>
+                        <th>Cohérence</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for paie_enrichie in paies_enrichies %}
+                    <tr class="{% if not paie_enrichie.coherence_globale %}coherence-ko{% endif %}">
+                        <td>
+                            <div>
+                                <strong>{{ paie_enrichie.paie.employe.matricule }}</strong><br>
+                                <small>{{ paie_enrichie.paie.employe.prenom }} {{ paie_enrichie.paie.employe.nom }}</small><br>
+                                <small class="text-muted">{{ paie_enrichie.paie.employe.profession }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="fw-bold">{{ paie_enrichie.stats_presence_calculees.jours_presence }}</span>
+                            {% if not paie_enrichie.coherence.jours_presence %}
+                            <br><small class="text-danger">({{ paie_enrichie.paie.jours_presence }} stocké)</small>
+                            {% endif %}
+                            <br>
+                            {% if paie_enrichie.pourcentage_presence >= 90 %}
+                            <span class="presence-badge presence-excellent">{{ paie_enrichie.pourcentage_presence }}%</span>
+                            {% elif paie_enrichie.pourcentage_presence >= 75 %}
+                            <span class="presence-badge presence-bon">{{ paie_enrichie.pourcentage_presence }}%</span>
+                            {% elif paie_enrichie.pourcentage_presence >= 50 %}
+                            <span class="presence-badge presence-moyen">{{ paie_enrichie.pourcentage_presence }}%</span>
+                            {% else %}
+                            <span class="presence-badge presence-faible">{{ paie_enrichie.pourcentage_presence }}%</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-bold">{{ paie_enrichie.stats_presence_calculees.sundays }}</span>
+                            {% if not paie_enrichie.coherence.dimanches %}
+                            <br><small class="text-danger">({{ paie_enrichie.paie.dimanches }} stocké)</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-bold">{{ paie_enrichie.stats_presence_calculees.absent }}</span>
+                            {% if not paie_enrichie.coherence.absences %}
+                            <br><small class="text-danger">({{ paie_enrichie.paie.absences }} stocké)</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ paie_enrichie.stats_presence_calculees.maladies }}</td>
+                        <td>{{ paie_enrichie.stats_presence_calculees.m_payer }}</td>
+                        <td>
+                            <span class="fw-bold">{{ paie_enrichie.stats_presence_calculees.j_repos }}</span>
+                            {% if not paie_enrichie.coherence.jours_repos %}
+                            <br><small class="text-danger">({{ paie_enrichie.paie.jours_repos }} stocké)</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ paie_enrichie.paie.salaire_net|floatformat:0 }} FCFA</strong>
+                            {% if paie_enrichie.heures_supplementaires.total_montant > 0 %}
+                            <br><small class="text-success">+{{ paie_enrichie.heures_supplementaires.total_montant|floatformat:0 }} HS</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if paie_enrichie.coherence_globale %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i> OK
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-exclamation-triangle"></i> KO
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group-vertical btn-group-sm">
+                                <a href="{% url 'fleet_app:paie_employe_detail_enhanced' paie_enrichie.paie.id %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if not paie_enrichie.coherence_globale %}
+                                <form method="post" action="{% url 'fleet_app:synchroniser_paie_individuelle' paie_enrichie.paie.employe.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="mois" value="{{ mois }}">
+                                    <input type="hidden" name="annee" value="{{ annee }}">
+                                    <button type="submit" class="btn btn-sync btn-sm">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                            <p>Aucune paie trouvée pour cette période</p>
+                            {% if employes_sans_paie %}
+                            <p class="text-muted">Utilisez le bouton "Créer toutes les paies manquantes" ci-dessus</p>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Résumé global -->
+    {% if paies_enrichies %}
+    <div class="mt-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-chart-pie"></i> Totaux de la période</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="h4 text-primary">{{ total_global.jours_presence }}</div>
+                                    <small>Jours présence</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="h4 text-success">{{ total_global.sundays }}</div>
+                                    <small>Sundays</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="h4 text-danger">{{ total_global.absences }}</div>
+                                    <small>Absences</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="h4 text-warning">{{ total_global.jours_repos }}</div>
+                                    <small>Jours repos</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-money-bill-wave"></i> Totaux financiers</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center">
+                            <div class="h4 text-success">{{ total_global.salaire_net|floatformat:0 }} FCFA</div>
+                            <small>Salaire net total</small>
+                        </div>
+                        <div class="text-center mt-3">
+                            <div class="h5 text-info">{{ total_global.salaire_brut|floatformat:0 }} FCFA</div>
+                            <small>Salaire brut total</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des compteurs
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(function(element) {
+        const finalValue = parseInt(element.textContent);
+        if (!isNaN(finalValue)) {
+            let currentValue = 0;
+            const increment = finalValue / 20;
+            
+            const timer = setInterval(function() {
+                currentValue += increment;
+                if (currentValue >= finalValue) {
+                    element.textContent = finalValue;
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(currentValue);
+                }
+            }, 50);
+        }
+    });
+    
+    // Auto-submit du formulaire de filtre lors du changement
+    const filterForm = document.querySelector('.filters-section form');
+    const filterInputs = filterForm.querySelectorAll('select');
+    
+    filterInputs.forEach(function(input) {
+        input.addEventListener('change', function() {
+            if (this.name !== 'auto_sync') {
+                filterForm.submit();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

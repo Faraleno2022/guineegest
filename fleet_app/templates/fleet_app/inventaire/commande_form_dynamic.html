@@ -1,0 +1,587 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+{% load humanize %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .card-header {
+        background-color: #f8f9fa;
+    }
+    .required-field::after {
+        content: "*";
+        color: red;
+        margin-left: 4px;
+    }
+    .ligne-commande {
+        padding: 10px;
+        border-radius: 5px;
+        transition: all 0.2s;
+    }
+    .ligne-commande:hover {
+        background-color: #f8f9fa;
+    }
+    .total-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        margin-top: 1rem;
+    }
+    .total-label {
+        font-weight: 600;
+    }
+    .total-value {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #0d6efd;
+    }
+    .table-header {
+        font-weight: bold;
+        background-color: #f8f9fa;
+        padding: 10px 0;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .prix-total {
+        font-weight: 600;
+    }
+    #lignes-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:commande_list' %}">Commandes</a></li>
+        <li class="breadcrumb-item active">{{ commande.numero|default:"Nouvelle commande" }}</li>
+    </ol>
+    
+    {% if request.GET.success %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>Commande sauvegardée avec succès!</strong>
+        {% if request.GET.total_produits %}
+            {{ request.GET.total_produits }} produit(s) ajouté(s) pour un montant total de 
+            {% if request.GET.montant_total %}
+                {{ request.GET.montant_total|floatformat:0|intcomma }} GNF.
+            {% else %}
+                {{ montant_total|default:"" }} GNF.
+            {% endif %}
+        {% endif %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+    
+    <form method="post" id="commandeForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Informations générales de la commande -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Informations générales
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.fournisseur.id_for_label }}" class="required-field">Fournisseur</label>
+                                    {{ form.fournisseur }}
+                                    {% if form.fournisseur.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.fournisseur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_creation.id_for_label }}" class="required-field">Date de création</label>
+                                    {{ form.date_creation }}
+                                    {% if form.date_creation.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.date_creation.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_livraison_prevue.id_for_label }}">Date de livraison prévue</label>
+                                    {{ form.date_livraison_prevue }}
+                                    {% if form.date_livraison_prevue.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.date_livraison_prevue.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.statut.id_for_label }}" class="required-field">Statut</label>
+                                    {{ form.statut }}
+                                    {% if form.statut.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.statut.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.remise.id_for_label }}">Remise (%)</label>
+                            {{ form.remise }}
+                            {% if form.remise.errors %}
+                                <div class="invalid-feedback d-block">{{ form.remise.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informations du fournisseur -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-building me-1"></i>
+                        Coordonnées du fournisseur
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="{{ form.adresse_fournisseur.id_for_label }}">Adresse</label>
+                            {{ form.adresse_fournisseur }}
+                            {% if form.adresse_fournisseur.errors %}
+                                <div class="invalid-feedback d-block">{{ form.adresse_fournisseur.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.telephone_fournisseur.id_for_label }}">Téléphone</label>
+                                    {{ form.telephone_fournisseur }}
+                                    {% if form.telephone_fournisseur.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.telephone_fournisseur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.email_fournisseur.id_for_label }}">Email</label>
+                                    {{ form.email_fournisseur }}
+                                    {% if form.email_fournisseur.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.email_fournisseur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.notes.id_for_label }}">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lignes de commande -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-list me-1"></i>
+                    Produits commandés
+                </div>
+                <button type="button" id="ajouter-ligne" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Ajouter un produit
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- En-têtes des colonnes -->
+                <div class="row table-header">
+                    <div class="col-md-3">Produit</div>
+                    <div class="col-md-2">Nom</div>
+                    <div class="col-md-2">Catégorie</div>
+                    <div class="col-md-1">Quantité</div>
+                    <div class="col-md-2">Prix unitaire (GNF)</div>
+                    <div class="col-md-1">Total</div>
+                    <div class="col-md-1">Actions</div>
+                </div>
+                
+                <!-- Conteneur pour les lignes de commande -->
+                <div id="lignes-container">
+                    {% if lignes %}
+                        {% for ligne in lignes %}
+                        <div class="ligne-commande row mb-3 align-items-center" data-index="{{ forloop.counter0 }}">
+                            <div class="col-md-3">
+                                <select name="lignes[{{ forloop.counter0 }}][produit]" class="form-select produit-select" required>
+                                    <option value="">Sélectionner un produit</option>
+                                    {% for produit in produits %}
+                                        <option value="{{ produit.id }}" {% if produit.id == ligne.produit.id %}selected{% endif %}>
+                                            {{ produit.id_produit }} - {{ produit.nom }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" name="lignes[{{ forloop.counter0 }}][nom_produit]" class="form-control nom-produit" value="{{ ligne.nom_produit }}" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" name="lignes[{{ forloop.counter0 }}][categorie]" class="form-control categorie" value="{{ ligne.produit.categorie }}" readonly>
+                            </div>
+                            <div class="col-md-1">
+                                <input type="number" name="lignes[{{ forloop.counter0 }}][quantite]" class="form-control quantite" min="1" required value="{{ ligne.quantite }}">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" name="lignes[{{ forloop.counter0 }}][prix_unitaire]" class="form-control prix-unitaire" min="0" required value="{{ ligne.prix_unitaire }}">
+                            </div>
+                            <div class="col-md-1">
+                                <span class="prix-total">{{ ligne.prix_total|floatformat:0 }} GNF</span>
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-danger btn-sm supprimer-ligne">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <!-- Une ligne vide pour commencer -->
+                        <div class="ligne-commande row mb-3 align-items-center" data-index="0">
+                            <div class="col-md-3">
+                                <select name="lignes[0][produit]" class="form-select produit-select">
+                                    <option value="">Sélectionner un produit</option>
+                                    {% for produit in produits %}
+                                        <option value="{{ produit.id }}">
+                                            {{ produit.id_produit }} - {{ produit.nom }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" name="lignes[0][nom_produit]" class="form-control nom-produit" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" name="lignes[0][categorie]" class="form-control categorie" readonly>
+                            </div>
+                            <div class="col-md-1">
+                                <input type="number" name="lignes[0][quantite]" class="form-control quantite" min="1" value="1">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" name="lignes[0][prix_unitaire]" class="form-control prix-unitaire" min="0">
+                            </div>
+                            <div class="col-md-1">
+                                <span class="prix-total">0 GNF</span>
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-danger btn-sm supprimer-ligne">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Bouton de validation des produits -->
+                <div class="d-flex justify-content-end mt-3 mb-3">
+                    <button type="button" id="saveProductsBtn" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i> Valider les produits commandés
+                    </button>
+                </div>
+                
+                <!-- Section des totaux -->
+                <div class="row mt-4">
+                    <div class="col-md-6 ms-auto">
+                        <div class="total-section">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="total-label">Montant total :</span>
+                                <span class="total-value" id="montantTotal">0 GNF</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="total-label">Remise (%) :</span>
+                                <span class="total-value text-danger" id="montantRemise">0 GNF</span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <span class="total-label">Montant final :</span>
+                                <span class="total-value" id="montantFinal">0 GNF</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{% url 'fleet_app:commande_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Annuler
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Enregistrer la commande
+            </button>
+        </div>
+    </form>
+    
+    <!-- Template caché pour les options de produit -->
+    <select id="produit-options" class="d-none">
+        {% for produit in produits %}
+            <option value="{{ produit.id }}">
+                {{ produit.id_produit }} - {{ produit.nom }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'fleet_app/js/commande-utils.js' %}"></script>
+<script>
+    // Données des produits pour l'auto-remplissage
+    const produitsData = [
+        {% for produit in produits %}
+        {
+            id: "{{ produit.id }}",
+            nom: "{{ produit.nom }}",
+            categorie: "{{ produit.categorie }}",
+            prix_unitaire: {{ produit.prix_unitaire|default:0 }}
+        },
+        {% endfor %}
+    ];
+    
+    $(document).ready(function() {
+        // Initialiser le datepicker pour les dates
+        $('#{{ form.date_creation.id_for_label }}, #{{ form.date_livraison_prevue.id_for_label }}').datepicker({
+            format: 'dd/mm/yyyy',
+            autoclose: true,
+            todayHighlight: true,
+            language: 'fr'
+        });
+        
+        // Initialiser le formulaire dynamique
+        initCommandeForm();
+        
+        // Fonction pour auto-remplir les champs nom_produit et catégorie
+        function autoRemplirChampsProduit(select) {
+            const produitId = $(select).val();
+            const row = $(select).closest('.ligne-commande');
+            const nomProduitInput = row.find('.nom-produit');
+            const categorieInput = row.find('.categorie');
+            const prixUnitaireInput = row.find('.prix-unitaire');
+            
+            if (produitId) {
+                // Trouver le produit dans les données
+                const produit = produitsData.find(p => p.id === produitId);
+                if (produit) {
+                    // Remplir les champs
+                    nomProduitInput.val(produit.nom);
+                    categorieInput.val(produit.categorie);
+                    prixUnitaireInput.val(produit.prix_unitaire);
+                    
+                    // Mettre à jour le prix total
+                    const quantite = parseInt(row.find('.quantite').val()) || 0;
+                    const prixUnitaire = parseFloat(prixUnitaireInput.val()) || 0;
+                    const prixTotal = quantite * prixUnitaire;
+                    
+                    // Formater le prix total avec séparateurs de milliers
+                    const prixTotalFormate = new Intl.NumberFormat('fr-FR').format(prixTotal) + ' GNF';
+                    row.find('.prix-total').text(prixTotalFormate);
+                    
+                    // Mettre à jour les totaux généraux
+                    updateTotals();
+                }
+            } else {
+                // Réinitialiser les champs si aucun produit n'est sélectionné
+                nomProduitInput.val('');
+                categorieInput.val('');
+                prixUnitaireInput.val('');
+                row.find('.prix-total').text('0 GNF');
+                updateTotals();
+            }
+        }
+        
+        // Attacher l'événement de changement aux sélecteurs de produits existants
+        $('.produit-select').on('change', function() {
+            autoRemplirChampsProduit(this);
+        });
+        
+        // Initialiser les champs pour les lignes existantes
+        $('.produit-select').each(function() {
+            if ($(this).val()) {
+                autoRemplirChampsProduit(this);
+            }
+        });
+        
+        // Gestion du bouton de validation des produits commandés
+        $('#saveProductsBtn').click(function() {
+            const lignesCommande = $('.ligne-commande');
+            
+            if (lignesCommande.length === 0) {
+                alert('Veuillez ajouter au moins un produit à la commande.');
+                return;
+            }
+            
+            // Vérifier que tous les produits sont sélectionnés et que les quantités sont valides
+            let isValid = true;
+            let totalProduits = 0;
+            
+            lignesCommande.each(function() {
+                const produitSelect = $(this).find('.produit-select');
+                const quantiteInput = $(this).find('.quantite');
+                
+                if (!produitSelect.val()) {
+                    produitSelect.addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    produitSelect.removeClass('is-invalid');
+                }
+                
+                if (!quantiteInput.val() || parseInt(quantiteInput.val()) < 1) {
+                    quantiteInput.addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    quantiteInput.removeClass('is-invalid');
+                    totalProduits++;
+                }
+            });
+            
+            if (!isValid) {
+                alert('Veuillez compléter correctement tous les produits de la commande.');
+                return;
+            }
+            
+            // Mettre à jour les totaux
+            updateTotals();
+            
+            // Ajouter un champ caché pour indiquer que les produits ont été validés
+            if (!$('#produits_valides').length) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    id: 'produits_valides',
+                    name: 'produits_valides',
+                    value: 'true'
+                }).appendTo('#commandeForm');
+            }
+            
+            // Indiquer visuellement que les produits sont prêts à être sauvegardés
+            $(this).removeClass('btn-success').addClass('btn-info');
+            $(this).html('<i class="fas fa-check-double me-1"></i> Produits prêts à être sauvegardés');
+            
+            // Mettre en évidence le bouton de sauvegarde final
+            const saveButton = $('button[type="submit"]');
+            saveButton.addClass('btn-pulse');
+            
+            // Ajouter une classe CSS pour l'animation de pulsation
+            if (!$('#pulse-style').length) {
+                $('<style id="pulse-style">').html(`
+                    @keyframes pulse {
+                        0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7); }
+                        70% { box-shadow: 0 0 0 10px rgba(13, 110, 253, 0); }
+                        100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+                    }
+                    .btn-pulse {
+                        animation: pulse 1.5s infinite;
+                    }
+                `).appendTo('head');
+            }
+            
+            // Faire défiler vers le bouton de sauvegarde
+            $('html, body').animate({
+                scrollTop: saveButton.offset().top - 100
+            }, 500);
+        });
+        
+        // Validation du formulaire avant soumission
+        $('#commandeForm').submit(function(e) {
+            let isValid = true;
+            
+            // Vérifier uniquement les lignes de commande qui ont été ajoutées
+            // Ne pas bloquer la soumission s'il n'y a pas de lignes
+            
+            // Pour les lignes existantes, vérifier que les données sont valides
+            $('.produit-select').each(function() {
+                if ($(this).val()) { // Seulement si un produit est sélectionné
+                    const row = $(this).closest('.ligne-commande');
+                    const quantite = row.find('.quantite');
+                    const prixUnitaire = row.find('.prix-unitaire');
+                    
+                    // Vérifier la quantité seulement si un produit est sélectionné
+                    if (!quantite.val() || parseInt(quantite.val()) <= 0) {
+                        quantite.addClass('is-invalid');
+                        isValid = false;
+                    } else {
+                        quantite.removeClass('is-invalid');
+                    }
+                    
+                    // Vérifier le prix unitaire seulement si un produit est sélectionné
+                    if (!prixUnitaire.val() || parseFloat(prixUnitaire.val()) < 0) {
+                        prixUnitaire.addClass('is-invalid');
+                        isValid = false;
+                    } else {
+                        prixUnitaire.removeClass('is-invalid');
+                    }
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez corriger les erreurs dans les lignes de produits ajoutées.');
+                return;
+            }
+            
+            // Si le formulaire est valide, ajouter un paramètre pour indiquer que la commande a été sauvegardée
+            if ($('#produits_valides').length) {
+                // Compter le nombre de produits
+                const totalProduits = $('.ligne-commande').length;
+                const montantTotal = $('#montantTotal').text();
+                
+                // Ajouter des champs cachés pour transmettre les informations
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'total_produits',
+                    value: totalProduits
+                }).appendTo('#commandeForm');
+                
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'montant_total',
+                    value: montantTotal.replace(/[^0-9]/g, '')
+                }).appendTo('#commandeForm');
+                
+                // Ajouter un paramètre success à l'URL de redirection
+                const actionUrl = $(this).attr('action') || window.location.href;
+                const separator = actionUrl.includes('?') ? '&' : '?';
+                $(this).attr('action', actionUrl + separator + 'success=true');
+                
+                // Afficher un message de chargement
+                const saveButton = $('button[type="submit"]');
+                const originalText = saveButton.html();
+                saveButton.html('<i class="fas fa-spinner fa-spin me-1"></i> Sauvegarde en cours...');
+                saveButton.prop('disabled', true);
+                
+                // Ajouter une classe pour le style de chargement
+                saveButton.removeClass('btn-pulse').addClass('btn-saving');
+                
+                // Ajouter un style pour le bouton de sauvegarde
+                if (!$('#saving-style').length) {
+                    $('<style id="saving-style">').html(`
+                        .btn-saving {
+                            background-color: #6c757d;
+                            border-color: #6c757d;
+                            opacity: 0.8;
+                        }
+                    `).appendTo('head');
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

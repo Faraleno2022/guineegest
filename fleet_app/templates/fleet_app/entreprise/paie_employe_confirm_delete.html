@@ -1,0 +1,84 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Supprimer Paie Employé{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Confirmation de suppression</h5>
+            <a href="{% url 'fleet_app:paie_employe_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">Attention!</h5>
+                <p>Vous êtes sur le point de supprimer la paie de <strong>{{ object.employe.prenom }} {{ object.employe.nom }}</strong> pour <strong>{{ object.get_mois_display }} {{ object.annee }}</strong>.</p>
+                <p>Cette action est irréversible.</p>
+                <p>Êtes-vous sûr de vouloir continuer?</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Informations sur la paie</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Employé:</div>
+                        <div class="col-sm-8">{{ object.employe.prenom }} {{ object.employe.nom }} ({{ object.employe.matricule }})</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Période:</div>
+                        <div class="col-sm-8">{{ object.get_mois_display }} {{ object.annee }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Salaire de base:</div>
+                        <div class="col-sm-8">{{ object.salaire_base }} GNF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Jours travaillés:</div>
+                        <div class="col-sm-8">{{ object.jours_travailles }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Montants</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-6 fw-bold">Heures supplémentaires:</div>
+                        <div class="col-sm-6">{{ object.montant_heures_supp }} GNF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-6 fw-bold">Primes:</div>
+                        <div class="col-sm-6">{{ object.primes }} GNF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-6 fw-bold">Déductions:</div>
+                        <div class="col-sm-6">{{ object.deductions }} GNF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-6 fw-bold">Avances:</div>
+                        <div class="col-sm-6">{{ object.avances }} GNF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-6 fw-bold">Salaire brut:</div>
+                        <div class="col-sm-6">{{ object.salaire_brut }} GNF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-6 fw-bold">Salaire net:</div>
+                        <div class="col-sm-6">{{ object.salaire_net }} GNF</div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash me-1"></i>Confirmer la suppression
+                </button>
+                <a href="{% url 'fleet_app:paie_employe_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

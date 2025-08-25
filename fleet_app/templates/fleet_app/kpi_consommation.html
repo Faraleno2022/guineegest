@@ -1,0 +1,678 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}KPI Consommation - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}KPI Consommation de Carburant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Formulaire d'ajout -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header {% if edit_mode %}bg-warning{% else %}bg-primary{% endif %} text-white d-flex justify-content-between align-items-center">
+                <div>
+                    {% if edit_mode %}
+                    <i class="fas fa-edit me-2"></i> <strong>Modifier la consommation de carburant</strong>
+                    {% else %}
+                    <i class="fas fa-plus-circle me-2"></i> <strong>Ajouter une consommation de carburant</strong>
+                    {% endif %}
+                </div>
+                <div>
+                    <span class="badge bg-light text-dark">Formulaire de saisie</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.vehicule.id_for_label }}" class="form-label">Véhicule</label>
+                            {{ form.vehicule }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.date_plein1.id_for_label }}" class="form-label">Date du premier plein</label>
+                            {{ form.date_plein1 }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.date_plein2.id_for_label }}" class="form-label">Date du second plein</label>
+                            {{ form.date_plein2 }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.km_plein1.id_for_label }}" class="form-label">
+                                <i class="fas fa-tachometer-alt me-1" data-bs-toggle="tooltip" title="Kilométrage au premier plein"></i> Km premier plein
+                            </label>
+                            <div class="input-group">
+                                {{ form.km_plein1 }}
+                                <span class="input-group-text">km</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.km_plein2.id_for_label }}" class="form-label">
+                                <i class="fas fa-tachometer-alt me-1" data-bs-toggle="tooltip" title="Kilométrage au second plein"></i> Km second plein
+                            </label>
+                            <div class="input-group">
+                                {{ form.km_plein2 }}
+                                <span class="input-group-text">km</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.litres_ajoutes.id_for_label }}" class="form-label">
+                                <i class="fas fa-gas-pump me-1" data-bs-toggle="tooltip" title="Quantité de carburant ajoutée"></i> Litres ajoutés
+                            </label>
+                            <div class="input-group">
+                                {{ form.litres_ajoutes }}
+                                <span class="input-group-text">L</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.consommation_100km.id_for_label }}" class="form-label">
+                                <i class="fas fa-chart-line me-1" data-bs-toggle="tooltip" title="Consommation aux 100km"></i> Consommation
+                            </label>
+                            <div class="input-group">
+                                {{ form.consommation_100km }}
+                                <span class="input-group-text">L/100km</span>
+                            </div>
+                            <small class="form-text text-muted">Calculé automatiquement ou saisissez manuellement</small>
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <div class="alert alert-info mt-2">
+                                <i class="fas fa-info-circle me-2"></i> La distance parcourue et la consommation aux 100km seront calculées automatiquement à partir des kilométrages et des litres ajoutés.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        {% if edit_mode %}
+                        <a href="{% url 'fleet_app:kpi_consommation' %}" class="btn btn-secondary me-2">
+                            <i class="fas fa-times me-2"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-2"></i> Mettre à jour
+                        </button>
+                        {% else %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Enregistrer
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Graphique des consommations moyennes -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-chart-bar me-2"></i> Consommation moyenne par véhicule (L/100km)
+                </div>
+                <div>
+                    <select id="periodeSelect" class="form-select form-select-sm">
+                        <option value="all">Toutes les périodes</option>
+                        <option value="month">Dernier mois</option>
+                        <option value="quarter">Dernier trimestre</option>
+                        <option value="year">Dernière année</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body" style="height: 250px;">
+                <canvas id="consommationChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Statistiques de consommation -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tachometer-alt me-2"></i> Statistiques globales
+            </div>
+            <div class="card-body">
+                <div class="stat-card">
+                    <i class="fas fa-gas-pump"></i>
+                    <div class="stat-value" id="consommationMoyenne">Chargement...</div>
+                    <div class="stat-label">Consommation moyenne (L/100km)</div>
+                </div>
+                <hr>
+                <div class="stat-card">
+                    <i class="fas fa-leaf"></i>
+                    <div class="stat-value" id="vehiculePlusEconomique">Chargement...</div>
+                    <div class="stat-label">Véhicule le plus économique</div>
+                </div>
+                <hr>
+                <div class="stat-card">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="stat-value" id="vehiculeMoinsEconomique">Chargement...</div>
+                    <div class="stat-label">Véhicule le moins économique</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comparaison avec constructeur -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-industry me-2"></i> Écart avec données constructeur
+            </div>
+            <div class="card-body" style="height: 180px;">
+                <canvas id="ecartChart" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tableau des consommations -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-list me-2"></i> Détail des consommations
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('consommationTable', 'Consommation_Carburant')">
+                        <i class="fas fa-file-excel me-1"></i> Excel
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="exportTableToPDF('consommationTable', 'Consommation_Carburant')">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </button>
+                    <input type="text" id="searchConsommation" class="form-control form-control-sm" placeholder="Rechercher...">
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
+                    <table id="consommationTable" class="table table-striped table-hover">
+                        <thead style="position: sticky; top: 0; background-color: #f8f9fa;">
+                            <tr>
+                                <th>Véhicule</th>
+                                <th>Période</th>
+                                <th>Distance</th>
+                                <th>Litres</th>
+                                <th>Conso. (L/100km)</th>
+                                <th>Écart constructeur</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for conso in consommations %}
+                            <tr>
+                                <td>{{ conso.vehicule.marque }} {{ conso.vehicule.modele }} ({{ conso.vehicule.immatriculation }})</td>
+                                <td>{{ conso.date_plein1 }} - {{ conso.date_plein2 }}</td>
+                                <td>{{ conso.distance_parcourue }} km</td>
+                                <td>{{ conso.litres_ajoutes }} L</td>
+                                <td>{{ conso.consommation_100km|floatformat:1 }} L/100km</td>
+                                <td>
+                                    {% if conso.ecart_constructeur %}
+                                        {% if conso.ecart_constructeur > 0 %}
+                                            <span class="text-danger">+{{ conso.ecart_constructeur|floatformat:1 }} L/100km</span>
+                                        {% elif conso.ecart_constructeur < 0 %}
+                                            <span class="text-success">{{ conso.ecart_constructeur|floatformat:1 }} L/100km</span>
+                                        {% else %}
+                                            <span class="text-muted">0 L/100km</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'fleet_app:consommation_edit' conso.id %}" class="btn btn-warning" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-danger" title="Supprimer" onclick="confirmDelete('{% url 'fleet_app:consommation_delete' conso.id %}', 'cette consommation de carburant')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">Aucune donnée de consommation disponible</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if consommations.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if consommations.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ consommations.previous_page_number }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in consommations.paginator.page_range %}
+                            {% if consommations.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > consommations.number|add:'-3' and num < consommations.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if consommations.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ consommations.next_page_number }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ consommations.paginator.num_pages }}" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+            <div class="card-footer text-end">
+                <a href="#" class="btn btn-sm btn-primary" onclick="scrollToTop()">
+                    <i class="fas fa-plus"></i> Ajouter une consommation
+                </a>
+                <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-file-export"></i> Exporter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    // Fonction pour calculer automatiquement la consommation
+    document.addEventListener('DOMContentLoaded', function() {
+        // Activer les tooltips Bootstrap
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+        
+        // Récupérer les éléments du formulaire
+        const kmPlein1Input = document.getElementById('{{ form.km_plein1.id_for_label }}');
+        const kmPlein2Input = document.getElementById('{{ form.km_plein2.id_for_label }}');
+        const litresAjoutesInput = document.getElementById('{{ form.litres_ajoutes.id_for_label }}');
+        const consommation100kmInput = document.getElementById('{{ form.consommation_100km.id_for_label }}');
+        
+        // Fonction pour calculer la distance parcourue et la consommation
+        function calculerConsommation() {
+            const kmPlein1 = parseInt(kmPlein1Input.value) || 0;
+            const kmPlein2 = parseInt(kmPlein2Input.value) || 0;
+            const litresAjoutes = parseFloat(litresAjoutesInput.value) || 0;
+            
+            // Vérifier que les valeurs sont valides
+            if (kmPlein1 > 0 && kmPlein2 > 0 && litresAjoutes > 0) {
+                // Vérifier que km_plein2 est supérieur à km_plein1
+                if (kmPlein2 <= kmPlein1) {
+                    alert('Erreur: Le kilométrage au second plein doit être supérieur au kilométrage au premier plein.');
+                    return;
+                }
+                
+                // Calculer la distance parcourue
+                const distanceParcourue = kmPlein2 - kmPlein1;
+                
+                // Calculer la consommation aux 100km
+                const consommation100km = (litresAjoutes * 100) / distanceParcourue;
+                
+                // Mettre à jour le champ consommation_100km
+                consommation100kmInput.value = consommation100km.toFixed(2);
+            }
+        }
+        
+        // Ajouter les écouteurs d'événements
+        if (kmPlein1Input && kmPlein2Input && litresAjoutesInput) {
+            kmPlein1Input.addEventListener('input', calculerConsommation);
+            kmPlein2Input.addEventListener('input', calculerConsommation);
+            litresAjoutesInput.addEventListener('input', calculerConsommation);
+        }
+        
+        // Données pour le graphique
+        // Données pour le graphique
+        const labels = {{ labels|safe }};
+        const data = {{ data|safe }};
+        
+        // Calcul des statistiques
+        const validData = data.filter(value => value > 0);
+        const consommationMoyenne = validData.reduce((a, b) => a + b, 0) / (validData.length || 1);
+        
+        // Trouver le véhicule le plus économique (consommation > 0)
+        let minIndex = -1;
+        let minValue = Infinity;
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] > 0 && data[i] < minValue) {
+                minValue = data[i];
+                minIndex = i;
+            }
+        }
+        
+        // Trouver le véhicule le moins économique
+        let maxIndex = 0;
+        for (let i = 1; i < data.length; i++) {
+            if (data[i] > data[maxIndex]) {
+                maxIndex = i;
+            }
+        }
+        
+        // Afficher les statistiques
+        document.getElementById('consommationMoyenne').textContent = consommationMoyenne.toFixed(1) + ' L/100km';
+        
+        if (minIndex >= 0) {
+            document.getElementById('vehiculePlusEconomique').textContent = labels[minIndex] + ' (' + data[minIndex].toFixed(1) + ' L/100km)';
+        } else {
+            document.getElementById('vehiculePlusEconomique').textContent = 'N/A';
+        }
+        
+        document.getElementById('vehiculeMoinsEconomique').textContent = labels[maxIndex] + ' (' + data[maxIndex].toFixed(1) + ' L/100km)';
+        
+        // Calculer la moyenne mobile pour une courbe plus dynamique
+        function calculerMoyenneMobile(data, periode = 2) {
+            const result = [];
+            
+            // Filtrer les valeurs nulles ou négatives
+            const filteredData = [];
+            const filteredIndices = [];
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] > 0) {
+                    filteredData.push(data[i]);
+                    filteredIndices.push(i);
+                }
+            }
+            
+            if (filteredData.length <= 1) {
+                return data.map(() => null);
+            }
+            
+            // Calculer la moyenne mobile pour chaque point
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] <= 0) {
+                    result.push(null); // Garder les valeurs nulles ou négatives comme null
+                    continue;
+                }
+                
+                let somme = 0;
+                let count = 0;
+                
+                // Calculer la moyenne sur la période spécifiée
+                for (let j = Math.max(0, i - periode); j <= Math.min(data.length - 1, i + periode); j++) {
+                    if (data[j] > 0) {
+                        somme += data[j];
+                        count++;
+                    }
+                }
+                
+                result.push(count > 0 ? somme / count : null);
+            }
+            
+            return result;
+        }
+        
+        // Calculer les données pour la courbe dynamique
+        const courbeDynamiqueData = calculerMoyenneMobile(data);
+        
+        // Créer le graphique de consommation
+        const ctx = document.getElementById('consommationChart').getContext('2d');
+        const consommationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Consommation moyenne (L/100km)',
+                        data: data,
+                        backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        borderWidth: 1,
+                        order: 2,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.8
+                    },
+                    {
+                        label: 'Courbe dynamique',
+                        data: courbeDynamiqueData,
+                        type: 'line',
+                        fill: {
+                            target: 'origin',
+                            above: 'rgba(52, 152, 219, 0.2)'
+                        },
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: 'rgba(52, 152, 219, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        tension: 0.4,
+                        order: 1,
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                },
+                animations: {
+                    colors: {
+                        type: 'color',
+                        duration: 1000
+                    },
+                    y: {
+                        from: 0
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Consommation (L/100km)',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            },
+                            padding: 10
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            callback: function(value) {
+                                return value.toFixed(1) + ' L/100km';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(200, 200, 200, 0.2)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            autoSkip: true,
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: {
+                                size: 10
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toFixed(1) + ' L/100km';
+                                }
+                                return label;
+                            },
+                            footer: function(context) {
+                                // Ajouter des informations supplémentaires
+                                const value = context[0].parsed.y;
+                                if (value === null) return '';
+                                
+                                const moyenne = data.filter(d => d > 0).reduce((a, b) => a + b, 0) / data.filter(d => d > 0).length;
+                                
+                                if (value < moyenne * 0.7) {
+                                    return 'Très économique ('+ Math.round((1 - value/moyenne) * 100) +'% de moins que la moyenne)';
+                                } else if (value < moyenne * 0.9) {
+                                    return 'Économique ('+ Math.round((1 - value/moyenne) * 100) +'% de moins que la moyenne)';
+                                } else if (value > moyenne * 1.3) {
+                                    return 'Consommation élevée (+'+ Math.round((value/moyenne - 1) * 100) +'% vs moyenne)';
+                                } else if (value > moyenne * 1.1) {
+                                    return 'Consommation supérieure à la moyenne (+'+ Math.round((value/moyenne - 1) * 100) +'%)';
+                                } else {
+                                    return 'Consommation proche de la moyenne';
+                                }
+                            }
+                        },
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        footerFont: {
+                            size: 12,
+                            style: 'italic'
+                        },
+                        padding: 12,
+                        displayColors: true,
+                        usePointStyle: true
+                    }
+                }
+            }
+        });
+        
+        // Données fictives pour le graphique d'écart avec constructeur
+        // Dans une application réelle, ces données viendraient du backend
+        const ecartCtx = document.getElementById('ecartChart').getContext('2d');
+        const ecartChart = new Chart(ecartCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Essence', 'Diesel', 'Hybride', 'Électrique'],
+                datasets: [{
+                    label: 'Écart moyen avec données constructeur (%)',
+                    data: [15.2, 12.8, 8.5, 5.2],
+                    backgroundColor: [
+                        'rgba(231, 76, 60, 0.7)',
+                        'rgba(241, 196, 15, 0.7)',
+                        'rgba(52, 152, 219, 0.7)',
+                        'rgba(46, 204, 113, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(231, 76, 60, 1)',
+                        'rgba(241, 196, 15, 1)',
+                        'rgba(52, 152, 219, 1)',
+                        'rgba(46, 204, 113, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Écart (%)',
+                            font: {
+                                size: 10
+                            }
+                        },
+                        ticks: {
+                            font: {
+                                size: 9
+                            }
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            font: {
+                                size: 9
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Fonction de recherche dans le tableau
+        document.getElementById('searchConsommation').addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('tbody tr');
+            
+            tableRows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                if (rowText.includes(searchText)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

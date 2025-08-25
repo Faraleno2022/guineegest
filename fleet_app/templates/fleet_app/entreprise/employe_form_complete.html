@@ -1,0 +1,495 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if form.instance.pk %}Modifier{% else %}Ajouter{% endif %} un Employé
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .charges-sociales-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .charges-sociales-card .form-check-label {
+        color: white;
+        font-weight: 500;
+    }
+    
+    .charges-sociales-card .form-text {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .bareme-info {
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .taux-custom {
+        background: rgba(255,255,255,0.9);
+        border-radius: 8px;
+        padding: 0.8rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    .taux-custom .form-control {
+        background: white;
+        border: 1px solid #ddd;
+    }
+    
+    .section-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-badge {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin: 0.2rem;
+        display: inline-block;
+        border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+    
+    .form-field-group {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .charge-option {
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .charge-option.active {
+        border-color: rgba(255,255,255,0.8);
+        background: rgba(255,255,255,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow-lg">
+        <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-user-plus me-2"></i>
+                {% if form.instance.pk %}Modifier{% else %}Ajouter{% endif %} un Employé
+            </h5>
+            <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="post" id="employeForm">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <!-- SECTION 1: INFORMATIONS PERSONNELLES -->
+                    <div class="col-lg-6">
+                        <div class="section-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user me-2"></i>Informations Personnelles
+                            </h6>
+                        </div>
+                        
+                        <div class="form-field-group">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.matricule.id_for_label }}" class="form-label">
+                                        <i class="fas fa-id-badge me-1"></i>Matricule *
+                                    </label>
+                                    {{ form.matricule }}
+                                    {% if form.matricule.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.matricule.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.statut.id_for_label }}" class="form-label">
+                                        <i class="fas fa-toggle-on me-1"></i>Statut *
+                                    </label>
+                                    {{ form.statut }}
+                                    {% if form.statut.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.statut.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.nom.id_for_label }}" class="form-label">
+                                        <i class="fas fa-user me-1"></i>Nom *
+                                    </label>
+                                    {{ form.nom }}
+                                    {% if form.nom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.nom.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.prenom.id_for_label }}" class="form-label">
+                                        <i class="fas fa-user me-1"></i>Prénom *
+                                    </label>
+                                    {{ form.prenom }}
+                                    {% if form.prenom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.prenom.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.fonction.id_for_label }}" class="form-label">
+                                        <i class="fas fa-briefcase me-1"></i>Fonction *
+                                    </label>
+                                    {{ form.fonction }}
+                                    {% if form.fonction.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.fonction.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.telephone.id_for_label }}" class="form-label">
+                                        <i class="fas fa-phone me-1"></i>Téléphone
+                                    </label>
+                                    {{ form.telephone }}
+                                    {% if form.telephone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.telephone.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.date_embauche.id_for_label }}" class="form-label">
+                                        <i class="fas fa-calendar me-1"></i>Date d'embauche
+                                    </label>
+                                    {{ form.date_embauche }}
+                                    {% if form.date_embauche.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.date_embauche.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- SECTION CALCUL SALAIRE -->
+                        <div class="section-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calculator me-2"></i>Configuration Salaire
+                            </h6>
+                        </div>
+                        
+                        <div class="form-field-group">
+                            <div class="form-check mb-3">
+                                {{ form.calcul_salaire_auto }}
+                                <label class="form-check-label" for="{{ form.calcul_salaire_auto.id_for_label }}">
+                                    <strong>{{ form.calcul_salaire_auto.label }}</strong>
+                                </label>
+                                <div class="form-text">{{ form.calcul_salaire_auto.help_text }}</div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label for="{{ form.salaire_journalier.id_for_label }}" class="form-label">
+                                        <i class="fas fa-money-bill-wave me-1"></i>Salaire de Base (GNF) *
+                                    </label>
+                                    {{ form.salaire_journalier }}
+                                    <div class="form-text">
+                                        <span class="info-badge">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Sera calculé automatiquement si l'option ci-dessus est activée
+                                        </span>
+                                    </div>
+                                    {% if form.salaire_journalier.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.salaire_journalier.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.taux_horaire_specifique.id_for_label }}" class="form-label">
+                                        <i class="fas fa-clock me-1"></i>Taux Horaire Spécifique
+                                    </label>
+                                    {{ form.taux_horaire_specifique }}
+                                    {% if form.taux_horaire_specifique.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.taux_horaire_specifique.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SECTION 2: CHARGES SOCIALES GUINÉENNES -->
+                    <div class="col-lg-6">
+                        <div class="charges-sociales-card">
+                            <h6 class="mb-3">
+                                <i class="fas fa-university me-2"></i>
+                                Charges Sociales Guinéennes
+                            </h6>
+                            <p class="mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Configurez les charges sociales à appliquer pour cet employé selon la réglementation guinéenne.
+                            </p>
+                            
+                            <!-- CNSS -->
+                            <div class="charge-option" id="cnssOption">
+                                <div class="form-check mb-2">
+                                    {{ form.appliquer_cnss }}
+                                    <label class="form-check-label" for="{{ form.appliquer_cnss.id_for_label }}">
+                                        <strong>{{ form.appliquer_cnss.label }}</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text mb-2">{{ form.appliquer_cnss.help_text }}</div>
+                                
+                                <div class="bareme-info">
+                                    <h6><i class="fas fa-chart-bar me-2"></i>Barème CNSS Standard :</h6>
+                                    <ul class="mb-2">
+                                        <li><strong>Salarié :</strong> 5% du salaire brut</li>
+                                        <li><strong>Employeur :</strong> 18% du salaire brut</li>
+                                    </ul>
+                                    <small>Exemple : Salaire 2M GNF → CNSS salarié = 100K, CNSS employeur = 360K</small>
+                                </div>
+                                
+                                <div class="taux-custom" id="cnssCustom">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="{{ form.taux_cnss_salarie_custom.id_for_label }}" class="form-label text-dark">
+                                                {{ form.taux_cnss_salarie_custom.label }}
+                                            </label>
+                                            {{ form.taux_cnss_salarie_custom }}
+                                            <div class="form-text text-muted">{{ form.taux_cnss_salarie_custom.help_text }}</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="{{ form.taux_cnss_employeur_custom.id_for_label }}" class="form-label text-dark">
+                                                {{ form.taux_cnss_employeur_custom.label }}
+                                            </label>
+                                            {{ form.taux_cnss_employeur_custom }}
+                                            <div class="form-text text-muted">{{ form.taux_cnss_employeur_custom.help_text }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- RTS -->
+                            <div class="charge-option" id="rtsOption">
+                                <div class="form-check mb-2">
+                                    {{ form.appliquer_rts }}
+                                    <label class="form-check-label" for="{{ form.appliquer_rts.id_for_label }}">
+                                        <strong>{{ form.appliquer_rts.label }}</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text mb-2">{{ form.appliquer_rts.help_text }}</div>
+                                
+                                <div class="bareme-info">
+                                    <h6><i class="fas fa-chart-line me-2"></i>Barème RTS Progressif :</h6>
+                                    <ul class="mb-0">
+                                        <li>0 à 1M GNF : <strong>0%</strong></li>
+                                        <li>1M à 1.5M GNF : <strong>10%</strong></li>
+                                        <li>1.5M à 2M GNF : <strong>15%</strong></li>
+                                        <li>2M à 4M GNF : <strong>20%</strong></li>
+                                        <li>4M à 6M GNF : <strong>25%</strong></li>
+                                        <li>Plus de 6M GNF : <strong>35%</strong></li>
+                                    </ul>
+                                    <small class="mt-2 d-block">Calculé après déduction CNSS salarié</small>
+                                </div>
+                            </div>
+                            
+                            <!-- VF -->
+                            <div class="charge-option" id="vfOption">
+                                <div class="form-check mb-2">
+                                    {{ form.appliquer_vf }}
+                                    <label class="form-check-label" for="{{ form.appliquer_vf.id_for_label }}">
+                                        <strong>{{ form.appliquer_vf.label }}</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text mb-2">{{ form.appliquer_vf.help_text }}</div>
+                                
+                                <div class="bareme-info">
+                                    <h6><i class="fas fa-percentage me-2"></i>Taux VF :</h6>
+                                    <p class="mb-2">Entre <strong>7%</strong> et <strong>10%</strong> du chiffre d'affaires</p>
+                                    <small>Pour petites entreprises ou travailleurs indépendants</small>
+                                </div>
+                                
+                                <div class="taux-custom" id="vfCustom">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="{{ form.taux_vf_custom.id_for_label }}" class="form-label text-dark">
+                                                {{ form.taux_vf_custom.label }}
+                                            </label>
+                                            {{ form.taux_vf_custom }}
+                                            <div class="form-text text-muted">{{ form.taux_vf_custom.help_text }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- BOUTONS D'ACTION -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-1"></i>
+                                {% if form.instance.pk %}Mettre à jour{% else %}Enregistrer{% endif %} l'employé
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Gestion de l'affichage des taux personnalisés
+    function toggleCustomRates() {
+        // CNSS
+        if ($('#appliquerCNSS').is(':checked')) {
+            $('#cnssOption').addClass('active');
+            $('#cnssCustom').slideDown();
+        } else {
+            $('#cnssOption').removeClass('active');
+            $('#cnssCustom').slideUp();
+        }
+        
+        // VF
+        if ($('#appliquerVF').is(':checked')) {
+            $('#vfOption').addClass('active');
+            $('#vfCustom').slideDown();
+        } else {
+            $('#vfOption').removeClass('active');
+            $('#vfCustom').slideUp();
+        }
+        
+        // RTS (pas de taux personnalisé, juste l'activation)
+        if ($('#appliquerRTS').is(':checked')) {
+            $('#rtsOption').addClass('active');
+        } else {
+            $('#rtsOption').removeClass('active');
+        }
+    }
+    
+    // Initialiser l'affichage
+    toggleCustomRates();
+    
+    // Écouter les changements
+    $('#appliquerCNSS, #appliquerRTS, #appliquerVF').on('change', toggleCustomRates);
+    
+    // Gestion du calcul automatique du salaire
+    $('#calculSalaireAuto').on('change', function() {
+        const isAuto = $(this).is(':checked');
+        const salaireField = $('#{{ form.salaire_journalier.id_for_label }}');
+        
+        if (isAuto) {
+            salaireField.attr('placeholder', 'Sera calculé automatiquement depuis les présences');
+            salaireField.prop('readonly', true);
+        } else {
+            salaireField.attr('placeholder', 'Saisir le montant en GNF');
+            salaireField.prop('readonly', false);
+        }
+    });
+    
+    // Initialiser le champ salaire
+    $('#calculSalaireAuto').trigger('change');
+    
+    // Validation du formulaire
+    $('#employeForm').on('submit', function(e) {
+        let isValid = true;
+        let errors = [];
+        
+        // Vérifier les champs obligatoires
+        const requiredFields = ['matricule', 'nom', 'prenom', 'fonction', 'salaire_journalier'];
+        requiredFields.forEach(function(field) {
+            const fieldElement = $(`#id_${field}`);
+            if (!fieldElement.val().trim()) {
+                isValid = false;
+                errors.push(`Le champ ${fieldElement.prev('label').text()} est obligatoire.`);
+                fieldElement.addClass('is-invalid');
+            } else {
+                fieldElement.removeClass('is-invalid');
+            }
+        });
+        
+        // Vérifier les taux personnalisés
+        if ($('#appliquerCNSS').is(':checked')) {
+            const tauxSalarie = parseFloat($('#id_taux_cnss_salarie_custom').val());
+            const tauxEmployeur = parseFloat($('#id_taux_cnss_employeur_custom').val());
+            
+            if (tauxSalarie && (tauxSalarie < 0 || tauxSalarie > 100)) {
+                isValid = false;
+                errors.push('Le taux CNSS salarié doit être entre 0% et 100%.');
+            }
+            
+            if (tauxEmployeur && (tauxEmployeur < 0 || tauxEmployeur > 100)) {
+                isValid = false;
+                errors.push('Le taux CNSS employeur doit être entre 0% et 100%.');
+            }
+        }
+        
+        if ($('#appliquerVF').is(':checked')) {
+            const tauxVF = parseFloat($('#id_taux_vf_custom').val());
+            if (tauxVF && (tauxVF < 7 || tauxVF > 10)) {
+                isValid = false;
+                errors.push('Le taux VF doit être entre 7% et 10%.');
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Erreurs de validation :\n' + errors.join('\n'));
+            return false;
+        }
+        
+        // Afficher un indicateur de chargement
+        $(this).find('button[type="submit"]').prop('disabled', true).html(
+            '<i class="fas fa-spinner fa-spin me-1"></i>Enregistrement...'
+        );
+    });
+});
+</script>
+{% endblock %}

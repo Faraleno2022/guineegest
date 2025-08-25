@@ -1,0 +1,328 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Détail du Produit{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:produit_list' %}">Inventaire - Produits</a></li>
+        <li class="breadcrumb-item active">Détail du produit</li>
+    </ol>
+    
+    <div class="row">
+        <!-- Informations du produit -->
+        <div class="col-xl-4">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-box me-1"></i>
+                        Informations du produit
+                    </div>
+                    <div>
+                        <a href="{% url 'fleet_app:produit_update' produit.id_produit %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Modifier
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%">ID Produit</th>
+                            <td>{{ produit.id_produit }}</td>
+                        </tr>
+                        <tr>
+                            <th>Nom</th>
+                            <td>{{ produit.nom }}</td>
+                        </tr>
+                        <tr>
+                            <th>Catégorie</th>
+                            <td>{{ produit.categorie }}</td>
+                        </tr>
+                        <tr>
+                            <th>Unité</th>
+                            <td>{{ produit.unite }}</td>
+                        </tr>
+                        <tr>
+                            <th>Prix unitaire</th>
+                            <td>{{ produit.prix_unitaire|floatformat:0 }} GNF</td>
+                        </tr>
+                        <tr>
+                            <th>Fournisseur</th>
+                            <td>{{ produit.fournisseur }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date d'ajout</th>
+                            <td>{{ produit.date_ajout|date:"d/m/Y" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- État du stock -->
+        <div class="col-xl-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-1"></i>
+                    État du stock
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white mb-4">
+                                <div class="card-body">
+                                    <h2 class="text-center">{{ stock_actuel }}</h2>
+                                    <p class="text-center mb-0">Stock actuel</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-warning text-white mb-4">
+                                <div class="card-body">
+                                    <h2 class="text-center">{{ produit.seuil_minimum }}</h2>
+                                    <p class="text-center mb-0">Seuil minimum</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card {% if statut_alerte == 'ALERTE' %}bg-danger{% else %}bg-success{% endif %} text-white mb-4">
+                                <div class="card-body">
+                                    <h2 class="text-center">{{ statut_alerte }}</h2>
+                                    <p class="text-center mb-0">Statut</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Graphique d'évolution du stock (placeholder) -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-chart-line me-1"></i>
+                            Évolution du stock
+                        </div>
+                        <div class="card-body">
+                            <canvas id="stockChart" width="100%" height="40"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Dernières entrées -->
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-arrow-circle-down me-1"></i>
+                        Dernières entrées en stock
+                    </div>
+                    <div>
+                        <a href="{% url 'fleet_app:entree_stock_create_with_product' produit.id_produit %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Nouvelle entrée
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Quantité</th>
+                                    <th>Prix unitaire</th>
+                                    <th>Fournisseur</th>
+                                    <th>Référence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entree in entrees %}
+                                <tr>
+                                    <td>{{ entree.date|date:"d/m/Y" }}</td>
+                                    <td class="text-end">{{ entree.quantite }}</td>
+                                    <td class="text-end">{{ entree.prix_unitaire|floatformat:0 }}</td>
+                                    <td>{{ entree.fournisseur }}</td>
+                                    <td>{{ entree.reference_facture }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">Aucune entrée en stock pour ce produit.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dernières sorties -->
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-arrow-circle-up me-1"></i>
+                        Dernières sorties de stock
+                    </div>
+                    <div>
+                        <a href="{% url 'fleet_app:sortie_stock_create_with_product' produit.id_produit %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Nouvelle sortie
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Quantité</th>
+                                    <th>Destinataire</th>
+                                    <th>Motif</th>
+                                    <th>Référence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sortie in sorties %}
+                                <tr>
+                                    <td>{{ sortie.date|date:"d/m/Y" }}</td>
+                                    <td class="text-end">{{ sortie.quantite }}</td>
+                                    <td>{{ sortie.destinataire }}</td>
+                                    <td>{{ sortie.motif }}</td>
+                                    <td>{{ sortie.reference_bon }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">Aucune sortie de stock pour ce produit.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Historique des mouvements -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-history me-1"></i>
+            Historique des mouvements
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Quantité</th>
+                            <th>Observations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mouvement in mouvements %}
+                        <tr>
+                            <td>{{ mouvement.date|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if mouvement.type_mouvement == 'Entrée' %}
+                                <span class="badge bg-success">{{ mouvement.type_mouvement }}</span>
+                                {% elif mouvement.type_mouvement == 'Sortie' %}
+                                <span class="badge bg-danger">{{ mouvement.type_mouvement }}</span>
+                                {% else %}
+                                <span class="badge bg-warning">{{ mouvement.type_mouvement }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ mouvement.quantite }}</td>
+                            <td>{{ mouvement.observations }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">Aucun mouvement pour ce produit.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Graphique d'évolution du stock (exemple)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Données d'exemple pour le graphique
+        const ctx = document.getElementById('stockChart');
+        
+        // Simuler des données d'évolution du stock sur les 6 derniers mois
+        const labels = ['Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'];
+        const stockData = [
+            {{ stock_actuel|add:"-15" }}, 
+            {{ stock_actuel|add:"-10" }}, 
+            {{ stock_actuel|add:"-5" }}, 
+            {{ stock_actuel|add:"10" }}, 
+            {{ stock_actuel|add:"-8" }}, 
+            {{ stock_actuel }}
+        ];
+        
+        // Créer le graphique
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Niveau de stock',
+                    data: stockData,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }, {
+                    label: 'Seuil minimum',
+                    data: Array(labels.length).fill({{ produit.seuil_minimum }}),
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Évolution du stock sur les 6 derniers mois'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantité'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Mois'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

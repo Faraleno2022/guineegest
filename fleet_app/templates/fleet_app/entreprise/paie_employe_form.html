@@ -1,0 +1,461 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}
+Modifier une Paie
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-money-bill-wave me-2"></i>
+                Modifier une Paie pour {{ employe.prenom }} {{ employe.nom }}
+            </h5>
+            <a href="{% url 'fleet_app:paie_employe_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+            </a>
+        </div>
+        <div class="card-body">
+            <!-- Informations de l'employé -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">Informations de l'employé</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-2">
+                                    <strong>Matricule:</strong> {{ employe.matricule }}
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <strong>Profession:</strong> {{ employe.fonction }}
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <strong>Prénom:</strong> {{ employe.prenom }}
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <strong>Nom:</strong> {{ employe.nom }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section des données pré-chargées -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Données automatiquement chargées pour {{ mois_nom }} {{ annee_actuelle }}
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-2 mb-2">
+                                <strong>Total Jours:</strong><br>
+                                <span class="badge bg-primary">{{ total_jours_mois }}</span>
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <strong>Présences:</strong><br>
+                                <span class="badge bg-success">{{ jours_travailles }}</span>
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <strong>Absences:</strong><br>
+                                <span class="badge bg-warning">{{ jours_absents }}</span>
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <strong>J Repos:</strong><br>
+                                <span class="badge bg-info">{{ jours_repos }}</span>
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <strong>Maladies:</strong><br>
+                                <span class="badge bg-secondary">{{ maladies }}</span>
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <strong>Dimanches:</strong><br>
+                                <span class="badge bg-dark">{{ dimanches_travailles }}</span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <strong>Heures Supplémentaires:</strong> 
+                                <span class="badge bg-warning">{{ total_heures_supp }}h</span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Montant H. Supp (GNF):</strong> 
+                                <span class="badge bg-success">{{ montant_heures_supp|floatformat:0|intcomma }}</span>
+                            </div>
+                        </div>
+                        <hr>
+                        <small class="text-muted">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Ces données ont été automatiquement calculées depuis vos saisies dans 
+                            <strong>Management → Présences</strong> et <strong>Management → Heures Supplémentaires</strong>.
+                            {% if derniere_paie %}
+                            <br><i class="fas fa-history me-1"></i>
+                            Les primes ci-dessous sont pré-remplies avec les valeurs de la dernière paie ({{ derniere_paie.mois }}/{{ derniere_paie.annee }}).
+                            {% endif %}
+                            Vous pouvez modifier les primes et indemnités selon vos besoins.
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Historique des Paies -->
+            {% if historique_paies %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-history me-2"></i>
+                                Historique des 6 dernières paies - Relations intelligentes
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Période</th>
+                                            <th>Salaire Base (GNF)</th>
+                                            <th>Prime Disc. (GNF)</th>
+                                            <th>Cherté Vie (GNF)</th>
+                                            <th>Transport (GNF)</th>
+                                            <th>Net Payé (GNF)</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for paie in historique_paies %}
+                                        <tr {% if paie.mois == mois_actuel and paie.annee == annee_actuelle %}class="table-warning"{% endif %}>
+                                            <td>
+                                                <strong>{{ paie.mois }}/{{ paie.annee }}</strong>
+                                                {% if paie.mois == mois_actuel and paie.annee == annee_actuelle %}
+                                                <span class="badge bg-warning text-dark ms-1">Actuel</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ paie.salaire_base|floatformat:0|intcomma|default:0 }}</td>
+                                            <td>{{ paie.prime_discipline|floatformat:0|intcomma|default:0 }}</td>
+                                            <td>{{ paie.cherete_vie|floatformat:0|intcomma|default:0 }}</td>
+                                            <td>{{ paie.indemnite_transport|floatformat:0|intcomma|default:0 }}</td>
+                                            <td><strong>{{ paie.net_a_payer|floatformat:0|intcomma|default:0 }}</strong></td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                        onclick="copierValeurs({{ paie.prime_discipline|default:0 }}, {{ paie.cherete_vie|default:0 }}, {{ paie.indemnite_transport|default:0 }}, {{ paie.indemnite_logement|default:0 }})">
+                                                    <i class="fas fa-copy"></i> Copier
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                Cliquez sur "Copier" pour utiliser les valeurs d'une paie précédente.
+                                Les relations intelligentes pré-remplissent automatiquement avec la dernière paie.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Tableau récapitulatif complet des informations -->
+                <div class="col-12 mb-4">
+                    <h6 class="border-bottom pb-2 mb-3">Informations complètes de paie</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Salaire de Base</th>
+                                    <th>Total Jours</th>
+                                    <th>Jours de présence</th>
+                                    <th>Absent</th>
+                                    <th>J Repos</th>
+                                    <th>Maladies</th>
+                                    <th>M.Payer</th>
+                                    <th>Férié</th>
+                                    <th>Sundays</th>
+                                    <th>H Supp</th>
+                                    <th>Mt Supp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>{{ salaire_base|floatformat:0 }}</strong></td>
+                                    <td>{{ total_jours_mois }}</td>
+                                    <td>{{ jours_travailles }}</td>
+                                    <td>{{ jours_absents }}</td>
+                                    <td>{{ jours_repos }}</td>
+                                    <td>{{ maladies }}</td>
+                                    <td>{{ maladies_payees }}</td>
+                                    <td>{{ jours_feries }}</td>
+                                    <td>{{ dimanches_travailles }}</td>
+                                    <td><strong>{{ total_heures_supp }}</strong></td>
+                                    <td><strong>{{ montant_heures_supp|floatformat:0 }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Deuxième tableau pour les montants et calculs -->
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Prime Discipline</th>
+                                    <th>Cherté Vie</th>
+                                    <th>Transport</th>
+                                    <th>Logement</th>
+                                    <th>Salaire Brut</th>
+                                    <th>CNSS (5%)</th>
+                                    <th>RTS</th>
+                                    <th>Avance</th>
+                                    <th>Sanction</th>
+                                    <th>Net à Payer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ paie.prime_discipline|floatformat:0 }}</td>
+                                    <td>{{ paie.cherte_vie|floatformat:0 }}</td>
+                                    <td>{{ paie.transport|floatformat:0 }}</td>
+                                    <td>{{ paie.logement|floatformat:0 }}</td>
+                                    <td><strong>{{ paie.salaire_brut|floatformat:0 }}</strong></td>
+                                    <td>{{ paie.cnss|floatformat:0 }}</td>
+                                    <td>{{ paie.rts|floatformat:0 }}</td>
+                                    <td>{{ paie.avances|floatformat:0 }}</td>
+                                    <td>{{ paie.sanctions|floatformat:0 }}</td>
+                                    <td><strong class="text-success">{{ paie.salaire_net|floatformat:0 }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Champs modifiables -->
+                <div class="col-md-12">
+                    <h6 class="border-bottom pb-2 mb-3">Indemnités et primes modifiables</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="prime_discipline" class="form-label">Prime Discipline (GNF)</label>
+                            <input type="number" class="form-control" id="prime_discipline" name="prime_discipline" 
+                                   value="{{ paie.prime_discipline|default:0 }}" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="cherte_vie" class="form-label">Cherté de vie (GNF)</label>
+                            <input type="number" class="form-control" id="cherte_vie" name="cherte_vie" 
+                                   value="{{ paie.cherete_vie|default:0 }}" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="transport" class="form-label">Indemnité Transport (GNF)</label>
+                            <input type="number" class="form-control" id="transport" name="transport" 
+                                   value="{{ paie.indemnite_transport|default:0 }}" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="logement" class="form-label">Indemnité Logement (GNF)</label>
+                            <input type="number" class="form-control" id="logement" name="logement" 
+                                   value="{{ paie.indemnite_logement|default:0 }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                    
+                    <!-- Deuxième rangée pour avances et sanctions -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="avances" class="form-label">Avances (GNF)</label>
+                            <input type="number" class="form-control" id="avances" name="avances" 
+                                   value="{{ paie.avance_sur_salaire|default:0 }}" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="sanctions" class="form-label">Sanctions (GNF)</label>
+                            <input type="number" class="form-control" id="sanctions" name="sanctions" 
+                                   value="{{ paie.sanction_vol_carburant|default:0 }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tableau récapitulatif des totaux -->
+                <div class="col-12 mb-4">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Brut</th>
+                                    <th>Net</th>
+                                    <th>J Mois</th>
+                                    <th>J Travail</th>
+                                    <th>Dim</th>
+                                    <th>Dim Payé</th>
+                                    <th>J Repos</th>
+                                    <th>Absent</th>
+                                    <th>Férié</th>
+                                    <th>Net à Payer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ brut }}</td>
+                                    <td>{{ net }}</td>
+                                    <td>{{ jours_mois }}</td>
+                                    <td>{{ jours_travail }}</td>
+                                    <td>{{ dimanches }}</td>
+                                    <td>{{ dimanches_payes }}</td>
+                                    <td>{{ jours_repos }}</td>
+                                    <td>{{ absences }}</td>
+                                    <td>{{ ferie }}</td>
+                                    <td><strong>{{ net_a_payer }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Enregistrer les modifications
+                    </button>
+                    <a href="{% url 'fleet_app:paie_employe_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ajouter la classe form-control à tous les inputs du formulaire
+        const formInputs = document.querySelectorAll('form input, form select, form textarea');
+        formInputs.forEach(input => {
+            input.classList.add('form-control');
+        });
+        
+        // Pré-remplir les champs avec les valeurs par défaut intelligentes
+        {% if prime_discipline_defaut %}
+        const primeDisciplineField = document.querySelector('input[name="prime_discipline"]');
+        if (primeDisciplineField && !primeDisciplineField.value) {
+            primeDisciplineField.value = {{ prime_discipline_defaut }};
+        }
+        {% endif %}
+        
+        {% if cherete_vie_defaut %}
+        const chereteVieField = document.querySelector('input[name="cherete_vie"]');
+        if (chereteVieField && !chereteVieField.value) {
+            chereteVieField.value = {{ cherete_vie_defaut }};
+        }
+        {% endif %}
+        
+        {% if indemnite_transport_defaut %}
+        const transportField = document.querySelector('input[name="indemnite_transport"]');
+        if (transportField && !transportField.value) {
+            transportField.value = {{ indemnite_transport_defaut }};
+        }
+        {% endif %}
+        
+        {% if indemnite_logement_defaut %}
+        const logementField = document.querySelector('input[name="indemnite_logement"]');
+        if (logementField && !logementField.value) {
+            logementField.value = {{ indemnite_logement_defaut }};
+        }
+        {% endif %}
+        
+        // Fonction pour calculer les totaux en temps réel
+        function calculateTotals() {
+            const salaire_base = {{ salaire_base }};
+            const primeDiscipline = parseFloat(document.querySelector('input[name="prime_discipline"]').value) || 0;
+            const chereteVie = parseFloat(document.querySelector('input[name="cherete_vie"]').value) || 0;
+            const transport = parseFloat(document.querySelector('input[name="indemnite_transport"]').value) || 0;
+            const logement = parseFloat(document.querySelector('input[name="indemnite_logement"]').value) || 0;
+            const montant_heures_supp = {{ montant_heures_supp }};
+            
+            // Calcul du salaire brut
+            const salaire_brut = salaire_base + primeDiscipline + chereteVie + transport + logement + montant_heures_supp;
+            
+            // Calcul des déductions
+            const cnss = salaire_brut * 0.05;
+            const avances = {{ avances }};
+            const sanctions = {{ sanctions }};
+            
+            // Net à payer
+            const net_a_payer = salaire_brut - cnss - avances - sanctions;
+            
+            // Affichage en temps réel (si vous avez des éléments d'affichage)
+            console.log('💰 Calculs en temps réel:');
+            console.log('Salaire Brut:', salaire_brut.toLocaleString(), 'GNF');
+            console.log('CNSS (5%):', cnss.toLocaleString(), 'GNF');
+            console.log('Net à Payer:', net_a_payer.toLocaleString(), 'GNF');
+        }
+        
+        // Ajouter les écouteurs d'événements pour les champs modifiables
+        const modifiableFields = [
+            'input[name="prime_discipline"]',
+            'input[name="cherete_vie"]',
+            'input[name="indemnite_transport"]',
+            'input[name="indemnite_logement"]'
+        ];
+        
+        modifiableFields.forEach(fieldSelector => {
+            const field = document.querySelector(fieldSelector);
+            if (field) {
+                field.addEventListener('input', calculateTotals);
+            }
+        });
+        
+        // Calcul initial
+        calculateTotals();
+    });
+    
+    // Fonction pour copier les valeurs d'une paie précédente
+    function copierValeurs(prime, cherete, transport, logement) {
+        document.querySelector('input[name="prime_discipline"]').value = prime;
+        document.querySelector('input[name="cherete_vie"]').value = cherete;
+        document.querySelector('input[name="indemnite_transport"]').value = transport;
+        document.querySelector('input[name="indemnite_logement"]').value = logement;
+        
+        // Déclencher le recalcul
+        document.querySelector('input[name="prime_discipline"]').dispatchEvent(new Event('input'));
+        
+        // Notification visuelle
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            Valeurs copiées avec succès !
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toast);
+        
+        // Supprimer la notification après 3 secondes
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+</script>
+{% endblock %}

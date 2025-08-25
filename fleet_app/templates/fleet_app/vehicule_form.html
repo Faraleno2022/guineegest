@@ -1,0 +1,185 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Ajouter un Véhicule{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Ajouter un nouveau véhicule</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.id_vehicule.id_for_label }}" class="form-label">ID Véhicule*</label>
+                                    {{ form.id_vehicule }}
+                                    {% if form.id_vehicule.errors %}
+                                        <div class="text-danger">{{ form.id_vehicule.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.immatriculation.id_for_label }}" class="form-label">Immatriculation*</label>
+                                    {{ form.immatriculation }}
+                                    {% if form.immatriculation.errors %}
+                                        <div class="text-danger">{{ form.immatriculation.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.statut_actuel.id_for_label }}" class="form-label">Statut*</label>
+                                    {{ form.statut_actuel }}
+                                    {% if form.statut_actuel.errors %}
+                                        <div class="text-danger">{{ form.statut_actuel.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.marque.id_for_label }}" class="form-label">Marque*</label>
+                                    {{ form.marque }}
+                                    {% if form.marque.errors %}
+                                        <div class="text-danger">{{ form.marque.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.modele.id_for_label }}" class="form-label">Modèle*</label>
+                                    {{ form.modele }}
+                                    {% if form.modele.errors %}
+                                        <div class="text-danger">{{ form.modele.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.categorie.id_for_label }}" class="form-label">Catégorie*</label>
+                                    {{ form.categorie }}
+                                    {% if form.categorie.errors %}
+                                        <div class="text-danger">{{ form.categorie.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.type_moteur.id_for_label }}" class="form-label">Type de moteur*</label>
+                                    {{ form.type_moteur }}
+                                    {% if form.type_moteur.errors %}
+                                        <div class="text-danger">{{ form.type_moteur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.kilometrage_initial.id_for_label }}" class="form-label">Kilométrage initial*</label>
+                                    {{ form.kilometrage_initial }}
+                                    {% if form.kilometrage_initial.errors %}
+                                        <div class="text-danger">{{ form.kilometrage_initial.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.affectation.id_for_label }}" class="form-label">Affectation</label>
+                                    {{ form.affectation }}
+                                    {% if form.affectation.errors %}
+                                        <div class="text-danger">{{ form.affectation.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_acquisition.id_for_label }}" class="form-label">Date d'acquisition*</label>
+                                    {{ form.date_acquisition }}
+                                    {% if form.date_acquisition.errors %}
+                                        <div class="text-danger">{{ form.date_acquisition.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_mise_service.id_for_label }}" class="form-label">Date de mise en service*</label>
+                                    {{ form.date_mise_service }}
+                                    {% if form.date_mise_service.errors %}
+                                        <div class="text-danger">{{ form.date_mise_service.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.numero_chassis.id_for_label }}" class="form-label">Numéro de châssis</label>
+                                    {{ form.numero_chassis }}
+                                    {% if form.numero_chassis.errors %}
+                                        <div class="text-danger">{{ form.numero_chassis.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.numero_moteur.id_for_label }}" class="form-label">Numéro de moteur</label>
+                                    {{ form.numero_moteur }}
+                                    {% if form.numero_moteur.errors %}
+                                        <div class="text-danger">{{ form.numero_moteur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ form.observations.id_for_label }}" class="form-label">Observations</label>
+                                    {{ form.observations }}
+                                    {% if form.observations.errors %}
+                                        <div class="text-danger">{{ form.observations.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'fleet_app:vehicule_list' %}" class="btn btn-secondary">Annuler</a>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialisation des champs de date
+        $('input[type="date"]').each(function() {
+            if (!$(this).val()) {
+                $(this).val(new Date().toISOString().split('T')[0]);
+            }
+        });
+    });
+</script>
+{% endblock %}

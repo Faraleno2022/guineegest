@@ -1,0 +1,418 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% load humanize %}
+
+{% block title %}Configuration des Salaires par Statut{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-salaire-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 20px 0;
+    }
+    
+    .config-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+        margin-bottom: 20px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .config-header {
+        background: #6c757d;
+        color: white;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .config-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .config-header p {
+        margin: 8px 0 0 0;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+    
+    .employe-selector {
+        padding: 25px;
+        background: #ffffff;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .employe-selector h4 {
+        color: #495057;
+        margin-bottom: 15px;
+        font-weight: 500;
+        font-size: 1.1rem;
+    }
+    
+    .form-select-lg {
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        padding: 12px 16px;
+        font-size: 1rem;
+        transition: border-color 0.15s ease-in-out;
+    }
+    
+    .form-select-lg:focus {
+        border-color: #6c757d;
+        box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    }
+    
+    .configuration-form {
+        padding: 25px;
+    }
+    
+    .employe-info {
+        background: #f8f9fa;
+        color: #495057;
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+    }
+    
+    .employe-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #6c757d;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0 auto 15px;
+    }
+    
+    .statut-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .statut-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 20px;
+        transition: border-color 0.15s ease-in-out;
+    }
+    
+    .statut-card:hover {
+        border-color: #6c757d;
+    }
+    
+    .statut-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 1rem;
+    }
+    
+    .statut-code {
+        background: #e9ecef;
+        color: #495057;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        display: inline-block;
+        margin-bottom: 12px;
+    }
+    
+    .montant-input {
+        position: relative;
+    }
+    
+    .montant-input input {
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        padding: 10px 50px 10px 12px;
+        font-size: 1rem;
+        font-weight: 400;
+        transition: border-color 0.15s ease-in-out;
+    }
+    
+    .montant-input input:focus {
+        border-color: #6c757d;
+        box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    }
+    
+    .currency-suffix {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+    
+    .save-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-top: 1px solid #dee2e6;
+        text-align: center;
+    }
+    
+    .btn-save {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .btn-save:hover {
+        background: #5a6268;
+        color: white;
+    }
+    
+    .resume-table {
+        background: white;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e9ecef;
+    }
+    
+    .resume-table .table {
+        margin: 0;
+    }
+    
+    .resume-table .table thead th {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 15px;
+        font-weight: 500;
+    }
+    
+    .resume-table .table tbody td {
+        padding: 12px 15px;
+        border-color: #dee2e6;
+        vertical-align: middle;
+    }
+    
+    .employe-badge {
+        background: #f8f9fa;
+        color: #495057;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-weight: 500;
+        display: inline-block;
+        border: 1px solid #dee2e6;
+    }
+    
+    .montant-badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    
+    .config-count {
+        background: #f8f9fa;
+        color: #6c757d;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        border: 1px solid #dee2e6;
+    }
+    
+    /* Design simple et épuré */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="config-salaire-container">
+    <div class="container">
+        <!-- En-tête principal -->
+        <div class="config-card">
+            <div class="config-header">
+                <h2><i class="fas fa-coins me-3"></i>Configuration des Salaires</h2>
+                <p>Configurez les montants de salaire par statut de présence pour chaque employé</p>
+            </div>
+            
+            <!-- Sélecteur d'employé -->
+            <div class="employe-selector">
+                <h4><i class="fas fa-user-cog me-2"></i>Sélectionner un employé</h4>
+                <form method="get" class="row">
+                    <div class="col-md-10">
+                        {{ form.employe|add_class:"form-select form-select-lg" }}
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Formulaire de configuration -->
+            {% if employe_selectionne_id %}
+            <div class="configuration-form fade-in">
+                {% for config in configurations_resume %}
+                    {% if config.employe.id == employe_selectionne_id %}
+                    <div class="employe-info">
+                        <div class="employe-avatar">
+                            {{ config.employe.nom.0 }}{{ config.employe.prenom.0 }}
+                        </div>
+                        <h3>{{ config.employe.nom }} {{ config.employe.prenom }}</h3>
+                        <p><i class="fas fa-id-badge me-2"></i>{{ config.employe.matricule }}</p>
+                        <p><i class="fas fa-briefcase me-2"></i>{{ config.employe.fonction|default:"Non spécifié" }}</p>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="statut-grid">
+                        {% for field in form %}
+                            {% if field.name != 'employe' %}
+                            <div class="statut-card">
+                                <div class="statut-label">{{ field.label }}</div>
+                                <div class="statut-code">{{ field.help_text }}</div>
+                                <div class="montant-input">
+                                    {{ field|add_class:"form-control form-control-lg" }}
+                                    <span class="currency-suffix">GNF</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="save-section">
+                        <button type="submit" class="btn btn-save">
+                            <i class="fas fa-save me-2"></i>Enregistrer les Configurations
+                        </button>
+                        <p class="mt-3 text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Les montants sont en Francs Guinéens (GNF). Laissez à 0 pour les statuts non rémunérés.
+                        </p>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Tableau récapitulatif -->
+        <div class="config-card">
+            <div class="config-header">
+                <h3><i class="fas fa-table me-2"></i>Récapitulatif des Configurations</h3>
+            </div>
+            
+            <div class="resume-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Employé</th>
+                            <th>Configurations</th>
+                            <th>Total Montant (GNF)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for config in configurations_resume %}
+                        <tr>
+                            <td>
+                                <div class="employe-badge">
+                                    <strong>{{ config.employe.nom }} {{ config.employe.prenom }}</strong><br>
+                                    <small>{{ config.employe.matricule }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="config-count">{{ config.nb_configurations }} statuts configurés</span>
+                            </td>
+                            <td>
+                                <span class="montant-badge">{{ config.montant_total|floatformat:0|intcomma }}</span>
+                            </td>
+                            <td>
+                                <a href="?employe={{ config.employe.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit me-1"></i>Modifier
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <i class="fas fa-info-circle me-2"></i>Aucune configuration trouvée
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes de statut
+    const statutCards = document.querySelectorAll('.statut-card');
+    statutCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('fade-in');
+    });
+    
+    // Validation des montants
+    const montantInputs = document.querySelectorAll('input[type="number"]');
+    montantInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            if (value < 0) {
+                this.value = 0;
+            }
+            
+            // Formatage visuel
+            if (value > 0) {
+                this.style.borderColor = '#28a745';
+                this.style.backgroundColor = '#f8fff9';
+            } else {
+                this.style.borderColor = '#e1e8ed';
+                this.style.backgroundColor = 'white';
+            }
+        });
+        
+        // Animation focus
+        input.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'scale(1)';
+        });
+    });
+    
+    // Soumission automatique du sélecteur d'employé
+    const employeSelect = document.querySelector('select[name="employe"]');
+    if (employeSelect) {
+        employeSelect.addEventListener('change', function() {
+            if (this.value) {
+                this.form.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

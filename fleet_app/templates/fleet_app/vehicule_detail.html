@@ -1,0 +1,423 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}{{ vehicule.marque }} {{ vehicule.modele }} - Détails{% endblock %}
+
+{% block page_title %}Détails du véhicule: {{ vehicule.marque }} {{ vehicule.modele }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Informations générales -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2"></i> Informations générales
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="display-1 text-muted">
+                        <i class="fas fa-car"></i>
+                    </span>
+                    <h4 class="mt-2">{{ vehicule.marque }} {{ vehicule.modele }}</h4>
+                    <h5 class="text-muted">{{ vehicule.immatriculation }}</h5>
+                    {% if vehicule.statut_actuel == 'Actif' %}
+                        <span class="badge bg-success">Actif</span>
+                    {% elif vehicule.statut_actuel == 'Maintenance' %}
+                        <span class="badge bg-warning">Maintenance</span>
+                    {% elif vehicule.statut_actuel == 'Hors Service' %}
+                        <span class="badge bg-danger">Hors Service</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ vehicule.statut_actuel }}</span>
+                    {% endif %}
+                </div>
+                <hr>
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th>ID Véhicule:</th>
+                            <td>{{ vehicule.id_vehicule }}</td>
+                        </tr>
+                        <tr>
+                            <th>Type de moteur:</th>
+                            <td>{{ vehicule.type_moteur }}</td>
+                        </tr>
+                        <tr>
+                            <th>Catégorie:</th>
+                            <td>{{ vehicule.categorie }}</td>
+                        </tr>
+                        <tr>
+                            <th>Année:</th>
+                            <td>{{ vehicule.annee }}</td>
+                        </tr>
+                        <tr>
+                            <th>Kilométrage:</th>
+                            <td>{{ vehicule.kilometrage_actuel }} km</td>
+                        </tr>
+                        <tr>
+                            <th>Date d'acquisition:</th>
+                            <td>{{ vehicule.date_acquisition }}</td>
+                        </tr>
+                        <tr>
+                            <th>Coût d'acquisition:</th>
+                            <td>{{ vehicule.cout_acquisition }} €</td>
+                        </tr>
+                        <tr>
+                            <th>Chauffeur principal:</th>
+                            <td>{% if vehicule.chauffeur_principal %}<a href="{% url 'fleet_app:chauffeur_detail' vehicule.chauffeur_principal.id %}">{{ vehicule.chauffeur_principal.nom }} {{ vehicule.chauffeur_principal.prenom }}</a>{% else %}Non assigné{% endif %}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between mb-2">
+                    <a href="{% url 'fleet_app:vehicule_edit' vehicule.id_vehicule %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit"></i> Modifier
+                    </a>
+                    <a href="{% url 'fleet_app:vehicule_list' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'fleet_app:vehicule_delete' vehicule.id_vehicule %}" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </a>
+                    <form action="{% url 'fleet_app:force_delete_vehicule' vehicule.id_vehicule %}" method="post" class="ms-2" onsubmit="return confirm('Attention ! Cette action va forcer la suppression du véhicule et de toutes ses données associées. Cette action est irréversible. Êtes-vous sûr de vouloir continuer ?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Forcer la suppression
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Documents administratifs -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-file-alt me-2"></i> Documents administratifs
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Numéro</th>
+                                <th>Date d'émission</th>
+                                <th>Date d'expiration</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if documents_error %}
+                            <tr>
+                                <td colspan="5" class="text-center text-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Impossible de charger les documents (Table manquante)
+                                </td>
+                            </tr>
+                            {% else %}
+                                {% for doc in documents %}
+                                <tr>
+                                    <td>{{ doc.type_document }}</td>
+                                    <td>{{ doc.numero }}</td>
+                                    <td>{{ doc.date_emission }}</td>
+                                    <td>{{ doc.date_expiration }}</td>
+                                    <td>
+                                        {% if doc.date_expiration and doc.date_expiration < today %}
+                                            <span class="badge bg-danger">Expiré</span>
+                                        {% elif doc.date_expiration and doc.date_expiration < today|date:'Y-m-d'|add:'30 days' %}
+                                            <span class="badge bg-warning">Expire bientôt</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Valide</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">Aucun document enregistré</td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal">
+                        <i class="fas fa-plus"></i> Ajouter un document
+                    </button>
+                </div>
+                
+                <!-- Modal pour ajouter un document administratif -->
+                <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="documentModalLabel">Ajouter un document administratif</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post" enctype="multipart/form-data">
+                                <div class="modal-body">
+                                    {% csrf_token %}
+                                    {{ document_form.vehicule }}
+                                    <div class="mb-3">
+                                        <label for="{{ document_form.type_document.id_for_label }}" class="form-label">Type de document</label>
+                                        {{ document_form.type_document }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ document_form.numero.id_for_label }}" class="form-label">Numéro</label>
+                                        {{ document_form.numero }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ document_form.date_emission.id_for_label }}" class="form-label">Date d'émission</label>
+                                        {{ document_form.date_emission }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ document_form.date_expiration.id_for_label }}" class="form-label">Date d'expiration</label>
+                                        {{ document_form.date_expiration }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ document_form.fichier.id_for_label }}" class="form-label">Fichier</label>
+                                        {{ document_form.fichier }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ document_form.commentaires.id_for_label }}" class="form-label">Commentaires</label>
+                                        {{ document_form.commentaires }}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Distances parcourues -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-road me-2"></i> Distances parcourues
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Période</th>
+                                <th>Km début</th>
+                                <th>Km fin</th>
+                                <th>Distance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if distances_error %}
+                            <tr>
+                                <td colspan="4" class="text-center text-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Impossible de charger les données (Table manquante)
+                                </td>
+                            </tr>
+                            {% else %}
+                                {% for distance in distances %}
+                                <tr>
+                                    <td>{{ distance.date_debut }} - {{ distance.date_fin }}</td>
+                                    <td>{{ distance.km_debut }}</td>
+                                    <td>{{ distance.km_fin }}</td>
+                                    <td>{{ distance.distance_parcourue }} km</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucune distance enregistrée</td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                    <a href="{% url 'fleet_app:kpi_distance' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-chart-line"></i> Voir KPI
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Consommation de carburant -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-gas-pump me-2"></i> Consommation de carburant
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Période</th>
+                                <th>Distance</th>
+                                <th>Litres</th>
+                                <th>Conso. aux 100km</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if consommations_error %}
+                            <tr>
+                                <td colspan="4" class="text-center text-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Impossible de charger les données (Table manquante)
+                                </td>
+                            </tr>
+                            {% else %}
+                                {% for consommation in consommations %}
+                                <tr>
+                                    <td>{{ consommation.date_plein1 }} - {{ consommation.date_plein2 }}</td>
+                                    <td>{{ consommation.litres_consommes }} L</td>
+                                    <td>{{ consommation.distance_parcourue }} km</td>
+                                    <td>{{ consommation.consommation_calculee|floatformat:1 }} L/100km</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucune consommation enregistrée</td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                    <a href="{% url 'fleet_app:kpi_consommation' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-chart-line"></i> Voir KPI
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Coûts de fonctionnement -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-money-bill-wave me-2"></i> Coûts de fonctionnement
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Montant</th>
+                                <th>Coût/km</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if couts_fonctionnement_error %}
+                            <tr>
+                                <td colspan="4" class="text-center text-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Impossible de charger les données (Table manquante)
+                                </td>
+                            </tr>
+                            {% else %}
+                                {% for cout in couts_fonctionnement %}
+                                <tr>
+                                    <td>{{ cout.date }}</td>
+                                    <td>{{ cout.type_cout }}</td>
+                                    <td>{{ cout.montant }} €</td>
+                                    <td>{{ cout.cout_par_km|floatformat:2 }} €/km</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucun coût enregistré</td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertes -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-bell me-2"></i> Alertes actives
+            </div>
+            <div class="card-body">
+                {% if alertes_error %}
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Impossible de charger les alertes (Table manquante)
+                    </div>
+                {% else %}
+                    {% if alertes %}
+                        <div class="list-group">
+                            {% for alerte in alertes %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ alerte.type_alerte }}</h6>
+                                        <small>{{ alerte.date_creation }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ alerte.description }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small>
+                                            {% if alerte.niveau_urgence == 'Critique' %}
+                                                <span class="badge bg-danger">Critique</span>
+                                            {% elif alerte.niveau_urgence == 'Élevé' %}
+                                                <span class="badge bg-warning">Élevé</span>
+                                            {% elif alerte.niveau_urgence == 'Moyen' %}
+                                                <span class="badge bg-info">Moyen</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Faible</span>
+                                            {% endif %}
+                                        </small>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-success" title="Marquer comme résolu">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Ignorer">
+                                                <i class="fas fa-eye-slash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted my-3">Aucune alerte active pour ce véhicule</p>
+                    {% endif %}
+                {% endif %}
+                <div class="text-end mt-3">
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus"></i> Créer une alerte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

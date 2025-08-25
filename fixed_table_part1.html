@@ -1,0 +1,35 @@
+<!-- Partie 1: Structure corrigée des colonnes fixes -->
+<div class="table-wrapper">
+    <!-- Colonnes figées -->
+    <div class="fixed-columns">
+        <table class="table table-hover table-bordered fixed-table">
+            <thead class="table-light">
+                <tr>
+                    <th class="align-middle matricule-col text-center col-matricule" rowspan="2"><i class="fas fa-id-card me-1" style="color: #0056b3;"></i> <span style="font-size: 1.1rem; color: #0056b3;">Matricule</span></th>
+                    <th class="align-middle employe-col col-employe" rowspan="2"><i class="fas fa-user me-1" style="color: #0056b3;"></i> <span style="font-size: 1.1rem; color: #0056b3;">Employé</span></th>
+                    <th class="align-middle poste-col col-fonction" rowspan="2"><i class="fas fa-briefcase me-1" style="color: #0056b3;"></i> <span style="font-size: 1.1rem; color: #0056b3;">Fonction</span></th>
+                    <th class="align-middle text-center col-statut" rowspan="2"><i class="fas fa-info-circle me-1"></i> <span style="font-size: 1.1rem;">Statut</span></th>
+                </tr>
+                <tr>
+                    <!-- Ligne vide pour aligner avec la seconde ligne d'en-tête -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in employes_data %}
+                <tr>
+                    <td class="matricule-col">{{ data.employe.matricule }}</td>
+                    <td class="employe-col">{{ data.employe.prenom }} {{ data.employe.nom }}</td>
+                    <td class="poste-col">{{ data.employe.fonction }}</td>
+                    <td>
+                        <!-- Statut global -->
+                        <span class="badge bg-primary shadow-sm" style="font-size: 1rem; padding: 0.4rem 0.7rem; font-weight: 600;">Actif</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">Aucun employé enregistré</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>

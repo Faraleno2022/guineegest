@@ -1,0 +1,68 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Supprimer Entrée de Fiche de Bord{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Confirmation de suppression</h5>
+            <a href="{% url 'fleet_app:fiche_bord_machine_detail' object.fiche_bord.id %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la fiche
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">Attention!</h5>
+                <p>Vous êtes sur le point de supprimer l'entrée de fiche de bord du <strong>{{ object.fiche_bord.date|date:"d/m/Y" }}</strong> à <strong>{{ object.heure|time:"H:i" }}</strong>.</p>
+                <p>Cette action est irréversible.</p>
+                <p>Êtes-vous sûr de vouloir continuer?</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Informations sur l'entrée</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Fiche de bord:</div>
+                        <div class="col-sm-8">{{ object.fiche_bord.date|date:"d/m/Y" }} - {{ object.fiche_bord.machine.nom }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Heure:</div>
+                        <div class="col-sm-8">{{ object.heure|time:"H:i" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Lieu:</div>
+                        <div class="col-sm-8">{{ object.lieu }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Type d'activité:</div>
+                        <div class="col-sm-8">{{ object.type_activite }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Données enregistrées</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Quantité:</div>
+                        <div class="col-sm-8">{{ object.quantite }} {{ object.unite }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Observations:</div>
+                        <div class="col-sm-8">{{ object.observations|default:"Aucune" }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash me-1"></i>Confirmer la suppression
+                </button>
+                <a href="{% url 'fleet_app:fiche_bord_machine_detail' object.fiche_bord.id %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

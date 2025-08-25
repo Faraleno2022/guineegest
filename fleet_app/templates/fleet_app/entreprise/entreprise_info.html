@@ -1,0 +1,453 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Informations de l'Entreprise{% endblock %}
+
+{% block extra_css %}
+<style>
+    .enterprise-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .enterprise-card h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        font-weight: 700;
+    }
+    
+    .enterprise-card p {
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border-left: 4px solid #667eea;
+    }
+    
+    .form-section h3 {
+        color: #667eea;
+        margin-bottom: 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 12px 30px;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .current-logo {
+        max-width: 150px;
+        max-height: 100px;
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .info-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    
+    .preview-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px dotted #ddd;
+    }
+    
+    .preview-item:last-child {
+        border-bottom: none;
+    }
+    
+    .preview-label {
+        font-weight: 600;
+        color: #666;
+    }
+    
+    .preview-value {
+        color: #333;
+    }
+    
+    .alert-info {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+        border: none;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="enterprise-card">
+        <h1>🏢 Informations de l'Entreprise</h1>
+        <p>Configurez les informations de votre entreprise qui apparaîtront sur les bulletins de paie et documents officiels.</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if not has_entreprise %}
+    <div class="alert alert-info" role="alert">
+        <h5><i class="fas fa-info-circle"></i> Première configuration</h5>
+        <p class="mb-0">Vous n'avez pas encore configuré les informations de votre entreprise. Remplissez le formulaire ci-dessous pour que ces informations apparaissent sur vos bulletins de paie.</p>
+    </div>
+    {% else %}
+    <div class="alert alert-success d-flex justify-content-between align-items-center" role="alert">
+        <div>
+            <h5 class="mb-1"><i class="fas fa-check-circle"></i> Informations configurées</h5>
+            <p class="mb-0">Vos informations d'entreprise sont déjà configurées et apparaissent sur vos bulletins de paie.</p>
+        </div>
+        <button type="button" class="btn btn-outline-success" onclick="scrollToForm()">
+            <i class="fas fa-edit"></i> Modifier
+        </button>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="entrepriseForm">
+        {% csrf_token %}
+        
+        <!-- Informations générales -->
+        <div class="form-section">
+            <h3><i class="fas fa-building"></i> Informations Générales</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.nom_entreprise.id_for_label }}" class="form-label">
+                            <strong>Nom de l'entreprise *</strong>
+                        </label>
+                        {{ form.nom_entreprise }}
+                        {% if form.nom_entreprise.errors %}
+                            <div class="text-danger small">{{ form.nom_entreprise.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.forme_juridique.id_for_label }}" class="form-label">
+                            <strong>Forme juridique</strong>
+                        </label>
+                        {{ form.forme_juridique }}
+                        {% if form.forme_juridique.errors %}
+                            <div class="text-danger small">{{ form.forme_juridique.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.nom_responsable.id_for_label }}" class="form-label">
+                            <strong>Nom du responsable</strong>
+                        </label>
+                        {{ form.nom_responsable }}
+                        {% if form.nom_responsable.errors %}
+                            <div class="text-danger small">{{ form.nom_responsable.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.logo.id_for_label }}" class="form-label">
+                            <strong>Logo de l'entreprise</strong>
+                        </label>
+                        {{ form.logo }}
+                        {% if entreprise.logo %}
+                            <div class="mt-2">
+                                <img src="{{ entreprise.logo.url }}" alt="Logo actuel" class="current-logo">
+                                <small class="text-muted d-block">Logo actuel</small>
+                            </div>
+                        {% endif %}
+                        {% if form.logo.errors %}
+                            <div class="text-danger small">{{ form.logo.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coordonnées -->
+        <div class="form-section">
+            <h3><i class="fas fa-map-marker-alt"></i> Coordonnées</h3>
+            <div class="mb-3">
+                <label for="{{ form.adresse.id_for_label }}" class="form-label">
+                    <strong>Adresse complète</strong>
+                </label>
+                {{ form.adresse }}
+                {% if form.adresse.errors %}
+                    <div class="text-danger small">{{ form.adresse.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.telephone.id_for_label }}" class="form-label">
+                            <strong>Téléphone</strong>
+                        </label>
+                        {{ form.telephone }}
+                        {% if form.telephone.errors %}
+                            <div class="text-danger small">{{ form.telephone.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                            <strong>Email</strong>
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.site_web.id_for_label }}" class="form-label">
+                            <strong>Site web</strong>
+                        </label>
+                        {{ form.site_web }}
+                        {% if form.site_web.errors %}
+                            <div class="text-danger small">{{ form.site_web.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations légales -->
+        <div class="form-section">
+            <h3><i class="fas fa-certificate"></i> Informations Légales</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.rccm.id_for_label }}" class="form-label">
+                            <strong>RCCM</strong>
+                        </label>
+                        {{ form.rccm }}
+                        {% if form.rccm.errors %}
+                            <div class="text-danger small">{{ form.rccm.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.nif.id_for_label }}" class="form-label">
+                            <strong>NIF</strong>
+                        </label>
+                        {{ form.nif }}
+                        {% if form.nif.errors %}
+                            <div class="text-danger small">{{ form.nif.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.cnss.id_for_label }}" class="form-label">
+                            <strong>CNSS</strong>
+                        </label>
+                        {{ form.cnss }}
+                        {% if form.cnss.errors %}
+                            <div class="text-danger small">{{ form.cnss.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations bancaires -->
+        <div class="form-section">
+            <h3><i class="fas fa-university"></i> Informations Bancaires (Optionnel)</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.banque.id_for_label }}" class="form-label">
+                            <strong>Nom de la banque</strong>
+                        </label>
+                        {{ form.banque }}
+                        {% if form.banque.errors %}
+                            <div class="text-danger small">{{ form.banque.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.numero_compte.id_for_label }}" class="form-label">
+                            <strong>Numéro de compte</strong>
+                        </label>
+                        {{ form.numero_compte }}
+                        {% if form.numero_compte.errors %}
+                            <div class="text-danger small">{{ form.numero_compte.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Sauvegarder les informations
+            </button>
+            <a href="{% url 'fleet_app:dashboard' %}" class="btn btn-secondary btn-lg ms-3">
+                <i class="fas fa-arrow-left"></i> Retour au tableau de bord
+            </a>
+        </div>
+    </form>
+
+    <!-- Aperçu des informations actuelles -->
+    {% if entreprise %}
+    <div class="form-section mt-4">
+        <h3><i class="fas fa-eye"></i> Aperçu des informations actuelles</h3>
+        <div class="info-preview">
+            {% if entreprise.nom_entreprise %}
+            <div class="preview-item">
+                <span class="preview-label">Entreprise:</span>
+                <span class="preview-value">{{ entreprise.nom_entreprise }}</span>
+            </div>
+            {% endif %}
+            {% if entreprise.adresse %}
+            <div class="preview-item">
+                <span class="preview-label">Adresse:</span>
+                <span class="preview-value">{{ entreprise.adresse }}</span>
+            </div>
+            {% endif %}
+            {% if entreprise.telephone %}
+            <div class="preview-item">
+                <span class="preview-label">Téléphone:</span>
+                <span class="preview-value">{{ entreprise.telephone }}</span>
+            </div>
+            {% endif %}
+            {% if entreprise.email %}
+            <div class="preview-item">
+                <span class="preview-label">Email:</span>
+                <span class="preview-value">{{ entreprise.email }}</span>
+            </div>
+            {% endif %}
+            {% if entreprise.rccm %}
+            <div class="preview-item">
+                <span class="preview-label">RCCM:</span>
+                <span class="preview-value">{{ entreprise.rccm }}</span>
+            </div>
+            {% endif %}
+            {% if entreprise.nif %}
+            <div class="preview-item">
+                <span class="preview-label">NIF:</span>
+                <span class="preview-value">{{ entreprise.nif }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="mt-3 d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Ces informations apparaîtront automatiquement sur vos bulletins de paie et documents officiels.
+            </small>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="scrollToForm()">
+                <i class="fas fa-edit"></i> Modifier ces informations
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation au scroll
+    const sections = document.querySelectorAll('.form-section');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    sections.forEach(section => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(20px)';
+        section.style.transition = 'all 0.6s ease';
+        observer.observe(section);
+    });
+    
+    // Validation en temps réel
+    const form = document.getElementById('entrepriseForm');
+    const inputs = form.querySelectorAll('input, textarea, select');
+    
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.value.trim() !== '') {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+
+// Fonction pour faire défiler vers le formulaire
+function scrollToForm() {
+    const form = document.getElementById('entrepriseForm');
+    if (form) {
+        form.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+        
+        // Mettre en évidence le formulaire temporairement
+        form.style.transition = 'all 0.3s ease';
+        form.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
+        form.style.transform = 'scale(1.02)';
+        
+        setTimeout(() => {
+            form.style.boxShadow = '';
+            form.style.transform = '';
+        }, 1000);
+        
+        // Focuser sur le premier champ du formulaire
+        const firstInput = form.querySelector('input, textarea, select');
+        if (firstInput) {
+            setTimeout(() => {
+                firstInput.focus();
+            }, 500);
+        }
+    }
+}
+</script>
+{% endblock %}

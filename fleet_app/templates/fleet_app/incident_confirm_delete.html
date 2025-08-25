@@ -1,0 +1,88 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}{{ title }} | Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Confirmation de suppression</h5>
+                </div>
+                <div class="card-body">
+                    <p class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Êtes-vous sûr de vouloir supprimer cet incident de sécurité du 
+                        <strong>{{ incident.date_incident|date:"d/m/Y" }}</strong> 
+                        concernant le véhicule 
+                        <strong>{{ incident.vehicule.marque }} {{ incident.vehicule.modele }} ({{ incident.vehicule.immatriculation }})</strong> ?
+                    </p>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Détails de l'incident</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Véhicule:</th>
+                                    <td>{{ incident.vehicule.marque }} {{ incident.vehicule.modele }} ({{ incident.vehicule.immatriculation }})</td>
+                                </tr>
+                                <tr>
+                                    <th>Date:</th>
+                                    <td>{{ incident.date_incident|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Conducteur:</th>
+                                    <td>{{ incident.conducteur }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Type:</th>
+                                    <td>{{ incident.type_incident }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Gravité:</th>
+                                    <td>
+                                        {% if incident.gravite == 'Faible' %}
+                                            <span class="badge bg-success">{{ incident.gravite }}</span>
+                                        {% elif incident.gravite == 'Moyenne' %}
+                                            <span class="badge bg-warning">{{ incident.gravite }}</span>
+                                        {% elif incident.gravite == 'Élevée' %}
+                                            <span class="badge bg-danger">{{ incident.gravite }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ incident.gravite }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Lieu:</th>
+                                    <td>{{ incident.lieu }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Description:</th>
+                                    <td>{{ incident.description }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'fleet_app:kpi_incidents' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

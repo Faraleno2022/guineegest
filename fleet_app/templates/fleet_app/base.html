@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gestion de Parc Automobile{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS pour export Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- html2pdf pour export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --footer-color: #000000;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Top Navigation Bar */
+        .top-navbar {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .top-navbar .navbar-brand {
+            color: white !important;
+            font-weight: bold;
+            font-size: 1.5rem;
+            padding: 0.5rem 1rem;
+        }
+        
+        .top-navbar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem 1rem;
+            font-size: 0.9rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .top-navbar .nav-link:hover {
+            color: white;
+            border-bottom: 3px solid var(--primary-color);
+        }
+        
+        .top-navbar .nav-link.active {
+            color: white;
+            border-bottom: 3px solid var(--primary-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .top-navbar .nav-link i {
+            margin-right: 6px;
+            width: 16px;
+            text-align: center;
+        }
+        
+        /* Dropdown Menu */
+        .top-navbar .dropdown-menu {
+            margin-top: 0.5rem;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 20px;
+            flex: 1;
+        }
+        
+        /* Cards */
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+        
+        /* Stats */
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .stat-card i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        .stat-card .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--dark-color);
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.9rem;
+            color: #777;
+        }
+        
+        /* Alert Badge */
+        .alert-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: var(--footer-color);
+            color: white;
+            padding: 1.5rem 0;
+            margin-top: auto;
+        }
+        
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Responsive Adjustments */
+        @media (max-width: 992px) {
+            .top-navbar .navbar-collapse {
+                background-color: var(--secondary-color);
+                padding: 1rem;
+                border-radius: 0 0 10px 10px;
+            }
+            
+            .top-navbar .nav-link {
+                border-bottom: none;
+                border-left: 3px solid transparent;
+                padding: 0.7rem 1rem;
+            }
+            
+            .top-navbar .nav-link:hover,
+            .top-navbar .nav-link.active {
+                border-bottom: none;
+                border-left: 3px solid var(--primary-color);
+            }
+        }
+        
+        /* Badge d'alerte dans la barre de navigation */
+        /* Styles pour la recherche dynamique */
+        .search-container {
+            width: 250px;
+        }
+        
+        #search-global {
+            border-radius: 20px;
+            padding-left: 15px;
+            background-color: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        #search-global::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        #search-global:focus {
+            background-color: white;
+            color: #333;
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+        
+        #search-results {
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .search-category {
+            font-size: 0.8rem;
+            color: #666;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .search-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .alert-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: bold;
+            border-radius: 50%;
+            margin-left: 5px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 6px rgba(231, 76, 60, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 15px 10px;
+            }
+            
+            .card {
+                margin-bottom: 15px;
+            }
+            
+            .stat-card .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg top-navbar fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'fleet_app:home' %}">Guinée-Ges</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbar" aria-controls="topNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"><i class="fas fa-bars text-white"></i></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="topNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a href="{% url 'fleet_app:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                            <i class="fas fa-home"></i> Accueil
+                        </a>
+                    </li>
+
+
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="kpiDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-chart-line"></i> KPIs
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="kpiDropdown">
+                            <li>
+                                <a href="{% url 'fleet_app:dashboard' %}" class="dropdown-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:vehicule_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'vehicule_list' %}active{% endif %}">
+                                    <i class="fas fa-car"></i> Véhicules
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:chauffeur_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'chauffeur_list' %}active{% endif %}">
+                                    <i class="fas fa-user-tie"></i> Chauffeurs
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:feuille_route_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'feuille_route_list' %}active{% endif %}">
+                                    <i class="fas fa-route"></i> Feuilles de route
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:kpi_distance' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_distance' %}active{% endif %}">
+                                    <i class="fas fa-road"></i> Distances
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:kpi_consommation' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_consommation' %}active{% endif %}">
+                                    <i class="fas fa-gas-pump"></i> Consommation
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.resolver_match.url_name == 'configuration_salaire' %}active{% endif %}" href="{% url 'fleet_app:configuration_salaire' %}">
+                                <i class="fas fa-coins me-2"></i>Configuration Salaires
+                            </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:kpi_disponibilite' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_disponibilite' %}active{% endif %}">
+                                    <i class="fas fa-check-circle"></i> Disponibilité
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:kpi_utilisation' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_utilisation' %}active{% endif %}">
+                                    <i class="fas fa-chart-line"></i> Utilisation
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:kpi_incidents' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_incidents' %}active{% endif %}">
+                                    <i class="fas fa-exclamation-triangle"></i> Incidents
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:kpi_couts_fonctionnement' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_couts_fonctionnement' %}active{% endif %}">
+                                    <i class="fas fa-tools"></i> Coûts Fonctionnement
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:kpi_couts_financiers' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_couts_financiers' %}active{% endif %}">
+                                    <i class="fas fa-money-bill-wave"></i> Coûts Financiers
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:alerte_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'alerte_list' %}active{% endif %}">
+                                    <i class="fas fa-bell"></i> Alertes
+                                    {% if alerts_count %}
+                                        <span class="badge bg-danger ms-1">{{ alerts_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="dropdown-item disabled" title="Fonctionnalité temporairement désactivée">
+                                    <i class="fas fa-file-alt"></i> Rapports
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'entreprise' in request.path %}active{% endif %}" href="#" id="entrepriseDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-building"></i> Management
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="entrepriseDropdown">
+                            <li>
+                                <a href="{% url 'fleet_app:employe_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'employe_list' %}active{% endif %}">
+                                    <i class="fas fa-users"></i> Employés
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:pointage_journalier' %}" class="dropdown-item {% if 'pointage' in request.resolver_match.url_name %}active{% endif %}">
+                                    <i class="fas fa-calendar-check"></i> Pointage Journalier
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:configuration_salaire' %}" class="dropdown-item {% if 'configuration_salaire' in request.resolver_match.url_name %}active{% endif %}">
+                                    <i class="fas fa-coins"></i> Configuration Salaires
+                                </a>
+                            </li>
+
+                            <li>
+                                <a href="{% url 'fleet_app:paie_employe_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'paie_employe_list' %}active{% endif %}">
+                                    <i class="fas fa-money-bill-wave"></i> Paies
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:heure_supplementaire_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'heure_supplementaire_list' %}active{% endif %}">
+                                    <i class="fas fa-clock"></i> Heures Supplémentaires
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:parametre_paie_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'parametre_paie_list' %}active{% endif %}">
+                                    <i class="fas fa-cogs"></i> Paramètres de Paie
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:bulletin_paie_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'bulletin_paie_list' %}active{% endif %}">
+                                    <i class="fas fa-file-invoice"></i> Bulletins de Paie
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:archive_mensuelle_full' %}" class="dropdown-item {% if request.resolver_match.url_name == 'archive_mensuelle_full' %}active{% endif %}">
+                                    <i class="fas fa-archive"></i> Archivage Mensuel
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:synchronization_dashboard' %}" class="dropdown-item {% if request.resolver_match.url_name == 'synchronization_dashboard' %}active{% endif %}">
+                                    <i class="fas fa-sync-alt text-success"></i> Synchronisation Données
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'minerai' in request.path %}active{% endif %}" href="#" id="mineraiDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-mountain"></i> S_T_Minérai
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="mineraiDropdown">
+                            <li>
+                                <a href="{% url 'fleet_app:pesee_camion_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'pesee_camion_list' %}active{% endif %}">
+                                    <i class="fas fa-weight"></i> Pesées Camions
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:fiche_bord_machine_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'fiche_bord_machine_list' %}active{% endif %}">
+                                    <i class="fas fa-clipboard-list"></i> Fiches de Bord Machine
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:fiche_or_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'fiche_or_list' %}active{% endif %}">
+                                    <i class="fas fa-coins"></i> Fiches d'Or
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'inventaire' in request.path %}active{% endif %}" href="#" id="inventaireDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-boxes"></i> Inventaire
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="inventaireDropdown">
+                            <li>
+                                <a href="{% url 'fleet_app:produit_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'produit_list' %}active{% endif %}">
+                                    <i class="fas fa-box"></i> Produits
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:entree_stock_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'entree_stock_list' %}active{% endif %}">
+                                    <i class="fas fa-arrow-circle-down"></i> Entrées en stock
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:sortie_stock_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'sortie_stock_list' %}active{% endif %}">
+                                    <i class="fas fa-arrow-circle-up"></i> Sorties en stock
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:stock_actuel' %}" class="dropdown-item {% if request.resolver_match.url_name == 'stock_actuel' %}active{% endif %}">
+                                    <i class="fas fa-chart-bar"></i> Stock actuel
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:mouvement_stock_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'mouvement_stock_list' %}active{% endif %}">
+                                    <i class="fas fa-exchange-alt"></i> Mouvements de stock
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:commande_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'commande_list' %}active{% endif %}">
+                                    <i class="fas fa-shopping-cart"></i> Commandes
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:facture_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'facture_list' %}active{% endif %}">
+                                    <i class="fas fa-file-invoice"></i> Factures
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                
+                <div class="d-flex">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle"></i> {{ user.username|default:"Utilisateur" }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user"></i> Profil</a></li>
+                            <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-cog"></i> Administration</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'fleet_app:entreprise_info' %}">
+                                    <i class="fas fa-building fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Informations Entreprise
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'fleet_app:synchronization_dashboard' %}">
+                                    <i class="fas fa-sync-alt fa-sm fa-fw mr-2 text-success"></i>
+                                    Synchronisation Données
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <a class="dropdown-item" href="javascript:void(0);" onclick="document.getElementById('logout-form').submit();"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="container-fluid main-content">
+        <div class="row">
+            <div class="col-12">
+                <!-- Page Title -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">{% block page_title %}Dashboard{% endblock %}</h2>
+                </div>
+                
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <!-- Content -->
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Gestion de Parc Automobile</h5>
+                    <p class="mb-0">Système de gestion de flotte automobile pour optimiser les coûts et améliorer la performance.</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Liens rapides</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'fleet_app:dashboard' %}">Dashboard</a></li>
+                        <li><a href="{% url 'fleet_app:vehicule_list' %}">Véhicules</a></li>
+                        <li><a href="{% url 'fleet_app:chauffeur_list' %}">Chauffeurs</a></li>
+                        <li><a href="{% url 'fleet_app:feuille_route_list' %}">Feuilles de route</a></li>
+                        <li><a href="#" class="disabled" title="Fonctionnalité temporairement désactivée">Rapports</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Support</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Aide</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="mt-4 mb-3" style="border-color: rgba(255,255,255,0.2);">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p class="mb-0">© {% now "Y" %} Gestion de Parc Automobile. Tous droits réservés.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3">
+        <!-- Les toasts seront ajoutés ici dynamiquement -->
+    </div>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script pour la recherche dynamique -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('search-global');
+            const searchResults = document.getElementById('search-results');
+            let searchTimeout;
+            
+            // Fonction pour effectuer la recherche
+            function performSearch(query) {
+                if (query.length < 2) {
+                    searchResults.innerHTML = '';
+                    searchResults.classList.add('d-none');
+                    return;
+                }
+                
+                fetch(`/api/recherche/?q=${encodeURIComponent(query)}&table=global`)
+                    .then(response => response.json())
+                    .then(data => {
+                        searchResults.innerHTML = '';
+                        
+                        if (data.results.length === 0) {
+                            searchResults.innerHTML = '<div class="p-3 text-muted">Aucun résultat trouvé</div>';
+                            searchResults.classList.remove('d-none');
+                            return;
+                        }
+                        
+                        // Grouper les résultats par type
+                        const groupedResults = {};
+                        data.results.forEach(result => {
+                            if (!groupedResults[result.type]) {
+                                groupedResults[result.type] = [];
+                            }
+                            groupedResults[result.type].push(result);
+                        });
+                        
+                        // Afficher les résultats groupés
+                        Object.keys(groupedResults).forEach(type => {
+                            const typeHeader = document.createElement('div');
+                            typeHeader.className = 'search-category p-2 bg-light fw-bold';
+                            typeHeader.textContent = type;
+                            searchResults.appendChild(typeHeader);
+                            
+                            groupedResults[type].forEach(result => {
+                                const resultItem = document.createElement('a');
+                                resultItem.href = result.url;
+                                resultItem.className = 'search-item d-block p-2 text-decoration-none text-dark border-bottom';
+                                resultItem.innerHTML = `<div>${result.text}</div>`;
+                                
+                                resultItem.addEventListener('click', function() {
+                                    searchResults.classList.add('d-none');
+                                    searchInput.value = '';
+                                });
+                                
+                                searchResults.appendChild(resultItem);
+                            });
+                        });
+                        
+                        searchResults.classList.remove('d-none');
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la recherche:', error);
+                        searchResults.innerHTML = '<div class="p-3 text-danger">Erreur lors de la recherche</div>';
+                        searchResults.classList.remove('d-none');
+                    });
+            }
+            
+            // Événement input pour la recherche en temps réel
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+                
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300); // Délai de 300ms pour éviter trop de requêtes
+            });
+            
+            // Fermer les résultats lors d'un clic en dehors
+            document.addEventListener('click', function(event) {
+                if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+                    searchResults.classList.add('d-none');
+                }
+            });
+            
+            // Ouvrir les résultats lors du focus sur l'input si une valeur est présente
+            searchInput.addEventListener('focus', function() {
+                if (this.value.trim().length >= 2) {
+                    performSearch(this.value.trim());
+                }
+            });
+        });
+    </script>
+    
+    <script src="/static/fleet_app/js/export-utils.js"></script>
+    <!-- Custom JS -->
+    {% block extra_js %}{% endblock %}
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3">
+        <!-- Les toasts seront ajoutés ici dynamiquement -->
+    </div>
+
+</body>
+</html>

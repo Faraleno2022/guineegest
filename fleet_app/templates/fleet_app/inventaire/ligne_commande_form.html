@@ -1,0 +1,280 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .card-header {
+        background-color: #f8f9fa;
+    }
+    .required-field::after {
+        content: "*";
+        color: red;
+        margin-left: 4px;
+    }
+    .price-preview {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:commande_list' %}">Commandes</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:commande_detail' pk=commande.numero %}">{{ commande.numero }}</a></li>
+        <li class="breadcrumb-item active">{{ ligne.id|default:"Nouveau produit" }}</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-box me-1"></i>
+            Informations du produit
+        </div>
+        <div class="card-body">
+            <form method="post" id="ligneCommandeForm">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.produit.id_for_label }}" class="required-field">Produit</label>
+                            {{ form.produit }}
+                            {% if form.produit.errors %}
+                                <div class="invalid-feedback d-block">{{ form.produit.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Sélectionnez un produit dans la liste</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.nom_produit.id_for_label }}">Nom du produit</label>
+                            {{ form.nom_produit }}
+                            {% if form.nom_produit.errors %}
+                                <div class="invalid-feedback d-block">{{ form.nom_produit.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Rempli automatiquement à partir du produit sélectionné</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.categorie.id_for_label }}">Catégorie</label>
+                            {{ form.categorie }}
+                            {% if form.categorie.errors %}
+                                <div class="invalid-feedback d-block">{{ form.categorie.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Rempli automatiquement à partir du produit sélectionné</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.quantite.id_for_label }}" class="required-field">Quantité</label>
+                            {{ form.quantite }}
+                            {% if form.quantite.errors %}
+                                <div class="invalid-feedback d-block">{{ form.quantite.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.prix_unitaire.id_for_label }}" class="required-field">Prix unitaire (GNF)</label>
+                            {{ form.prix_unitaire }}
+                            {% if form.prix_unitaire.errors %}
+                                <div class="invalid-feedback d-block">{{ form.prix_unitaire.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Aperçu</h5>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Prix total:</span>
+                                        <span class="price-preview" id="prixTotal"><span id="prixTotalValeur">0</span> GNF</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'fleet_app:commande_detail' pk=commande.numero %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        console.log('DOM chargé - Initialisation du formulaire d’ajout de produit');
+        
+        // Récupération des éléments du DOM
+        var produitSelect = $('#id_produit');
+        var nomProduitInput = $('#id_nom_produit');
+        var categorieInput = $('#id_categorie');
+        var quantiteInput = $('#id_quantite');
+        var prixUnitaireInput = $('#id_prix_unitaire');
+        var prixTotalValeurElement = $('#prixTotalValeur');
+        
+        console.log('Eléments du DOM récupérés:', {
+            'produitSelect': produitSelect.length > 0,
+            'nomProduitInput': nomProduitInput.length > 0,
+            'categorieInput': categorieInput.length > 0,
+            'quantiteInput': quantiteInput.length > 0,
+            'prixUnitaireInput': prixUnitaireInput.length > 0,
+            'prixTotalValeurElement': prixTotalValeurElement.length > 0
+        });
+        
+        // Données des produits pour l'auto-remplissage
+        var produitsData = {
+            {% for produit in produits %}
+            "{{ produit.id }}": {
+                "nom": "{{ produit.nom }}",
+                "categorie": "{{ produit.categorie }}",
+                "prix_unitaire": {{ produit.prix_unitaire|default:0 }}
+            },
+            {% endfor %}
+        };
+        
+        // Fonction pour remplir automatiquement les champs
+        function remplirChampsProduit() {
+            var produitId = produitSelect.val();
+            console.log('Produit sélectionné:', produitId);
+            
+            if (produitId && produitsData[produitId]) {
+                var produit = produitsData[produitId];
+                nomProduitInput.val(produit.nom);
+                categorieInput.val(produit.categorie);
+                prixUnitaireInput.val(produit.prix_unitaire);
+                console.log('Données du produit chargées:', produit);
+            } else {
+                nomProduitInput.val('');
+                categorieInput.val('');
+                prixUnitaireInput.val('');
+                console.log('Aucun produit sélectionné ou produit non trouvé');
+            }
+            
+            // Calculer le prix total après avoir rempli les champs
+            calculerPrixTotal();
+        }
+        
+        // Fonction pour calculer le prix total
+        function calculerPrixTotal() {
+            var quantite = parseFloat(quantiteInput.val()) || 0;
+            var prixUnitaire = parseFloat(prixUnitaireInput.val()) || 0;
+            var prixTotal = quantite * prixUnitaire;
+            
+            console.log('Calcul du prix total:', {
+                'quantite': quantite,
+                'prixUnitaire': prixUnitaire,
+                'prixTotal': prixTotal
+            });
+            
+            // Mettre à jour directement la valeur numérique
+            prixTotalValeurElement.text(new Intl.NumberFormat('fr-FR').format(prixTotal));
+            
+            // Déclencher un événement personnalisé pour indiquer que le prix total a été mis à jour
+            $(document).trigger('prixTotalUpdated', [prixTotal]);
+            
+            return prixTotal; // Retourner la valeur pour d'autres utilisations potentielles
+        }
+        
+        // Ajout des écouteurs d'événements avec délai minimal pour éviter les calculs trop fréquents
+        var calculTimeout;
+        
+        produitSelect.on('change', function() {
+            console.log('Changement de produit détecté');
+            clearTimeout(calculTimeout);
+            remplirChampsProduit();
+        });
+        
+        quantiteInput.on('input', function() {
+            console.log('Changement de quantité détecté');
+            clearTimeout(calculTimeout);
+            calculTimeout = setTimeout(calculerPrixTotal, 100);
+        });
+        
+        prixUnitaireInput.on('input', function() {
+            console.log('Changement de prix unitaire détecté');
+            clearTimeout(calculTimeout);
+            calculTimeout = setTimeout(calculerPrixTotal, 100);
+        });
+        
+        // Forcer le calcul initial après un court délai
+        setTimeout(function() {
+            console.log('Calcul initial forcé');
+            
+            // Remplissage initial si un produit est déjà sélectionné
+            if (produitSelect.val()) {
+                console.log('Produit déjà sélectionné au chargement');
+                remplirChampsProduit();
+            } else {
+                // Forcer le calcul même si aucun produit n'est sélectionné
+                console.log('Aucun produit sélectionné au chargement, calcul initial forcé');
+                calculerPrixTotal();
+            }
+        }, 300);
+        
+        // Validation du formulaire
+        $('#ligneCommandeForm').submit(function(e) {
+            console.log('Soumission du formulaire');
+            let isValid = true;
+            
+            // Vérification du produit
+            if (!$('#{{ form.produit.id_for_label }}').val()) {
+                $('#{{ form.produit.id_for_label }}').addClass('is-invalid');
+                isValid = false;
+            } else {
+                $('#{{ form.produit.id_for_label }}').removeClass('is-invalid');
+            }
+            
+            // Vérification de la quantité
+            if (!$('#{{ form.quantite.id_for_label }}').val() || parseInt($('#{{ form.quantite.id_for_label }}').val()) <= 0) {
+                $('#{{ form.quantite.id_for_label }}').addClass('is-invalid');
+                isValid = false;
+            } else {
+                $('#{{ form.quantite.id_for_label }}').removeClass('is-invalid');
+            }
+            
+            // Vérification du prix unitaire
+            if (!$('#{{ form.prix_unitaire.id_for_label }}').val() || parseFloat($('#{{ form.prix_unitaire.id_for_label }}').val()) <= 0) {
+                $('#{{ form.prix_unitaire.id_for_label }}').addClass('is-invalid');
+                isValid = false;
+            } else {
+                $('#{{ form.prix_unitaire.id_for_label }}').removeClass('is-invalid');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires correctement.');
+                console.log('Validation du formulaire échouée');
+            } else {
+                console.log('Formulaire validé avec succès');
+                // Recalculer le prix total une dernière fois avant soumission
+                calculerPrixTotal();
+            }
+            
+            return isValid;
+        });
+        
+        // Déclencher un calcul immédiat pour s'assurer que le prix total est affiché
+        calculerPrixTotal();
+    });
+</script>
+{% endblock %}

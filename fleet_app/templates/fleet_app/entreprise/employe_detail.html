@@ -1,0 +1,297 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Détail Employé{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-user me-2"></i>Détail de l'Employé</h5>
+            <div>
+                <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+                </a>
+                <a href="{% url 'fleet_app:employe_edit' employe.pk %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit me-1"></i>Modifier
+                </a>
+                <a href="{% url 'fleet_app:employe_delete' employe.pk %}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash me-1"></i>Supprimer
+                </a>
+                <a href="{% url 'fleet_app:paie_employe_create' employe.pk %}" class="btn btn-success btn-sm">
+                    <i class="fas fa-money-bill-wave me-1"></i>Créer une paie
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Informations Personnelles</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Matricule:</div>
+                        <div class="col-sm-8">{{ employe.matricule }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Nom:</div>
+                        <div class="col-sm-8">{{ employe.nom }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Prénom:</div>
+                        <div class="col-sm-8">{{ employe.prenom }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Date de naissance:</div>
+                        <div class="col-sm-8">{{ employe.date_naissance|date:"d/m/Y" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Lieu de naissance:</div>
+                        <div class="col-sm-8">{{ employe.lieu_naissance }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Adresse:</div>
+                        <div class="col-sm-8">{{ employe.adresse }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Téléphone:</div>
+                        <div class="col-sm-8">{{ employe.telephone }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Informations Professionnelles</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Poste:</div>
+                        <div class="col-sm-8">{{ employe.fonction|default:"-" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Date d'embauche:</div>
+                        <div class="col-sm-8">{% if employe.date_embauche %}{{ employe.date_embauche|date:"d/m/Y" }}{% else %}-{% endif %}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Salaire de base:</div>
+                        <div class="col-sm-8">{{ employe.salaire_journalier|default:"-" }} GNF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Statut:</div>
+                        <div class="col-sm-8">
+                            <span class="badge {% if employe.statut == 'Actif' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ employe.statut }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if employe.date_depart %}
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Date de départ:</div>
+                        <div class="col-sm-8">{{ employe.date_depart|date:"d/m/Y" }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Numéro CNSS:</div>
+                        <div class="col-sm-8">{{ employe.numero_cnss|default:"Non renseigné" }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if employe.observations %}
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2 mb-3">Observations</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ employe.observations|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Statistiques générales -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2 mb-3">Statistiques (30 derniers jours)</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-success">{{ stats_presence.jours_presence }}</h5>
+                                    <p class="card-text small">Jours de présence</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-danger">{{ stats_presence.jours_absence }}</h5>
+                                    <p class="card-text small">Jours d'absence</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-primary">{{ stats_heures_sup.total_heures|floatformat:2 }}h</h5>
+                                    <p class="card-text small">Heures supplémentaires</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-warning">{{ stats_presence.jours_maladie }}</h6>
+                                    <p class="card-text small">Maladies</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-info">{{ stats_presence.jours_repos }}</h6>
+                                    <p class="card-text small">Jours de repos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-secondary">{{ stats_presence.jours_dimanche }}</h6>
+                                    <p class="card-text small">Dimanches</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-success">{{ stats_heures_sup.total_montant|floatformat:0 }} GNF</h6>
+                                    <p class="card-text small">Montant H. Supp</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Historique des présences -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2 mb-3">Présences des 30 derniers jours</h6>
+                    {% if presences %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Jour</th>
+                                    <th>Statut</th>
+                                    <th>Détails</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for presence in presences %}
+                                <tr>
+                                    <td>{{ presence.date|date:"d/m/Y" }}</td>
+                                    <td>{{ presence.date|date:"l"|capfirst }}</td>
+                                    <td>
+                                        <span class="badge {% if presence.statut == 'A' %}bg-danger
+                                                       {% elif presence.statut == 'M' or presence.statut == 'M(Payer)' %}bg-warning
+                                                       {% elif presence.statut == 'OFF' %}bg-secondary
+                                                       {% elif 'dim' in presence.statut %}bg-info
+                                                       {% else %}bg-success{% endif %}">
+                                            {{ presence.statut }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if presence.statut == 'P(Am)' %}
+                                            Présent matin
+                                        {% elif presence.statut == 'P(Pm)' %}
+                                            Présent après-midi
+                                        {% elif presence.statut == 'P(Am&Pm)' %}
+                                            Présent journée complète
+                                        {% elif presence.statut == 'P(dim_Am)' %}
+                                            Dimanche matin
+                                        {% elif presence.statut == 'P(dim_Pm)' %}
+                                            Dimanche après-midi
+                                        {% elif presence.statut == 'P(dim_Am_&_Pm)' %}
+                                            Dimanche journée complète
+                                        {% elif presence.statut == 'A' %}
+                                            Absent
+                                        {% elif presence.statut == 'M' %}
+                                            Maladie
+                                        {% elif presence.statut == 'M(Payer)' %}
+                                            Maladie payée
+                                        {% elif presence.statut == 'C' %}
+                                            Congé
+                                        {% elif presence.statut == 'F' %}
+                                            Formation
+                                        {% elif presence.statut == 'OFF' %}
+                                            Repos autorisé
+                                        {% else %}
+                                            {{ presence.statut }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 mb-3">
+                        <h6 class="small fw-bold">Légende des statuts :</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-success">P(Am) : Présent matin</span>
+                            <span class="badge bg-success">P(Pm) : Présent après-midi</span>
+                            <span class="badge bg-success">P(Am&Pm) : Présent journée complète</span>
+                            <span class="badge bg-success">P(dim_Am) : Dimanche matin</span>
+                            <span class="badge bg-success">P(dim_Pm) : Dimanche après-midi</span>
+                            <span class="badge bg-success">P(dim_Am_&_Pm) : Dimanche journée</span>
+                            <span class="badge bg-danger">A : Absent</span>
+                            <span class="badge bg-warning">M : Maladie</span>
+                            <span class="badge bg-warning">M(Payer) : Maladie payée</span>
+                            <span class="badge bg-info">C : Congé</span>
+                            <span class="badge bg-info">F : Formation</span>
+                            <span class="badge bg-secondary">OFF : Repos autorisé</span>
+                        </div>
+                    </div>
+                    <span class="text-muted">Système de présences supprimé</span>
+                    {% else %}
+                    <p class="text-muted">Aucune présence enregistrée pour cet employé.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Historique des paies -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2 mb-3">Dernières Paies</h6>
+                    {% if paies %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Mois</th>
+                                    <th>Année</th>
+                                    <th>Salaire brut</th>
+                                    <th>Salaire net</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paie in paies %}
+                                <tr>
+                                    <td>{{ paie.get_mois_display }}</td>
+                                    <td>{{ paie.annee }}</td>
+                                    <td>{{ paie.salaire_brut }} GNF</td>
+                                    <td>{{ paie.salaire_net }} GNF</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <a href="{% url 'fleet_app:paie_employe_list' %}?employe={{ employe.pk }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-money-bill-wave me-1"></i>Voir toutes les paies
+                    </a>
+                    {% else %}
+                    <p class="text-muted">Aucune paie enregistrée pour cet employé.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

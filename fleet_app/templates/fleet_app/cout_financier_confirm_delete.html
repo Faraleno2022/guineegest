@@ -1,0 +1,63 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Supprimer un coût financier - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}Supprimer un coût financier{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-exclamation-triangle me-2"></i> Confirmation de suppression
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <p><strong>Attention :</strong> Vous êtes sur le point de supprimer définitivement ce coût financier.</p>
+                    <p>Cette action est irréversible. Voulez-vous vraiment continuer ?</p>
+                </div>
+                
+                <h5 class="mb-3">Détails du coût financier :</h5>
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 30%">Véhicule</th>
+                        <td>{{ cout.vehicule.marque }} {{ cout.vehicule.modele }} ({{ cout.vehicule.immatriculation }})</td>
+                    </tr>
+                    <tr>
+                        <th>Date</th>
+                        <td>{{ cout.date }}</td>
+                    </tr>
+                    <tr>
+                        <th>Type de coût</th>
+                        <td>{{ cout.type_cout }}</td>
+                    </tr>
+                    <tr>
+                        <th>Montant</th>
+                        <td>{{ cout.montant }} €</td>
+                    </tr>
+                    <tr>
+                        <th>Période d'amortissement</th>
+                        <td>{{ cout.periode_amortissement }} mois</td>
+                    </tr>
+                    <tr>
+                        <th>Description</th>
+                        <td>{{ cout.description }}</td>
+                    </tr>
+                </table>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'fleet_app:kpi_couts_financiers' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i> Confirmer la suppression
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,257 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Paramètres de Paie{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Sélecteur de période global pour synchronisation -->
+    {% include 'fleet_app/components/period_selector.html' %}
+    <div class="row">
+        <div class="col-12">
+            <!-- Messages d'alerte -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <!-- Tableau des taux spécifiques par employé -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Paramètres de Paie par Employé</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm table-striped" id="dataTable" width="100%" cellspacing="0" style="white-space: nowrap;">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Matricule</th>
+                                    <th>Profession</th>
+                                    <th>Prénom</th>
+                                    <th>Nom</th>
+                                    <th>Salaire base</th>
+                                    <th>Taux jour</th>
+                                    <th>Taux dim/fér</th>
+                                    <th>Montant jour</th>
+                                    <th>Montant dim/fér</th>
+                                    <th>Mode calcul</th>
+                                    <th>H. normales</th>
+                                    <th>Avances</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employe in employes %}
+                                <tr>
+                                    <td>{{ employe.matricule }}</td>
+                                    <td>{{ employe.fonction }}</td>
+                                    <td>{{ employe.prenom }}</td>
+                                    <td>{{ employe.nom }}</td>
+                                    <td>{{ employe.salaire_journalier|floatformat:2 }} GNF</td>
+                                    <td>
+                                        {% if employe.taux_horaire_specifique %}
+                                            {{ employe.taux_horaire_specifique|floatformat:2 }} GNF/h
+                                        {% else %}
+                                            <span class="text-muted">Taux global</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if employe.taux_horaire_specifique %}
+                                            {{ employe.taux_horaire_specifique|floatformat:2 }} GNF/h
+                                        {% else %}
+                                            <span class="text-muted">Taux global</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if employe.montant_heure_supp_jour_ouvrable %}
+                                            {{ employe.montant_heure_supp_jour_ouvrable|floatformat:2 }} GNF
+                                        {% else %}
+                                            <span class="text-muted">Non défini</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if employe.montant_heure_supp_dimanche_ferie %}
+                                            {{ employe.montant_heure_supp_dimanche_ferie|floatformat:2 }} GNF
+                                        {% else %}
+                                            <span class="text-muted">Non défini</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if employe.mode_calcul_heures_supp == 'taux' %}
+                                            <span class="badge bg-primary">Taux</span>
+                                        {% elif employe.mode_calcul_heures_supp == 'montant' %}
+                                            <span class="badge bg-success">Montant fixe</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Par défaut</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ config.heures_normales_mois|floatformat:2 }}</td>
+                                    <td>{{ employe.avances|floatformat:2 }} GNF</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalModifierTaux{{ employe.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% if employe.taux_horaire_specifique %}
+                                            <form method="post" class="d-inline" onsubmit="return confirm('Voulez-vous vraiment réinitialiser les taux spécifiques de cet employé ?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="supprimer_taux_employe" value="1">
+                                                <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Supprimer les taux spécifiques">
+                                                    <i class="fas fa-trash"></i> Taux
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                        {% if employe.montant_heure_supp_jour_ouvrable or employe.montant_heure_supp_dimanche_ferie %}
+                                            <form method="post" class="d-inline" onsubmit="return confirm('Voulez-vous vraiment supprimer les montants fixes d\'heures supplémentaires de cet employé ?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="supprimer_montants_fixes" value="1">
+                                                <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                                                <button type="submit" class="btn btn-sm btn-warning" title="Supprimer les montants fixes">
+                                                    <i class="fas fa-trash"></i> Montants
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                
+                                <!-- Modal pour modifier les taux spécifiques -->
+                                <div class="modal fade" id="modalModifierTaux{{ employe.id }}" tabindex="-1" aria-labelledby="modalModifierTauxLabel{{ employe.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="modalModifierTauxLabel{{ employe.id }}">Modifier les taux spécifiques - {{ employe.prenom }} {{ employe.nom }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <form method="post">
+                                                <div class="modal-body">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="modifier_taux_employe" value="1">
+                                                    <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="taux_jour_ouvrable_employe{{ employe.id }}" class="form-label">Taux jour ouvrable</label>
+                                                        <input type="number" step="0.01" class="form-control" id="taux_jour_ouvrable_employe{{ employe.id }}" name="taux_jour_ouvrable_employe" value="{% if employe.taux_horaire_specifique %}{{ employe.taux_horaire_specifique|floatformat:2 }}{% else %}{{ config.taux_jour_ouvrable|floatformat:2 }}{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="taux_dimanche_ferie_employe{{ employe.id }}" class="form-label">Taux dimanche/férié</label>
+                                                        <input type="number" step="0.01" class="form-control" id="taux_dimanche_ferie_employe{{ employe.id }}" name="taux_dimanche_ferie_employe" value="{% if employe.taux_horaire_specifique %}{{ employe.taux_horaire_specifique|floatformat:2 }}{% else %}{{ config.taux_dimanche_ferie|floatformat:2 }}{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="montant_jour_ouvrable_employe{{ employe.id }}" class="form-label">Montant fixe heure supp jour ouvrable (GNF)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="montant_jour_ouvrable_employe{{ employe.id }}" name="montant_jour_ouvrable_employe" value="{% if employe.montant_heure_supp_jour_ouvrable %}{{ employe.montant_heure_supp_jour_ouvrable|floatformat:2 }}{% else %}0.00{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="montant_dimanche_ferie_employe{{ employe.id }}" class="form-label">Montant fixe heure supp dimanche/férié (GNF)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="montant_dimanche_ferie_employe{{ employe.id }}" name="montant_dimanche_ferie_employe" value="{% if employe.montant_heure_supp_dimanche_ferie %}{{ employe.montant_heure_supp_dimanche_ferie|floatformat:2 }}{% else %}0.00{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="mode_calcul_employe{{ employe.id }}" class="form-label">Mode de calcul des heures supplémentaires</label>
+                                                        <select class="form-select" id="mode_calcul_employe{{ employe.id }}" name="mode_calcul_employe">
+                                                            <option value="defaut" {% if employe.mode_calcul_heures_supp == 'defaut' %}selected{% endif %}>Utiliser les paramètres par défaut</option>
+                                                            <option value="taux" {% if employe.mode_calcul_heures_supp == 'taux' %}selected{% endif %}>Utiliser les taux</option>
+                                                            <option value="montant" {% if employe.mode_calcul_heures_supp == 'montant' %}selected{% endif %}>Utiliser les montants fixes</option>
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="heures_normales_mois_employe{{ employe.id }}" class="form-label">Heures normales par mois</label>
+                                                        <input type="number" step="0.01" class="form-control" id="heures_normales_mois_employe{{ employe.id }}" name="heures_normales_mois_employe" value="{{ config.heures_normales_mois|floatformat:2 }}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="avances_employe{{ employe.id }}" class="form-label">Avances sur salaire (GNF)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="avances_employe{{ employe.id }}" name="avances_employe" value="{{ employe.avances|floatformat:2 }}">
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Exemple de calcul dynamique du taux horaire
+        function calculerTauxHoraire() {
+            const salaireMensuel = parseFloat($('#{{ form.salaire_mensuel_base.id_for_label }}').val()) || 0;
+            const heuresNormales = parseFloat($('#{{ form.heures_normales_mois.id_for_label }}').val()) || 173.33;
+            
+            if (salaireMensuel > 0 && heuresNormales > 0) {
+                const tauxHoraire = salaireMensuel / heuresNormales;
+                $('#taux-horaire-calcule').text(tauxHoraire.toFixed(2) + ' GNF/heure');
+            } else {
+                $('#taux-horaire-calcule').text('0.00 GNF/heure');
+            }
+        }
+        
+        // Mettre à jour le taux horaire quand les valeurs changent
+        $('#{{ form.salaire_mensuel_base.id_for_label }}, #{{ form.heures_normales_mois.id_for_label }}').on('input', calculerTauxHoraire);
+        
+        // Calculer initialement
+        calculerTauxHoraire();
+        
+        // Initialiser DataTable
+        $('#dataTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/French.json'
+            },
+            responsive: true
+        });
+        
+        // Script de synchronisation inter-modules
+        const syncScript = document.createElement('script');
+        syncScript.src = "{% static 'fleet_app/js/synchronisation_modules.js' %}";
+        document.head.appendChild(syncScript);
+        
+        syncScript.onload = function() {
+            // Initialiser la synchronisation pour le module parametres-paie
+            const syncSystem = SynchronisationModules.getInstance();
+            
+            // Écouter les événements de synchronisation
+            window.addEventListener('moduleDataReload', function(e) {
+                if (e.detail.module === 'parametres-paie') {
+                    console.log('🔄 Rechargement des données paramètres paie pour', e.detail.month + '/' + e.detail.year);
+                    // Recharger les données du tableau
+                    reloadParametresPaieData(e.detail.month, e.detail.year);
+                }
+            });
+            
+            // Fonction pour recharger les données
+            function reloadParametresPaieData(month, year) {
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('mois', month);
+                currentUrl.searchParams.set('annee', year);
+                
+                // Recharger la page avec les nouveaux paramètres
+                window.location.href = currentUrl.toString();
+            }
+        };
+    });
+</script>
+{% endblock %}

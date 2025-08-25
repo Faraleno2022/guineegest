@@ -1,0 +1,211 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Pointage Individuel{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-user-check me-2"></i>
+                    Pointage Individuel
+                </h2>
+                <a href="{% url 'fleet_app:pointage_journalier' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-calendar-alt"></i> Retour au tableau
+                </a>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Formulaire de pointage -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Nouveau pointage
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.employe.id_for_label }}" class="form-label">
+                                    {{ form.employe.label }}
+                                </label>
+                                {{ form.employe|add_class:"form-select" }}
+                                {% if form.employe.errors %}
+                                    <div class="text-danger small">
+                                        {{ form.employe.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.date.id_for_label }}" class="form-label">
+                                    {{ form.date.label }}
+                                </label>
+                                {{ form.date|add_class:"form-control" }}
+                                {% if form.date.errors %}
+                                    <div class="text-danger small">
+                                        {{ form.date.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.statut.id_for_label }}" class="form-label">
+                                {{ form.statut.label }}
+                            </label>
+                            {{ form.statut|add_class:"form-select" }}
+                            {% if form.statut.errors %}
+                                <div class="text-danger small">
+                                    {{ form.statut.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Erreurs non-field -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors.0 }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i>
+                                Enregistrer le pointage
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Derniers pointages -->
+            {% if derniers_pointages %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Derniers pointages
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Employé</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pointage in derniers_pointages %}
+                                <tr>
+                                    <td>{{ pointage.employe.nom }} {{ pointage.employe.prenom }}</td>
+                                    <td>{{ pointage.date|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ pointage.statut }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="text-end">
+                        <a href="{% url 'fleet_app:historique_pointage' %}" class="btn btn-sm btn-outline-primary">
+                            Voir tout l'historique
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions rapides -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">Actions rapides</h6>
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'fleet_app:pointage_rapide' %}" class="btn btn-outline-info">
+                            <i class="fas fa-users"></i> Pointage rapide
+                        </a>
+                        <a href="{% url 'fleet_app:historique_pointage' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-search"></i> Rechercher
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus sur le premier champ
+    const firstField = document.querySelector('form select, form input');
+    if (firstField) {
+        firstField.focus();
+    }
+    
+    // Validation côté client
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const employe = document.getElementById('{{ form.employe.id_for_label }}');
+        const date = document.getElementById('{{ form.date.id_for_label }}');
+        const statut = document.getElementById('{{ form.statut.id_for_label }}');
+        
+        if (!employe.value) {
+            e.preventDefault();
+            employe.focus();
+            alert('Veuillez sélectionner un employé');
+            return;
+        }
+        
+        if (!date.value) {
+            e.preventDefault();
+            date.focus();
+            alert('Veuillez sélectionner une date');
+            return;
+        }
+        
+        if (!statut.value) {
+            e.preventDefault();
+            statut.focus();
+            alert('Veuillez sélectionner un statut');
+            return;
+        }
+        
+        // Vérifier que la date n'est pas dans le futur
+        const selectedDate = new Date(date.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (selectedDate > today) {
+            e.preventDefault();
+            date.focus();
+            alert('Impossible de pointer dans le futur');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

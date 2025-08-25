@@ -1,0 +1,127 @@
+{% load static %}
+
+<!-- Sélecteur de période global pour la synchronisation inter-modules -->
+<div id="global-period-selector" class="card mb-3 shadow-sm">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <i class="fas fa-calendar-alt text-primary"></i>
+                <strong class="text-dark">Période :</strong>
+            </div>
+            <div class="col-auto">
+                <select id="period-month" class="form-select form-select-sm" style="min-width: 120px;">
+                    {% for month_num, month_name in month_names.items %}
+                        <option value="{{ month_num }}" {% if month_num == sync_period.month %}selected{% endif %}>
+                            {{ month_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <select id="period-year" class="form-select form-select-sm" style="min-width: 80px;">
+                    <option value="2022" {% if sync_period.year == 2022 %}selected{% endif %}>2022</option>
+                    <option value="2023" {% if sync_period.year == 2023 %}selected{% endif %}>2023</option>
+                    <option value="2024" {% if sync_period.year == 2024 %}selected{% endif %}>2024</option>
+                    <option value="2025" {% if sync_period.year == 2025 %}selected{% endif %}>2025</option>
+                    <option value="2026" {% if sync_period.year == 2026 %}selected{% endif %}>2026</option>
+                    <option value="2027" {% if sync_period.year == 2027 %}selected{% endif %}>2027</option>
+                    <option value="2028" {% if sync_period.year == 2028 %}selected{% endif %}>2028</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <span class="text-muted small">
+                    <i class="fas fa-link me-1"></i>Connexion logique active
+                </span>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group" role="group">
+                    <button id="prev-month" class="btn btn-outline-secondary btn-sm" title="Mois précédent">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="next-month" class="btn btn-outline-secondary btn-sm" title="Mois suivant">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col">
+                <div class="text-muted small d-flex align-items-center">
+                    {% if sync_modules.current_module %}
+                        <span class="badge bg-light text-dark">{{ sync_modules.current_module|title }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if sync_modules.is_management_page %}
+            <div class="col-auto">
+                <div class="dropdown">
+                    <button class="btn btn-outline-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-exchange-alt me-1"></i>Modules
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% for module in sync_modules.available_modules %}
+                            <li>
+                                <a class="dropdown-item {% if module.name == sync_modules.current_module %}active{% endif %}" 
+                                   href="{{ module.url }}?mois={{ sync_period.month }}&annee={{ sync_period.year }}">
+                                    <i class="{{ module.icon }} me-2"></i>{{ module.title }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Informations de synchronisation pour le JavaScript -->
+<script>
+    window.syncPeriodData = {
+        currentMonth: {{ sync_period.month }},
+        currentYear: {{ sync_period.year }},
+        currentModule: '{{ sync_modules.current_module|default:"" }}',
+        isManagementPage: {{ sync_modules.is_management_page|yesno:"true,false" }}
+    };
+</script>
+
+<!-- Styles spécifiques pour le sélecteur -->
+<style>
+    #global-period-selector {
+        border-left: 4px solid #007bff;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+    
+    #global-period-selector .card-body {
+        background: rgba(255, 255, 255, 0.9);
+    }
+    
+    #sync-status {
+        font-size: 0.85rem;
+    }
+    
+    .dropdown-item.active {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #0056b3;
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        #global-period-selector .row {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        #global-period-selector .col-auto {
+            width: 100%;
+            text-align: center;
+        }
+        
+        #global-period-selector select,
+        #global-period-selector button {
+            width: 100%;
+        }
+    }
+</style>

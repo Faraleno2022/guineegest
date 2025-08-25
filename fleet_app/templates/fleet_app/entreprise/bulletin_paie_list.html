@@ -1,0 +1,1615 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Bulletin de paie - {{ mois_nom }} {{ annee_actuelle }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <!-- Sélecteur de période global pour synchronisation -->
+    {% include 'fleet_app/components/period_selector.html' %}
+    <!-- En-tête de l'entreprise -->
+    {% if entreprise %}
+    <div class="company-header-bulletin mb-4" style="background: #f8f9fa; color: #333; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px;">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    {% if entreprise.logo %}
+                    <img src="{{ entreprise.logo.url }}" alt="Logo" style="height: 60px; margin-right: 20px; border-radius: 4px; border: 1px solid #dee2e6;">
+                    {% endif %}
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.8rem; font-weight: 600; color: #495057;">{{ entreprise.nom_entreprise }}</h2>
+                        {% if entreprise.adresse %}
+                        <p style="margin: 5px 0; color: #6c757d; font-size: 1rem;">📍 {{ entreprise.adresse }}</p>
+                        {% endif %}
+                        <div style="display: flex; gap: 20px; margin-top: 8px;">
+                            {% if entreprise.telephone %}
+                            <span style="color: #6c757d; font-size: 0.9rem;">📞 {{ entreprise.telephone }}</span>
+                            {% endif %}
+                            {% if entreprise.email %}
+                            <span style="opacity: 0.9; font-size: 0.9rem;">✉️ {{ entreprise.email }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                    <h4 style="margin: 0; font-size: 1.2rem;">📊 BULLETINS DE PAIE</h4>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9;">{{ mois_nom }} {{ annee_actuelle }}</p>
+                    {% if entreprise.rccm or entreprise.nif %}
+                    <div style="margin-top: 10px; font-size: 0.8rem; opacity: 0.8;">
+                        {% if entreprise.rccm %}<div>RCCM: {{ entreprise.rccm }}</div>{% endif %}
+                        {% if entreprise.nif %}<div>NIF: {{ entreprise.nif }}</div>{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        <div class="col-12">
+            <!-- Zone de recherche multicritère dynamique -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-search"></i> Recherche dynamique multicritère
+                    </h6>
+                </div>
+                <div class="card-body py-4">
+                    <div class="row g-3">
+                        <!-- Ligne 1: Filtres Mois et Année -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary">
+                                <i class="fas fa-calendar-alt"></i> Mois
+                            </label>
+                            <select class="form-select" id="moisFilter">
+                                <option value="">Tous les mois</option>
+                                <option value="1">Janvier</option>
+                                <option value="2">Février</option>
+                                <option value="3">Mars</option>
+                                <option value="4">Avril</option>
+                                <option value="5">Mai</option>
+                                <option value="6">Juin</option>
+                                <option value="7">Juillet</option>
+                                <option value="8">Août</option>
+                                <option value="9">Septembre</option>
+                                <option value="10">Octobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Décembre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary">
+                                <i class="fas fa-calendar"></i> Année
+                            </label>
+                            <select class="form-select" id="anneeFilter">
+                                <option value="">Toutes les années</option>
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Ligne 2: Recherche employé -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-secondary">
+                                <i class="fas fa-user"></i> Employé
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-gradient-primary text-white">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="employeSearch" 
+                                       placeholder="Rechercher par matricule, nom, prénom ou contenu du bulletin..." 
+                                       autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" id="clearAllFilters">
+                                    <i class="fas fa-eraser"></i> Effacer tout
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 3: Résultats et actions -->
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="badge bg-primary fs-6" id="resultCount">{{ total_employes }} bulletin(s)</span>
+                                    <span class="badge bg-secondary fs-6" id="filterStatus">Aucun filtre actif</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <select class="form-select form-select-sm" id="itemsPerPage" style="width: auto;">
+                                        <option value="3" {% if items_per_page == 3 %}selected{% endif %}>3 par page</option>
+                                        <option value="6" {% if items_per_page == 6 %}selected{% endif %}>6 par page</option>
+                                        <option value="9" {% if items_per_page == 9 %}selected{% endif %}>9 par page</option>
+                                        <option value="12" {% if items_per_page == 12 %}selected{% endif %}>12 par page</option>
+                                    </select>
+                                    <button class="btn btn-warning btn-sm" id="configChargesSociales" data-bs-toggle="modal" data-bs-target="#modalChargesSociales">
+                                        <i class="fas fa-cogs"></i> Charges Sociales
+                                    </button>
+                                    <button class="btn btn-success btn-sm" id="exportExcel">
+                                        <i class="fas fa-file-excel"></i> Excel
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" id="exportPDF">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grille des bulletins de paie -->
+            <div class="row" id="bulletinsContainer">
+                {% for bulletin in bulletins_data %}
+                <div class="col-xl-4 col-lg-6 col-md-12 mb-4 bulletin-card" 
+                     data-matricule="{{ bulletin.employe.matricule|lower }}"
+                     data-nom="{{ bulletin.employe.nom|lower }}"
+                     data-prenom="{{ bulletin.employe.prenom|lower }}"
+                     data-employe-id="{{ bulletin.employe.id }}">
+                    <div class="card shadow-lg border-0 h-100 bulletin-item">
+                        <!-- En-tête de la carte -->
+                        <div class="card-header bg-gradient-primary text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0 font-weight-bold">
+                                        <i class="fas fa-user"></i> {{ bulletin.employe.prenom }} {{ bulletin.employe.nom }}
+                                    </h6>
+                                    <small class="text-white-50">{{ bulletin.employe.matricule }} - {{ bulletin.employe.fonction }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-light text-dark">{{ bulletin.employe.statut }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Corps de la carte -->
+                        <div class="card-body p-0">
+                            <!-- Statistiques de présence -->
+                            <div class="p-3 border-bottom bg-light">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fas fa-calendar-check text-success"></i> Statistiques {{ bulletin.paie.mois }}/{{ bulletin.paie.annee }}
+                                </h6>
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="stat-mini">
+                                            <div class="stat-value text-success">{{ bulletin.presences_stats.jours_travailles|default:0 }}</div>
+                                            <div class="stat-label">Jours Travaillés</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="stat-mini">
+                                            <div class="stat-value text-danger">{{ bulletin.presences_stats.jours_absence|default:0 }}</div>
+                                            <div class="stat-label">Jours Absent</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="stat-mini">
+                                            <div class="stat-value text-warning">{{ bulletin.presences_stats.jours_dimanche|default:0 }}</div>
+                                            <div class="stat-label">Dimanche Travaillé</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="stat-mini">
+                                            <div class="stat-value text-info">{{ bulletin.presences_stats.malade_paye|default:0 }}</div>
+                                            <div class="stat-label">Malade Payé</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row text-center mt-2">
+                                    <div class="col-12">
+                                        <div class="stat-mini">
+                                            <div class="stat-value text-secondary">{{ bulletin.presences_stats.malade|default:0 }}</div>
+                                            <div class="stat-label">Malade (non payé)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Détails financiers -->
+                            <div class="p-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="fas fa-money-bill-wave text-primary"></i> Détails financiers
+                                </h6>
+                                
+                                <!-- Éléments de paie -->
+                                <div class="mb-3">
+                                    <h6 class="text-muted mb-2">Éléments de rémunération</h6>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm"><strong>Salaire de base (GNF)</strong></span>
+                                        <span class="font-weight-bold text-success">{{ bulletin.paie.salaire_base|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm">Prime de discipline (GNF)</span>
+                                        <span class="text-success">{{ bulletin.paie.prime_discipline|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm">Cherté de vie (GNF)</span>
+                                        <span class="text-success">{{ bulletin.paie.cherete_vie|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm">Transport (GNF)</span>
+                                        <span class="text-success">{{ bulletin.paie.indemnite_transport|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm">Heures supp. ({{ bulletin.heures_supp.total_heures|floatformat:2|default:"0.00" }}h) (GNF)</span>
+                                        <span class="text-success">{{ bulletin.heures_supp.total_montant|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                    
+                                    <hr class="my-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="font-weight-bold">Salaire brut (GNF)</span>
+                                        <span class="font-weight-bold text-primary">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Déductions -->
+                                <div class="mb-3">
+                                    <h6 class="text-muted mb-2">Déductions</h6>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm">CNSS ({% if cnss_activer %}{{ cnss_taux }}%{% else %}0%{% endif %}) (GNF)</span>
+                                        <span class="text-danger">{{ bulletin.paie.cnss|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm">Avances (GNF)</span>
+                                        <span class="text-danger">{{ bulletin.employe.avances|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-sm">Sanctions (GNF)</span>
+                                        <span class="text-danger">{{ bulletin.employe.sanctions|floatformat:0|intcomma|default:0 }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Net à payer -->
+                                <div class="alert alert-success mb-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="font-weight-bold">
+                                            <i class="fas fa-hand-holding-usd"></i> Net à payer (GNF)
+                                        </span>
+                                        <span class="font-weight-bold fs-5">{{ bulletin.net_a_payer|floatformat:0|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pied de la carte avec actions -->
+                        <div class="card-footer bg-light border-0 p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="/paies/nouveau/{{ bulletin.employe.id }}/" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-plus"></i> Créer une paie
+                                    </a>
+                                    <button class="btn btn-outline-info btn-sm" 
+                                            onclick="voirDetails({{ bulletin.employe.id }})">
+                                        <i class="fas fa-eye"></i> Détails
+                                    </button>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="/management/bulletins/print/{{ bulletin.employe.id }}/?mois={{ mois_actuel }}&annee={{ annee_actuelle }}" 
+                                       target="_blank"
+                                       class="btn btn-success btn-sm" 
+                                       title="Imprimer le bulletin de paie professionnel">
+                                        <i class="fas fa-print"></i> Imprimer
+                                    </a>
+                                    <button class="btn btn-outline-success btn-sm" 
+                                            onclick="imprimerBulletinAuto({{ bulletin.employe.id }}, '{{ bulletin.employe.nom }}', '{{ bulletin.employe.prenom }}')">
+                                        <i class="fas fa-download"></i> Auto
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle"></i>
+                        Aucun bulletin de paie trouvé pour {{ mois_nom }} {{ annee_actuelle }}.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if paginator.num_pages > 1 %}
+            <div class="row mt-4">
+                <div class="col-12">
+                    <nav aria-label="Navigation des bulletins de paie">
+                        <ul class="pagination justify-content-center">
+                            {% if employes_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1&mois={{ mois_actuel }}&annee={{ annee_actuelle }}&per_page={{ items_per_page }}">
+                                        <i class="fas fa-angle-double-left"></i> Premier
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employes_page.previous_page_number }}&mois={{ mois_actuel }}&annee={{ annee_actuelle }}&per_page={{ items_per_page }}">
+                                        <i class="fas fa-angle-left"></i> Précédent
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in employes_page.paginator.page_range %}
+                                {% if num == employes_page.number %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > employes_page.number|add:'-3' and num < employes_page.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}&mois={{ mois_actuel }}&annee={{ annee_actuelle }}&per_page={{ items_per_page }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if employes_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employes_page.next_page_number }}&mois={{ mois_actuel }}&annee={{ annee_actuelle }}&per_page={{ items_per_page }}">
+                                        Suivant <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ paginator.num_pages }}&mois={{ mois_actuel }}&annee={{ annee_actuelle }}&per_page={{ items_per_page }}">
+                                        Dernier <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    
+                    <div class="text-center mt-2">
+                        <small class="text-muted">
+                            Page {{ employes_page.number }} sur {{ paginator.num_pages }} 
+                            ({{ paginator.count }} employé(s) au total)
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Bibliothèque SheetJS pour l'export Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// RECHERCHE MULTICRITÈRE DYNAMIQUE POUR BULLETINS DE PAIE
+function initMultiCriteriaSearch() {
+    console.log('🔍 RECHERCHE MULTICRITÈRE - Démarrage automatique');
+    
+    // Attendre que le DOM soit prêt
+    const moisFilter = document.querySelector('#moisFilter');
+    const anneeFilter = document.querySelector('#anneeFilter');
+    const employeSearch = document.querySelector('#employeSearch');
+    const clearAllBtn = document.querySelector('#clearAllFilters');
+    const resultCount = document.querySelector('#resultCount');
+    const filterStatus = document.querySelector('#filterStatus');
+    const bulletinsContainer = document.querySelector('#bulletinsContainer');
+    
+    if (!moisFilter || !anneeFilter || !employeSearch || !bulletinsContainer) {
+        console.log('⚠️ Éléments de recherche multicritère non trouvés, nouvelle tentative...');
+        setTimeout(initMultiCriteriaSearch, 500);
+        return;
+    }
+    
+    console.log('✅ Éléments multicritères trouvés, chargement automatique');
+    
+    // Fonction de filtrage multicritère
+    function applyMultiCriteriaFilter() {
+        const moisSelected = moisFilter.value;
+        const anneeSelected = anneeFilter.value;
+        const employeSearchTerm = employeSearch.value.toLowerCase().trim();
+        
+        const bulletinCards = bulletinsContainer.querySelectorAll('.bulletin-card');
+        let visibleCards = 0;
+        let activeFilters = [];
+        
+        console.log('🔎 Filtrage multicritère automatique:');
+        console.log('- Mois:', moisSelected || 'Tous');
+        console.log('- Année:', anneeSelected || 'Toutes');
+        console.log('- Employé:', employeSearchTerm || 'Tous');
+        
+        // Construire le statut des filtres actifs
+        if (moisSelected) activeFilters.push(`Mois: ${getMonthName(moisSelected)}`);
+        if (anneeSelected) activeFilters.push(`Année: ${anneeSelected}`);
+        if (employeSearchTerm) activeFilters.push(`Employé: "${employeSearchTerm}"`);
+        
+        bulletinCards.forEach((card, index) => {
+            let shouldShow = true;
+            
+            // Récupérer les données de la carte
+            const matricule = (card.dataset.matricule || '').toLowerCase();
+            const nom = (card.dataset.nom || '').toLowerCase();
+            const prenom = (card.dataset.prenom || '').toLowerCase();
+            const cardText = card.textContent.toLowerCase();
+            
+            // Filtrage par mois (si spécifié)
+            if (moisSelected && shouldShow) {
+                // Chercher le mois dans le contenu de la carte
+                const monthName = getMonthName(moisSelected).toLowerCase();
+                shouldShow = cardText.includes(monthName) || cardText.includes(moisSelected);
+            }
+            
+            // Filtrage par année (si spécifié)
+            if (anneeSelected && shouldShow) {
+                shouldShow = cardText.includes(anneeSelected);
+            }
+            
+            // Filtrage par employé (si spécifié)
+            if (employeSearchTerm && shouldShow) {
+                shouldShow = matricule.includes(employeSearchTerm) ||
+                           nom.includes(employeSearchTerm) ||
+                           prenom.includes(employeSearchTerm) ||
+                           cardText.includes(employeSearchTerm);
+            }
+            
+            // Appliquer le filtrage
+            if (shouldShow) {
+                card.style.display = '';
+                // Effets visuels si des filtres sont actifs
+                if (activeFilters.length > 0) {
+                    card.style.transform = 'scale(1.01)';
+                    card.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.3)';
+                    card.style.border = '2px solid #28a745';
+                } else {
+                    card.style.transform = '';
+                    card.style.boxShadow = '';
+                    card.style.border = '';
+                }
+                visibleCards++;
+            } else {
+                card.style.display = 'none';
+                card.style.transform = '';
+                card.style.boxShadow = '';
+                card.style.border = '';
+            }
+        });
+        
+        // Mettre à jour les compteurs et statuts
+        if (resultCount) resultCount.textContent = visibleCards + ' bulletin(s)';
+        
+        if (filterStatus) {
+            if (activeFilters.length === 0) {
+                filterStatus.textContent = 'Aucun filtre actif';
+                filterStatus.className = 'badge bg-secondary fs-6';
+            } else {
+                filterStatus.textContent = activeFilters.join(' | ');
+                filterStatus.className = 'badge bg-success fs-6';
+            }
+        }
+        
+        console.log('📊 Résultat multicritère:', visibleCards, 'bulletins visibles sur', bulletinCards.length);
+        
+        // Message si aucun résultat
+        const existingMsg = bulletinsContainer.querySelector('#noResultMsg');
+        if (existingMsg) existingMsg.remove();
+        
+        if (visibleCards === 0 && activeFilters.length > 0) {
+            const noResultDiv = document.createElement('div');
+            noResultDiv.id = 'noResultMsg';
+            noResultDiv.className = 'col-12 text-center py-5';
+            noResultDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-filter fa-3x mb-3 text-warning"></i><br>
+                    <h4>Aucun bulletin ne correspond aux critères</h4>
+                    <p class="mb-2"><strong>Filtres actifs:</strong></p>
+                    <p class="mb-0">${activeFilters.join(' | ')}</p>
+                    <small class="text-muted mt-2">Essayez de modifier ou supprimer certains filtres</small>
+                </div>
+            `;
+            bulletinsContainer.appendChild(noResultDiv);
+        }
+        
+        // Supprimer les effets visuels après 4 secondes
+        if (activeFilters.length > 0) {
+            setTimeout(() => {
+                bulletinCards.forEach(card => {
+                    if (card.style.display !== 'none') {
+                        card.style.transform = '';
+                        card.style.boxShadow = '';
+                        card.style.border = '';
+                    }
+                });
+            }, 4000);
+        }
+    }
+    
+    // Fonction utilitaire pour obtenir le nom du mois
+    function getMonthName(monthNumber) {
+        const months = {
+            '1': 'Janvier', '2': 'Février', '3': 'Mars', '4': 'Avril',
+            '5': 'Mai', '6': 'Juin', '7': 'Juillet', '8': 'Août',
+            '9': 'Septembre', '10': 'Octobre', '11': 'Novembre', '12': 'Décembre'
+        };
+        return months[monthNumber] || '';
+    }
+    
+    // Événements de filtrage
+    moisFilter.addEventListener('change', applyMultiCriteriaFilter);
+    anneeFilter.addEventListener('change', applyMultiCriteriaFilter);
+    employeSearch.addEventListener('input', applyMultiCriteriaFilter);
+    employeSearch.addEventListener('keyup', applyMultiCriteriaFilter);
+    
+    // Bouton d'effacement de tous les filtres
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', function() {
+            moisFilter.value = '';
+            anneeFilter.value = '';
+            employeSearch.value = '';
+            applyMultiCriteriaFilter();
+            employeSearch.focus();
+            console.log('🧹 Tous les filtres effacés');
+        });
+    }
+    
+    // Raccourci Escape pour vider la recherche employé
+    employeSearch.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            employeSearch.value = '';
+            applyMultiCriteriaFilter();
+        }
+    });
+    
+    // Initialisation automatique
+    applyMultiCriteriaFilter();
+    employeSearch.focus();
+    
+    console.log('✅ Recherche multicritère chargée automatiquement avec succès!');
+}
+
+// Démarrer la recherche multicritère automatiquement
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMultiCriteriaSearch);
+} else {
+    initMultiCriteriaSearch();
+}
+
+// Fonctions jQuery pour les autres fonctionnalités
+$(document).ready(function() {
+        // Changement du nombre d'éléments par page
+        $('#itemsPerPage').on('change', function() {
+            const perPage = $(this).val();
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('per_page', perPage);
+            urlParams.set('page', '1'); // Retour à la première page
+            window.location.href = '?' + urlParams.toString();
+        });
+        
+        // Export Excel - Version corrigée
+        $('#exportExcel').on('click', function() {
+            console.log('🔄 Export Excel - Démarrage');
+            
+            // Vérifier si XLSX est disponible
+            if (typeof XLSX === 'undefined') {
+                alert('❌ Erreur: Bibliothèque Excel non chargée. Rechargez la page.');
+                console.error('XLSX library not loaded');
+                return;
+            }
+            
+            // Récupérer tous les bulletins visibles (après filtrage)
+            const visibleBulletins = [];
+            const bulletinCards = document.querySelectorAll('.bulletin-card');
+            
+            console.log(`📊 Nombre total de cartes trouvées: ${bulletinCards.length}`);
+            
+            bulletinCards.forEach((card, index) => {
+                const isVisible = card.style.display !== 'none';
+                console.log(`Carte ${index}: visible=${isVisible}`);
+                
+                if (isVisible) {
+                    // Extraire les données de chaque bulletin visible
+                    const matricule = card.dataset.matricule || '';
+                    const nom = card.dataset.nom || '';
+                    const prenom = card.dataset.prenom || '';
+                    
+                    // Extraire les données du contenu de la carte
+                    const cardContent = card.textContent;
+                    const moisMatch = cardContent.match(/Mois:\s*([^\n\r]+)/);
+                    const anneeMatch = cardContent.match(/Année:\s*(\d{4})/);
+                    const salaireMatch = cardContent.match(/Salaire de base[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+                    const presencesMatch = cardContent.match(/Présences:\s*(\d+)/);
+                    const absencesMatch = cardContent.match(/Absences:\s*(\d+)/);
+                    const totalMatch = cardContent.match(/Total à payer[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+                    
+                    const bulletinData = {
+                        'Matricule': matricule,
+                        'Nom': nom,
+                        'Prénom': prenom,
+                        'Mois': moisMatch ? moisMatch[1].trim() : 'N/A',
+                        'Année': anneeMatch ? anneeMatch[1] : 'N/A',
+                        'Salaire de base': salaireMatch ? salaireMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A',
+                        'Présences': presencesMatch ? presencesMatch[1] : '0',
+                        'Absences': absencesMatch ? absencesMatch[1] : '0',
+                        'Total à payer': totalMatch ? totalMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A'
+                    };
+                    
+                    visibleBulletins.push(bulletinData);
+                    console.log(`✅ Bulletin ajouté:`, bulletinData);
+                }
+            });
+            
+            console.log(`📋 Total bulletins à exporter: ${visibleBulletins.length}`);
+            
+            if (visibleBulletins.length === 0) {
+                alert('⚠️ Aucun bulletin à exporter. Vérifiez vos filtres ou assurez-vous qu\'il y a des bulletins visibles.');
+                return;
+            }
+            
+            try {
+                // Créer le fichier Excel
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(visibleBulletins);
+                
+                // Ajuster la largeur des colonnes
+                const colWidths = [
+                    { wch: 12 }, // Matricule
+                    { wch: 20 }, // Nom
+                    { wch: 20 }, // Prénom
+                    { wch: 15 }, // Mois
+                    { wch: 8 },  // Année
+                    { wch: 18 }, // Salaire de base
+                    { wch: 12 }, // Présences
+                    { wch: 12 }, // Absences
+                    { wch: 18 }  // Total à payer
+                ];
+                ws['!cols'] = colWidths;
+                
+                // Ajouter la feuille au classeur
+                XLSX.utils.book_append_sheet(wb, ws, 'Bulletins de Paie');
+                
+                // Générer le nom du fichier avec la date
+                const now = new Date();
+                const dateStr = now.toISOString().split('T')[0];
+                const filename = `Bulletins_Paie_${dateStr}.xlsx`;
+                
+                // Télécharger le fichier
+                XLSX.writeFile(wb, filename);
+                
+                console.log(`✅ Export Excel terminé: ${visibleBulletins.length} bulletins exportés`);
+                
+                // Notification de succès
+                showNotification('success', 'Export Excel réussi!', `${visibleBulletins.length} bulletin(s) exporté(s) dans ${filename}`);
+                
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'export Excel:', error);
+                alert('❌ Erreur lors de l\'export Excel. Vérifiez la console pour plus de détails.');
+            }
+        });
+        
+        // Export PDF - Version corrigée
+        $('#exportPDF').on('click', function() {
+            console.log('🔄 Export PDF - Démarrage');
+            
+            // Récupérer tous les bulletins visibles
+            const visibleBulletins = [];
+            const bulletinCards = document.querySelectorAll('.bulletin-card');
+            
+            bulletinCards.forEach(card => {
+                if (card.style.display !== 'none') {
+                    visibleBulletins.push(card);
+                }
+            });
+            
+            console.log(`📋 Bulletins visibles pour PDF: ${visibleBulletins.length}`);
+            
+            if (visibleBulletins.length === 0) {
+                alert('⚠️ Aucun bulletin à exporter. Vérifiez vos filtres.');
+                return;
+            }
+            
+            try {
+                // Créer une nouvelle fenêtre pour l'impression
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
+                
+                if (!printWindow) {
+                    alert('❌ Impossible d\'ouvrir la fenêtre d\'impression. Vérifiez que les pop-ups ne sont pas bloqués.');
+                    return;
+                }
+                
+                // Construire le contenu HTML pour le PDF
+                let htmlContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Bulletins de Paie - Export PDF</title>
+                        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+                        <style>
+                            @media print {
+                                .page-break { page-break-before: always; }
+                                .no-print { display: none !important; }
+                            }
+                            body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+                            .bulletin-pdf { 
+                                border: 2px solid #007bff; 
+                                margin: 20px 0; 
+                                padding: 20px; 
+                                border-radius: 10px;
+                                background: white;
+                            }
+                            .header-pdf { 
+                                text-align: center; 
+                                background: #007bff; 
+                                color: white; 
+                                padding: 15px; 
+                                margin: -20px -20px 20px -20px; 
+                                border-radius: 8px 8px 0 0;
+                            }
+                            .info-row { margin: 10px 0; display: flex; justify-content: space-between; }
+                            .label-pdf { font-weight: bold; color: #495057; }
+                            .value-pdf { color: #212529; }
+                            .print-buttons { margin: 20px 0; text-align: center; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container-fluid">
+                            <div class="text-center mb-4 no-print print-buttons">
+                                <h2><i class="fas fa-file-pdf text-danger"></i> Export PDF - Bulletins de Paie</h2>
+                                <p class="text-muted">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+                                <button onclick="window.print()" class="btn btn-primary">
+                                    <i class="fas fa-print"></i> Imprimer / Sauvegarder PDF
+                                </button>
+                                <button onclick="window.close()" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Fermer
+                                </button>
+                            </div>
+                `;
+                
+                // Ajouter chaque bulletin
+                visibleBulletins.forEach((card, index) => {
+                    const matricule = card.dataset.matricule || '';
+                    const nom = card.dataset.nom || '';
+                    const prenom = card.dataset.prenom || '';
+                    const cardContent = card.textContent;
+                    
+                    const moisMatch = cardContent.match(/Mois:\s*([^\n\r]+)/);
+                    const anneeMatch = cardContent.match(/Année:\s*(\d{4})/);
+                    const salaireMatch = cardContent.match(/Salaire de base[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+                    const presencesMatch = cardContent.match(/Présences:\s*(\d+)/);
+                    const absencesMatch = cardContent.match(/Absences:\s*(\d+)/);
+                    const totalMatch = cardContent.match(/Total à payer[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+                    
+                    htmlContent += `
+                        <div class="bulletin-pdf ${index > 0 ? 'page-break' : ''}">
+                            <div class="header-pdf">
+                                <h4><i class="fas fa-receipt"></i> Bulletin de Paie</h4>
+                                <p class="mb-0">Employé: ${nom} ${prenom} (${matricule})</p>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-row">
+                                        <span class="label-pdf">Matricule:</span>
+                                        <span class="value-pdf">${matricule}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label-pdf">Nom complet:</span>
+                                        <span class="value-pdf">${nom} ${prenom}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label-pdf">Période:</span>
+                                        <span class="value-pdf">${moisMatch ? moisMatch[1].trim() : 'N/A'} ${anneeMatch ? anneeMatch[1] : ''}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-row">
+                                        <span class="label-pdf">Salaire de base:</span>
+                                        <span class="value-pdf">${salaireMatch ? salaireMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label-pdf">Présences:</span>
+                                        <span class="value-pdf">${presencesMatch ? presencesMatch[1] : '0'} jour(s)</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label-pdf">Absences:</span>
+                                        <span class="value-pdf">${absencesMatch ? absencesMatch[1] : '0'} jour(s)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            <div class="text-center">
+                                <h5 class="text-primary">
+                                    <i class="fas fa-money-bill-wave"></i> 
+                                    Total à payer: ${totalMatch ? totalMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A'}
+                                </h5>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                htmlContent += `
+                        </div>
+                    </body>
+                    </html>
+                `;
+                
+                // Écrire le contenu dans la nouvelle fenêtre
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                
+                console.log(`✅ Export PDF terminé: ${visibleBulletins.length} bulletins préparés`);
+                
+                // Notification de succès
+                showNotification('info', 'Export PDF ouvert!', `${visibleBulletins.length} bulletin(s) préparé(s) pour impression`);
+                
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'export PDF:', error);
+                alert('❌ Erreur lors de l\'export PDF. Vérifiez la console pour plus de détails.');
+            }
+        });
+    });
+    
+    // Fonction utilitaire pour les notifications
+    function showNotification(type, title, message) {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-info';
+        const icon = type === 'success' ? 'fa-file-excel' : 'fa-file-pdf';
+        
+        const notification = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+                 style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                <i class="fas ${icon}"></i> 
+                <strong>${title}</strong><br>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        $('body').append(notification);
+        
+        // Supprimer la notification après 5 secondes
+        setTimeout(() => notification.remove(), 5000);
+    }
+    
+    // Fonctions pour les actions des cartes - Version corrigée
+    function voirDetails(employeId) {
+        console.log(`🔍 Voir détails pour employé ID: ${employeId}`);
+        
+        // Vérifier si l'ID est valide
+        if (!employeId || employeId === 'undefined') {
+            alert('❌ Erreur: ID employé non valide');
+            return;
+        }
+        
+        // Rediriger vers la page de création de paie
+        const detailUrl = `/paies/nouveau/${employeId}/`;
+        console.log(`🔗 Redirection vers: ${detailUrl}`);
+        window.location.href = detailUrl;
+    }
+    
+    function exporterBulletin(employeId) {
+        console.log(`📤 Export bulletin pour employé ID: ${employeId}`);
+        
+        if (!employeId || employeId === 'undefined') {
+            alert('❌ Erreur: ID employé non valide');
+            return;
+        }
+        
+        // Trouver la carte correspondante
+        const bulletinCard = document.querySelector(`.bulletin-card[data-employe-id="${employeId}"]`);
+        if (!bulletinCard) {
+            alert('❌ Bulletin non trouvé');
+            return;
+        }
+        
+        // Vérifier si XLSX est disponible
+        if (typeof XLSX === 'undefined') {
+            alert('❌ Erreur: Bibliothèque Excel non chargée');
+            return;
+        }
+        
+        try {
+            // Extraire les données du bulletin
+            const matricule = bulletinCard.dataset.matricule || '';
+            const nom = bulletinCard.dataset.nom || '';
+            const prenom = bulletinCard.dataset.prenom || '';
+            const cardContent = bulletinCard.textContent;
+            
+            const moisMatch = cardContent.match(/Mois:\s*([^\n\r]+)/);
+            const anneeMatch = cardContent.match(/Année:\s*(\d{4})/);
+            const salaireMatch = cardContent.match(/Salaire de base[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+            const presencesMatch = cardContent.match(/Présences:\s*(\d+)/);
+            const absencesMatch = cardContent.match(/Absences:\s*(\d+)/);
+            const totalMatch = cardContent.match(/Total à payer[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+            
+            const bulletinData = [{
+                'Matricule': matricule,
+                'Nom': nom,
+                'Prénom': prenom,
+                'Mois': moisMatch ? moisMatch[1].trim() : 'N/A',
+                'Année': anneeMatch ? anneeMatch[1] : 'N/A',
+                'Salaire de base': salaireMatch ? salaireMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A',
+                'Présences': presencesMatch ? presencesMatch[1] : '0',
+                'Absences': absencesMatch ? absencesMatch[1] : '0',
+                'Total à payer': totalMatch ? totalMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A'
+            }];
+            
+            // Créer le fichier Excel
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(bulletinData);
+            
+            // Ajuster la largeur des colonnes
+            const colWidths = [
+                { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 8 },
+                { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 18 }
+            ];
+            ws['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Bulletin de Paie');
+            
+            // Générer le nom du fichier
+            const filename = `Bulletin_${nom}_${prenom}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            
+            // Télécharger le fichier
+            XLSX.writeFile(wb, filename);
+            
+            console.log(`✅ Export individuel terminé: ${filename}`);
+            showNotification('success', 'Export réussi!', `Bulletin de ${nom} ${prenom} exporté`);
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'export individuel:', error);
+            alert('❌ Erreur lors de l\'export. Vérifiez la console.');
+        }
+    }
+    
+    function imprimerBulletin(employeId) {
+        console.log(`🖨️ Impression bulletin pour employé ID: ${employeId}`);
+        
+        if (!employeId || employeId === 'undefined') {
+            alert('❌ Erreur: ID employé non valide');
+            return;
+        }
+        
+        // Trouver la carte correspondante
+        const bulletinCard = document.querySelector(`.bulletin-card[data-employe-id="${employeId}"]`);
+        if (!bulletinCard) {
+            alert('❌ Bulletin non trouvé');
+            return;
+        }
+        
+        try {
+            // Créer une nouvelle fenêtre pour l'impression
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            
+            if (!printWindow) {
+                alert('❌ Impossible d\'ouvrir la fenêtre d\'impression. Vérifiez que les pop-ups ne sont pas bloqués.');
+                return;
+            }
+            
+            // Extraire les données
+            const matricule = bulletinCard.dataset.matricule || '';
+            const nom = bulletinCard.dataset.nom || '';
+            const prenom = bulletinCard.dataset.prenom || '';
+            const cardContent = bulletinCard.textContent;
+            
+            const moisMatch = cardContent.match(/Mois:\s*([^\n\r]+)/);
+            const anneeMatch = cardContent.match(/Année:\s*(\d{4})/);
+            const salaireMatch = cardContent.match(/Salaire de base[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+            const presencesMatch = cardContent.match(/Présences:\s*(\d+)/);
+            const absencesMatch = cardContent.match(/Absences:\s*(\d+)/);
+            const totalMatch = cardContent.match(/Total à payer[\s\S]*?(\d+(?:\s*\d+)*)\s*GNF/);
+            
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Bulletin de Paie - ${nom} ${prenom}</title>
+                    <style>
+                        @media print {
+                            @page { margin: 1cm; }
+                            body { font-family: Arial, sans-serif; }
+                        }
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .info-row { display: flex; justify-content: space-between; margin: 10px 0; }
+                        .label-print { font-weight: bold; }
+                        .value-print { color: #333; }
+                        hr { margin: 20px 0; }
+                        .text-center { text-align: center; }
+                        .text-primary { color: #007bff; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>💰 BULLETIN DE PAIE</h1>
+                        <h2>${nom} ${prenom}</h2>
+                    </div>
+                    <div class="content">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="label-print">Matricule:</span>
+                                    <span class="value-print">${matriculeMatch ? matriculeMatch[1].trim() : 'N/A'}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label-print">Nom complet:</span>
+                                    <span class="value-print">${nom} ${prenom}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label-print">Période:</span>
+                                    <span class="value-print">${moisMatch ? moisMatch[1].trim() : 'N/A'} ${anneeMatch ? anneeMatch[1] : ''}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="label-print">Salaire de base:</span>
+                                    <span class="value-print">${salaireMatch ? salaireMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A'}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label-print">Présences:</span>
+                                    <span class="value-print">${presencesMatch ? presencesMatch[1] : '0'} jour(s)</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label-print">Absences:</span>
+                                    <span class="value-print">${absencesMatch ? absencesMatch[1] : '0'} jour(s)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                            <h4 class="text-primary">
+                                <i class="fas fa-money-bill-wave"></i> 
+                                Total à payer: ${totalMatch ? totalMatch[1].replace(/\s/g, '') + ' GNF' : 'N/A'}
+                            </h4>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            
+            console.log(`✅ Impression préparée pour: ${nom} ${prenom}`);
+            showNotification('info', 'Impression préparée!', `Bulletin de ${nom} ${prenom} prêt à imprimer`);
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'impression:', error);
+            alert('❌ Erreur lors de l\'impression. Vérifiez la console.');
+        }
+    }
+    
+    // Fonction pour impression automatique avec le nouveau template professionnel
+    function imprimerBulletinAuto(employeId, nom, prenom) {
+        try {
+            console.log(`🖨️ Impression automatique pour: ${nom} ${prenom}`);
+            
+            // Construction de l'URL avec les paramètres actuels
+            const moisActuel = {{ mois_actuel }};
+            const anneeActuelle = {{ annee_actuelle }};
+            const printUrl = `/management/bulletins/print/${employeId}/?mois=${moisActuel}&annee=${anneeActuelle}&auto_print=1`;
+            
+            // Ouverture dans une nouvelle fenêtre avec impression automatique
+            const printWindow = window.open(printUrl, '_blank', 'width=900,height=700');
+            
+            if (!printWindow) {
+                alert('❌ Erreur: Impossible d\'ouvrir la fenêtre d\'impression. Vérifiez les paramètres de votre navigateur.');
+                return;
+            }
+            
+            showNotification('success', 'Impression automatique!', `Bulletin professionnel de ${nom} ${prenom} en cours d'impression`);
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'impression automatique:', error);
+            alert('❌ Erreur lors de l\'impression automatique.');
+        }
+    }
+    
+    // Script de synchronisation inter-modules
+    const syncScript = document.createElement('script');
+    syncScript.src = "{% static 'fleet_app/js/synchronisation_modules.js' %}";
+    document.head.appendChild(syncScript);
+    
+    syncScript.onload = function() {
+        // Initialiser la synchronisation pour le module bulletins-paie
+        const syncSystem = SynchronisationModules.getInstance();
+        
+        // Écouter les événements de synchronisation
+        window.addEventListener('moduleDataReload', function(e) {
+            if (e.detail.module === 'bulletins-paie') {
+                console.log('🔄 Rechargement des données bulletins paie pour', e.detail.month + '/' + e.detail.year);
+                // Recharger les données du tableau
+                reloadBulletinsPaieData(e.detail.month, e.detail.year);
+            }
+        });
+        
+        // Fonction pour recharger les données
+        function reloadBulletinsPaieData(month, year) {
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('mois', month);
+            currentUrl.searchParams.set('annee', year);
+            
+            // Recharger la page avec les nouveaux paramètres
+            window.location.href = currentUrl.toString();
+        }
+    };
+</script>
+
+<style>
+/* Styles simplifiés pour les bulletins de paie */
+.bg-gradient-primary {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.bulletin-item {
+    transition: box-shadow 0.2s ease;
+    border: 1px solid #dee2e6;
+}
+
+.bulletin-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+.stat-mini {
+    padding: 5px;
+}
+
+.stat-mini .stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.stat-mini .stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+/* Animation pour la recherche */
+.bulletin-card {
+    transition: all 0.3s ease;
+}
+
+.search-highlight {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.3) !important;
+    border: 2px solid #007bff !important;
+}
+
+/* Auto-sync indicator */
+.sync-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #28a745;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.updated-recently {
+    border-left: 4px solid #28a745 !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .bulletin-card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-footer .btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+</style>
+
+<!-- Modal de configuration des charges sociales -->
+<div class="modal fade" id="modalChargesSociales" tabindex="-1" aria-labelledby="modalChargesSocialesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalChargesSocialesLabel">
+                    <i class="fas fa-cogs"></i> Configuration des Charges Sociales Guinéennes
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Information :</strong> Cette configuration détermine si les charges sociales guinéennes (CNSS) doivent être déduites du salaire des employés dans les bulletins de paie.
+                </div>
+                
+                <form id="formChargesSociales">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="appliquerCNSS" {% if cnss_activer %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="appliquerCNSS">
+                                    Appliquer les charges sociales guinéennes (CNSS)
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                Si coché : Les charges sociales (CNSS {{ cnss_taux|default:"5" }}%) seront déduites du salaire.<br>
+                                Si décoché : Aucune déduction CNSS ne sera appliquée.
+                            </small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="tauxCNSS" class="form-label">Taux CNSS (%)</label>
+                            <input type="number" class="form-control" id="tauxCNSS" value="{{ cnss_taux|default:5 }}" min="0" max="100" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- 🇬🇳 CONFIGURATION RTS (RETENUE À LA SOURCE) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-calculator"></i> Configuration RTS (Retenue à la source)
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Type de calcul RTS</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="rtsType" id="rtsProgressif" value="PROGRESSIF" {% if rts_type == 'PROGRESSIF' %}checked{% endif %}>
+                                <label class="form-check-label" for="rtsProgressif">
+                                    <strong>Barème progressif guinéen</strong> (recommandé)
+                                </label>
+                                <small class="d-block text-muted">0% jusqu'à 1M, 5% de 1M à 3M, 15% au-dessus de 3M</small>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="rtsType" id="rtsFixe" value="FIXE" {% if rts_type == 'FIXE' %}checked{% endif %}>
+                                <label class="form-check-label" for="rtsFixe">
+                                    <strong>Taux fixe</strong>
+                                </label>
+                                <small class="d-block text-muted">Taux unique sur le salaire net imposable</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="tauxRTSFixe" class="form-label">Taux RTS fixe (%) <span class="text-muted">- si sélectionné</span></label>
+                            <input type="number" class="form-control" id="tauxRTSFixe" value="{{ rts_taux_fixe|default:10 }}" min="0" max="100" step="0.01" {% if rts_type != 'FIXE' %}disabled{% endif %}>
+                            <small class="text-muted">Activé uniquement si "Taux fixe" est sélectionné</small>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">Aperçu de l'impact sur un salaire de 3,160,000 GNF :</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Élément</th>
+                                            <th class="text-end">Charges activées (Barème progressif)</th>
+                                            <th class="text-end">Charges désactivées</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Salaire brut (GNF)</td>
+                                            <td class="text-end">3,160,000</td>
+                                            <td class="text-end">3,160,000</td>
+                                        </tr>
+                                        <tr>
+                                            <td>CNSS (<span id="previewTaux">{{ cnss_taux|default:5 }}</span>%) (GNF)</td>
+                                            <td class="text-end text-danger" id="previewCNSSActive">-158,000</td>
+                                            <td class="text-end text-success">0</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Salaire net imposable (GNF)</td>
+                                            <td class="text-end">3,002,000</td>
+                                            <td class="text-end">3,160,000</td>
+                                        </tr>
+                                        <tr>
+                                            <td>RTS (Barème progressif) (GNF)</td>
+                                            <td class="text-end text-danger" id="previewRTSActive">-100,300</td>
+                                            <td class="text-end text-success">0</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-muted small">
+                                                <strong>Détail RTS :</strong> Tranche 1 (0-1M): 0 GNF | Tranche 2 (1M-3M): 100,000 GNF | Tranche 3 (3M+): 300 GNF
+                                            </td>
+                                        </tr>
+                                        <tr class="table-warning">
+                                            <td><strong>Net à payer (GNF)</strong></td>
+                                            <td class="text-end" id="previewNetActive"><strong>2,901,700</strong></td>
+                                            <td class="text-end"><strong>3,160,000</strong></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-warning" id="sauvegarderChargesSociales">
+                    <i class="fas fa-save"></i> Sauvegarder la configuration
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 🇬🇳 Configuration des charges sociales guinéennes
+document.addEventListener('DOMContentLoaded', function() {
+    const appliquerCNSSCheckbox = document.getElementById('appliquerCNSS');
+    const tauxCNSSInput = document.getElementById('tauxCNSS');
+    const previewTaux = document.getElementById('previewTaux');
+    const previewCNSSActive = document.getElementById('previewCNSSActive');
+    const previewRTSActive = document.getElementById('previewRTSActive');
+    const previewNetActive = document.getElementById('previewNetActive');
+    const sauvegarderBtn = document.getElementById('sauvegarderChargesSociales');
+    
+    // Éléments RTS
+    const rtsProgressifRadio = document.getElementById('rtsProgressif');
+    const rtsFixeRadio = document.getElementById('rtsFixe');
+    const tauxRTSFixeInput = document.getElementById('tauxRTSFixe');
+    
+    // Activer/désactiver le champ RTS fixe selon le type sélectionné
+    function toggleRTSFixeInput() {
+        tauxRTSFixeInput.disabled = !rtsFixeRadio.checked;
+        updatePreview();
+    }
+    
+    rtsProgressifRadio.addEventListener('change', toggleRTSFixeInput);
+    rtsFixeRadio.addEventListener('change', toggleRTSFixeInput);
+    
+    // Mettre à jour l'aperçu avec calculs conformes à la réglementation guinéenne
+    function updatePreview() {
+        const taux = parseFloat(tauxCNSSInput.value) || 0;
+        const salaireBrut = 3160000;  // Exemple réaliste
+        
+        // 1. Calcul CNSS (5% sur salaire brut)
+        const montantCNSS = Math.round(salaireBrut * (taux / 100));
+        
+        // 2. Salaire net imposable (après CNSS)
+        const salaireNetImposable = salaireBrut - montantCNSS;
+        
+        // 3. Calcul RTS selon le type sélectionné
+        let montantRTS = 0;
+        if (rtsFixeRadio.checked) {
+            // RTS à taux fixe
+            const tauxRTSFixe = parseFloat(tauxRTSFixeInput.value) || 10;
+            montantRTS = Math.round(salaireNetImposable * (tauxRTSFixe / 100));
+        } else {
+            // RTS barème progressif guinéen
+            if (salaireNetImposable <= 1000000) {
+                montantRTS = 0;  // Tranche 1: 0%
+            } else if (salaireNetImposable <= 3000000) {
+                montantRTS = Math.round((salaireNetImposable - 1000000) * 0.05);  // Tranche 2: 5%
+            } else {
+                const rtsT2 = 2000000 * 0.05;  // 100,000 GNF
+                const rtsT3 = (salaireNetImposable - 3000000) * 0.15;  // Tranche 3: 15%
+                montantRTS = Math.round(rtsT2 + rtsT3);
+            }
+        }
+        
+        // 4. Net à payer final
+        const netAPayer = salaireBrut - montantCNSS - montantRTS;
+        
+        // Mise à jour de l'affichage
+        previewTaux.textContent = taux.toFixed(2);
+        previewCNSSActive.textContent = '-' + montantCNSS.toLocaleString();
+        previewRTSActive.textContent = '-' + montantRTS.toLocaleString();
+        previewNetActive.innerHTML = '<strong>' + netAPayer.toLocaleString() + '</strong>';
+    }
+    
+    tauxCNSSInput.addEventListener('input', updatePreview);
+    tauxRTSFixeInput.addEventListener('input', updatePreview);
+    
+    // Sauvegarder la configuration avec confirmation
+    sauvegarderBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('🔄 Bouton sauvegarde cliqué');
+        
+        const appliquerCNSS = appliquerCNSSCheckbox.checked;
+        const tauxCNSS = parseFloat(tauxCNSSInput.value) || 5;
+        
+        // Récupération de la configuration RTS
+        const rtsType = rtsProgressifRadio.checked ? 'PROGRESSIF' : 'FIXE';
+        const tauxRTSFixe = parseFloat(tauxRTSFixeInput.value) || 10;
+        
+        // Message de confirmation
+        const confirmationMessage = `
+            Êtes-vous sûr de vouloir sauvegarder cette configuration des charges sociales ?
+            
+            🇬🇳 CONFIGURATION CNSS:
+            - Statut: ${appliquerCNSS ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
+            - Taux: ${tauxCNSS}%
+            
+            📊 CONFIGURATION RTS:
+            - Type: ${rtsType === 'PROGRESSIF' ? 'Barème progressif guinéen' : 'Taux fixe'}
+            ${rtsType === 'FIXE' ? `- Taux fixe: ${tauxRTSFixe}%` : '- Tranches: 0% (0-1M), 5% (1M-3M), 15% (3M+)'}
+            
+            Cette action recalculera automatiquement tous les bulletins de paie du mois en cours.
+        `;
+        
+        if (!confirm(confirmationMessage)) {
+            console.log('❌ Sauvegarde annulée par l\'utilisateur');
+            return;
+        }
+        
+        console.log('✅ Confirmation reçue, démarrage de la sauvegarde');
+        console.log('📊 Configuration à sauvegarder:', { appliquerCNSS, tauxCNSS });
+        
+        // Désactiver le bouton pendant la sauvegarde
+        sauvegarderBtn.disabled = true;
+        sauvegarderBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde en cours...';
+        
+        // Vérifier le token CSRF
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfToken) {
+            console.error('❌ Token CSRF introuvable');
+            alert('❌ ERREUR: Token CSRF manquant. Veuillez recharger la page et réessayer.');
+            // Réactiver le bouton
+            sauvegarderBtn.disabled = false;
+            sauvegarderBtn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder la configuration';
+            return;
+        }
+        
+        console.log('✅ Token CSRF trouvé:', csrfToken.value.substring(0, 10) + '...');
+        
+        // Créer les données à envoyer
+        const requestData = {
+            'appliquer_cnss': appliquerCNSS,
+            'taux_cnss': tauxCNSS,
+            'rts_type': rtsType,
+            'taux_rts_fixe': tauxRTSFixe
+        };
+        
+        console.log('📤 Données à envoyer:', requestData);
+        
+        // Envoyer la configuration au serveur
+        fetch('{% url "fleet_app:config_charges_sociales" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken.value,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => {
+            console.log('📡 Réponse serveur reçue');
+            console.log('- Status:', response.status);
+            console.log('- Status Text:', response.statusText);
+            console.log('- Headers:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+        })
+        .then(data => {
+            console.log('✅ Données JSON reçues:', data);
+            
+            // Réactiver le bouton
+            sauvegarderBtn.disabled = false;
+            sauvegarderBtn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder la configuration';
+            
+            if (data.success) {
+                console.log('✅ Sauvegarde réussie!');
+                
+                // Message de succès détaillé
+                const successMessage = `
+                    ✅ CONFIGURATION DES CHARGES SOCIALES GUINÉENNES SAUVEGARDÉE!
+                    
+                    🇬🇳 CNSS:
+                    - Statut: ${appliquerCNSS ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
+                    - Taux: ${tauxCNSS}%
+                    
+                    📊 RTS (Retenue à la source):
+                    - Type: ${data.rts_type === 'PROGRESSIF' ? 'Barème progressif guinéen' : 'Taux fixe'}
+                    ${data.rts_type === 'FIXE' ? `- Taux: ${data.taux_rts_fixe}%` : '- Tranches: 0% (0-1M), 5% (1M-3M), 15% (3M+)'}
+                    
+                    📊 Résultats:
+                    - Bulletins recalculés: ${data.bulletins_recalcules || 0}
+                    
+                    La page va se recharger pour afficher les nouveaux calculs conformes à la législation guinéenne.
+                `;
+                
+                alert(successMessage);
+                
+                // Fermer le modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalChargesSociales'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Afficher notification si disponible
+                if (typeof showNotification === 'function') {
+                    const message = data.message || `Charges sociales ${appliquerCNSS ? 'activées' : 'désactivées'} avec succès!`;
+                    showNotification('success', 'Configuration sauvegardée!', message);
+                }
+                
+                // Recharger la page pour appliquer les changements
+                setTimeout(() => {
+                    console.log('🔄 Rechargement de la page dans 3 secondes...');
+                    window.location.reload();
+                }, 3000);
+                
+            } else {
+                console.error('❌ Erreur serveur:', data.error || data.message);
+                const errorMessage = `
+                    ❌ ERREUR LORS DE LA SAUVEGARDE
+                    
+                    ${data.error || data.message || 'Erreur inconnue'}
+                    
+                    Veuillez vérifier votre connexion et réessayer.
+                `;
+                alert(errorMessage);
+                
+                if (typeof showNotification === 'function') {
+                    showNotification('error', 'Erreur', data.error || 'Erreur lors de la sauvegarde');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur fetch complète:', error);
+            
+            // Réactiver le bouton
+            sauvegarderBtn.disabled = false;
+            sauvegarderBtn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder la configuration';
+            
+            const errorMessage = `
+                ❌ ERREUR DE COMMUNICATION
+                
+                ${error.message}
+                
+                Vérifiez:
+                - Votre connexion internet
+                - Que le serveur Django fonctionne
+                - Rechargez la page et réessayez
+            `;
+            
+            alert(errorMessage);
+            
+            if (typeof showNotification === 'function') {
+                showNotification('error', 'Erreur de communication', error.message);
+            }
+        });
+    });
+    
+    // Initialiser l'aperçu
+    updatePreview();
+});
+</script>
+
+{% endblock %}

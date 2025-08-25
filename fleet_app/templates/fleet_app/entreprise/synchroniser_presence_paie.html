@@ -1,0 +1,281 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Synchroniser Présence → Paie{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+<style>
+.sync-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.sync-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.sync-form {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.rapport-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #007bff;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.employe-detail {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid #28a745;
+}
+
+.formule-info {
+    background: #e3f2fd;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #2196f3;
+}
+
+.btn-sync {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.btn-sync:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sync-container">
+    <div class="sync-header">
+        <h1><i class="fas fa-sync-alt"></i> Synchronisation Présence → Paie</h1>
+        <p>Récupération automatique des données de présence depuis le pointage vers les paies</p>
+    </div>
+
+    <!-- Formules de calcul -->
+    <div class="formule-info">
+        <h5><i class="fas fa-calculator"></i> Formules de calcul appliquées</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <ul class="list-unstyled">
+                    <li><strong>Jours de présence:</strong> P(Am_&_Pm) + P(Pm) + P(Am)</li>
+                    <li><strong>Sundays:</strong> P(dim_Am) + P(dim_Pm) + P(dim_Am_&_Pm)</li>
+                    <li><strong>Absent:</strong> nombre de A</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul class="list-unstyled">
+                    <li><strong>Maladies:</strong> nombre de M</li>
+                    <li><strong>M.Payer:</strong> nombre de M(Payer)</li>
+                    <li><strong>J Repos:</strong> nombre de OFF</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de synchronisation -->
+    <div class="sync-form">
+        <h4><i class="fas fa-calendar-alt"></i> Synchroniser pour une période</h4>
+        
+        <form method="post" class="mt-3">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="mois" class="form-label">Mois</label>
+                    <select name="mois" id="mois" class="form-select">
+                        {% for mois_num, mois_nom in mois_noms %}
+                        <option value="{{ mois_num }}" {% if mois_num == mois_actuel %}selected{% endif %}>
+                            {{ mois_nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="annee" class="form-label">Année</label>
+                    <select name="annee" id="annee" class="form-select">
+                        {% for annee in "2023,2024,2025"|split:"," %}
+                        <option value="{{ annee }}" {% if annee|add:0 == annee_actuelle %}selected{% endif %}>
+                            {{ annee }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-sync w-100">
+                        <i class="fas fa-sync-alt"></i> Synchroniser
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Rapport de synchronisation -->
+    {% if rapport %}
+    <div class="rapport-section">
+        <h4><i class="fas fa-chart-bar"></i> Rapport de synchronisation - {{ rapport.mois|stringformat:"02d" }}/{{ rapport.annee }}</h4>
+        
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ rapport.total_employes }}</div>
+                    <div>Employés total</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #28a745;">
+                    <div class="stat-number" style="color: #28a745;">{{ rapport.employes_crees }}</div>
+                    <div>Paies créées</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #ffc107;">
+                    <div class="stat-number" style="color: #ffc107;">{{ rapport.employes_mis_a_jour }}</div>
+                    <div>Paies mises à jour</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #dc3545;">
+                    <div class="stat-number" style="color: #dc3545;">{{ rapport.erreurs|length }}</div>
+                    <div>Erreurs</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Détails par employé -->
+        {% if rapport.details %}
+        <h5><i class="fas fa-users"></i> Détails par employé</h5>
+        <div class="row">
+            {% for detail in rapport.details %}
+            <div class="col-md-6 mb-3">
+                <div class="employe-detail">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>{{ detail.employe.nom }}</strong>
+                        {% if detail.created %}
+                        <span class="badge bg-success">Créé</span>
+                        {% else %}
+                        <span class="badge bg-warning">Mis à jour</span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Matricule: {{ detail.employe.matricule }}</small>
+                    
+                    <div class="mt-2">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="fw-bold text-primary">{{ detail.statistiques.jours_presence }}</div>
+                                <small>Présence</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-success">{{ detail.statistiques.sundays }}</div>
+                                <small>Sundays</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-danger">{{ detail.statistiques.absent }}</div>
+                                <small>Absences</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Erreurs -->
+        {% if rapport.erreurs %}
+        <div class="alert alert-danger">
+            <h6><i class="fas fa-exclamation-triangle"></i> Erreurs rencontrées</h6>
+            {% for erreur in rapport.erreurs %}
+            <div>• {{ erreur.employe.nom }}: {{ erreur.erreur }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Actions rapides -->
+    <div class="row">
+        <div class="col-md-4">
+            <a href="{% url 'paies_list' %}" class="btn btn-outline-primary w-100">
+                <i class="fas fa-money-bill-wave"></i> Voir les paies
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{% url 'rapport_presence_mois' %}" class="btn btn-outline-info w-100">
+                <i class="fas fa-chart-line"></i> Rapport présence
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{% url 'verifier_coherence' %}" class="btn btn-outline-warning w-100">
+                <i class="fas fa-search"></i> Vérifier cohérence
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh des statistiques après synchronisation
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des compteurs
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(function(element) {
+        const finalValue = parseInt(element.textContent);
+        let currentValue = 0;
+        const increment = finalValue / 20;
+        
+        const timer = setInterval(function() {
+            currentValue += increment;
+            if (currentValue >= finalValue) {
+                element.textContent = finalValue;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(currentValue);
+            }
+        }, 50);
+    });
+});
+</script>
+{% endblock %}

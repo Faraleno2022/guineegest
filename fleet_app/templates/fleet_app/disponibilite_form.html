@@ -1,0 +1,107 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Modifier une période de disponibilité - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-edit me-2"></i> {{ title }}
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">Des erreurs ont été détectées dans le formulaire :</h5>
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li><strong>{{ field.label }}</strong> : {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.vehicule.id_for_label }}" class="form-label">Véhicule</label>
+                            {{ form.vehicule }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.date_debut.id_for_label }}" class="form-label">Date de début</label>
+                            {{ form.date_debut }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.date_fin.id_for_label }}" class="form-label">Date de fin</label>
+                            {{ form.date_fin }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.heures_disponibles.id_for_label }}" class="form-label">Heures disponibles</label>
+                            {{ form.heures_disponibles }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.heures_totales.id_for_label }}" class="form-label">Heures totales</label>
+                            {{ form.heures_totales }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.disponibilite_pourcentage.id_for_label }}" class="form-label">Disponibilité (%)</label>
+                            {{ form.disponibilite_pourcentage }}
+                            <small class="form-text text-muted">Calculé automatiquement</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.raison_indisponibilite.id_for_label }}" class="form-label">Raison d'indisponibilité</label>
+                            {{ form.raison_indisponibilite }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'fleet_app:kpi_disponibilite' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Retour
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Récupération des éléments du formulaire
+        const heuresDisponibles = document.getElementById('{{ form.heures_disponibles.id_for_label }}');
+        const heuresTotales = document.getElementById('{{ form.heures_totales.id_for_label }}');
+        const disponibilitePourcentage = document.getElementById('{{ form.disponibilite_pourcentage.id_for_label }}');
+        
+        // Fonction pour calculer le pourcentage de disponibilité
+        function calculerPourcentage() {
+            if (heuresTotales.value > 0) {
+                const pourcentage = (heuresDisponibles.value / heuresTotales.value) * 100;
+                disponibilitePourcentage.value = pourcentage.toFixed(1);
+            } else {
+                disponibilitePourcentage.value = '0.0';
+            }
+        }
+        
+        // Ajout des événements pour recalculer le pourcentage
+        heuresDisponibles.addEventListener('input', calculerPourcentage);
+        heuresTotales.addEventListener('input', calculerPourcentage);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Supprimer un chauffeur{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Supprimer un chauffeur</h1>
+        <a href="{% url 'fleet_app:chauffeur_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Confirmation de suppression</h6>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <p>Êtes-vous sûr de vouloir supprimer le chauffeur <strong>{{ chauffeur.prenom }} {{ chauffeur.nom }}</strong> ?</p>
+                <p>Cette action est irréversible et supprimera toutes les données associées à ce chauffeur.</p>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Confirmer la suppression
+                </button>
+                <a href="{% url 'fleet_app:chauffeur_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

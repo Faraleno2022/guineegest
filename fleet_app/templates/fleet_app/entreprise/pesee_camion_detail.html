@@ -1,0 +1,86 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Détail Pesée Camion{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Détail de la Pesée</h5>
+            <div>
+                <a href="{% url 'fleet_app:pesee_camion_list' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+                </a>
+                <a href="{% url 'fleet_app:pesee_camion_edit' pesee.pk %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit me-1"></i>Modifier
+                </a>
+                <a href="{% url 'fleet_app:pesee_camion_delete' pesee.pk %}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash me-1"></i>Supprimer
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Informations Générales</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Date:</div>
+                        <div class="col-sm-8">{{ pesee.date|date:"d/m/Y" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Chauffeur:</div>
+                        <div class="col-sm-8">{{ pesee.first_name }} {{ pesee.last_name }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Téléphone:</div>
+                        <div class="col-sm-8">{{ pesee.phone_number }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Plaque:</div>
+                        <div class="col-sm-8">{{ pesee.plate }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">N° Carte d'entrée:</div>
+                        <div class="col-sm-8">{{ pesee.entry_card_number }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Détails de la Pesée</h6>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Zone de chargement:</div>
+                        <div class="col-sm-8">{{ pesee.loading_zone }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Heure de départ:</div>
+                        <div class="col-sm-8">{{ pesee.departure_time|time:"H:i" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Début pesée:</div>
+                        <div class="col-sm-8">{{ pesee.weighing_start|time:"H:i" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Fin pesée:</div>
+                        <div class="col-sm-8">{{ pesee.weighing_end|time:"H:i" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-bold">Quantité:</div>
+                        <div class="col-sm-8">{{ pesee.quantity }} kg</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if pesee.observation %}
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2 mb-3">Observations</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ pesee.observation|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

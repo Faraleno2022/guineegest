@@ -1,0 +1,10 @@
+django==5.2.3
+django-crispy-forms==2.3
+crispy-bootstrap5==2024.2
+django-bootstrap5==24.3
+django-widget-tweaks==1.5.0
+python-dotenv==1.0.1
+tkcalendar==1.6.1
+matplotlib==3.7.1
+pandas==2.0.1
+pillow==9.5.0

@@ -1,0 +1,186 @@
+<div class="table-wrapper">
+    <!-- Colonnes figées -->
+    <div class="fixed-columns">
+        <table class="table table-hover table-bordered fixed-table">
+            <thead class="table-light">
+                <tr>
+                    <th class="align-middle matricule-col text-center col-matricule" rowspan="2"><i class="fas fa-id-card me-1" style="color: #0056b3;"></i> <span style="font-size: 1.1rem; color: #0056b3;">Matricule</span></th>
+                    <th class="align-middle employe-col col-employe" rowspan="2"><i class="fas fa-user me-1" style="color: #0056b3;"></i> <span style="font-size: 1.1rem; color: #0056b3;">Employé</span></th>
+                    <th class="align-middle poste-col col-fonction" rowspan="2"><i class="fas fa-briefcase me-1" style="color: #0056b3;"></i> <span style="font-size: 1.1rem; color: #0056b3;">Fonction</span></th>
+                    <th class="align-middle text-center col-statut" rowspan="2"><i class="fas fa-info-circle me-1"></i> <span style="font-size: 1.1rem;">Statut</span></th>
+                </tr>
+                <tr>
+                    <!-- Ligne vide pour aligner avec la seconde ligne d'en-tête -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in employes_data %}
+                <tr>
+                    <td class="matricule-col">{{ data.employe.matricule }}</td>
+                    <td class="employe-col">{{ data.employe.prenom }} {{ data.employe.nom }}</td>
+                    <td class="poste-col">{{ data.employe.fonction }}</td>
+                    <td>
+                        <!-- Statut global -->
+                        <span class="badge bg-primary shadow-sm" style="font-size: 1rem; padding: 0.4rem 0.7rem; font-weight: 600;">Actif</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">Aucun employé enregistré</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Contenu défilant -->
+    <div class="scrollable-content">
+        <table class="table table-hover table-bordered scrollable-table" id="presenceTable">
+            <thead class="table-light">
+                <tr>
+                    <!-- Jours du mois -->
+                    {% for header in days_headers %}
+                    <th class="text-center">
+                        <span class="d-block fw-bold" style="font-size: 1.1rem; color: #0056b3;">{{ header.day }}</span>
+                        <span style="font-size: 0.9rem; color: #0056b3;">{{ header.date_str }}</span>
+                    </th>
+                    {% endfor %}
+                    <!-- Colonnes de paie et présence -->
+                    <th class="align-middle text-center" rowspan="2"><i class="fas fa-calendar me-1"></i> <span style="font-size: 0.8rem;">Total Jours</span></th>
+                    <th class="align-middle text-center" rowspan="2"><i class="fas fa-check-circle me-1"></i> <span style="font-size: 0.8rem;">Jours de présence</span></th>
+                    <th class="align-middle text-center" rowspan="2"><i class="fas fa-times-circle me-1"></i> <span style="font-size: 0.8rem;">Absences</span></th>
+                    <th class="align-middle text-center" rowspan="2"><i class="fas fa-money-bill me-1"></i> <span style="font-size: 0.8rem;">M.Payer</span></th>
+                    <th class="align-middle text-center" rowspan="2"><i class="fas fa-medkit me-1"></i> <span style="font-size: 0.8rem;">Maladies</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Sundays</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Montant Over Time Pay for Sundays</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Number of Sundays Worked</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Nombre Heures Supplém</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Montant Temps Supplément</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Sunday Off</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Sundays (PM)</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Montant Sundays(PM)</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Sundays(AM)</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Montant Sundays(AM)</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Sunday(Am & Pm)</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Montant Sunday (Am & PM)</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Montant Sunday</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Number Sunday</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Salaire Net</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Salaire par Jours</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Salaire Net A Payer</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Mountant des jours Travailleurs</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Holiday Pay 25/Déc</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Eid Mubarak 30/03/2025</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Total Holiday</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Valeur des Jour Sommer</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Eid Mubarak 31/03/2025</span></th>
+                    <th class="align-middle text-center" rowspan="2"><span style="font-size: 0.8rem;">Avance sur salaire</span></th>
+                </tr>
+                <tr>
+                    <!-- Jours de la semaine -->
+                    {% for header in days_headers %}
+                        <th class="text-center small">
+                            <span class="badge bg-light text-primary rounded-pill shadow-sm" style="font-size: 0.9rem; padding: 0.35rem 0.65rem; border: 1px solid #0056b3;">{{ header.weekday|capfirst }}</span>
+                        </th>
+                    {% endfor %}
+                    <!-- Pas de contenu pour les colonnes de paie dans cette ligne -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in employes_data %}
+                <tr>
+                    <!-- Présences par jour -->
+                    {% for presence in data.presences %}
+                    <td class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-sm dropdown-toggle {{ presence.btn_class }} shadow-sm" 
+                                    type="button" id="dropdownStatus-{{ data.employe.id }}-{{ presence.day }}" 
+                                    data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid rgba(0,0,0,0.2);">
+                                <strong>{{ presence.statut|default:'-' }}</strong>
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="dropdownStatus-{{ data.employe.id }}-{{ presence.day }}">
+                                {% for code, label in statut_choices %}
+                                    <li>
+                                        <form method="post" action="{% url 'fleet_app:presence_journaliere_list' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="employe_id" value="{{ data.employe.id }}">
+                                            <input type="hidden" name="jour" value="{{ presence.day }}">
+                                            <input type="hidden" name="statut" value="{{ code }}">
+                                            <button type="submit" class="dropdown-item" onclick="closeDropdownAfterSubmit(this)">
+                                                {% if code == 'P' %}
+                                                    <span class="badge bg-success me-2">{{ code }}</span>
+                                                {% elif code == 'P(Am)' %}
+                                                    <span class="badge bg-success me-2">{{ code }}</span>
+                                                {% elif code == 'P(Pm)' %}
+                                                    <span class="badge bg-success me-2">{{ code }}</span>
+                                                {% elif code == 'P(dim_Am)' %}
+                                                    <span class="badge bg-success text-dark me-2" style="background-color: #8eff8e !important;">{{ code }}</span>
+                                                {% elif code == 'P(dim_Pm)' %}
+                                                    <span class="badge bg-success text-dark me-2" style="background-color: #8eff8e !important;">{{ code }}</span>
+                                                {% elif code == 'P(dim_Am_&_Pm)' %}
+                                                    <span class="badge bg-success text-dark me-2" style="background-color: #8eff8e !important;">{{ code }}</span>
+                                                {% elif code == 'A' %}
+                                                    <span class="badge bg-danger me-2">{{ code }}</span>
+                                                {% elif code == 'M' %}
+                                                    <span class="badge bg-warning me-2">{{ code }}</span>
+                                                {% elif code == 'M(Payer)' %}
+                                                    <span class="badge bg-warning text-dark me-2">{{ code }}</span>
+                                                {% elif code == 'OFF' %}
+                                                    <span class="badge bg-secondary me-2">{{ code }}</span>
+                                                {% elif code == 'C' %}
+                                                    <span class="badge bg-info me-2">{{ code }}</span>
+                                                {% elif code == 'R' %}
+                                                    <span class="badge bg-primary me-2">{{ code }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary me-2">{{ code }}</span>
+                                                {% endif %}
+                                                {{ label }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </td>
+                    {% endfor %}
+                    <!-- Colonnes de paie et présence -->
+                    <td class="text-center stat-col">{{ month_days|length }}</td>
+                    <td class="text-center stat-col">{{ data.nombre_presences }}</td>
+                    <td class="text-center stat-col">{{ data.nombre_absences }}</td>
+                    <td class="text-center stat-col">{{ data.nombre_maladies_payees }}</td>
+                    <td class="text-center stat-col">{{ data.nombre_maladies }}</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center text-muted">0</td>
+                    <td class="text-center">0</td>
+                    <td class="text-center">0</td>
+                    <td class="text-center">0</td>
+                    <td class="text-center">0</td>
+                    <td class="text-center">0</td>
+                    <td class="text-center">0</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ days_headers|length|add:34 }}" class="text-center">Aucun employé enregistré</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

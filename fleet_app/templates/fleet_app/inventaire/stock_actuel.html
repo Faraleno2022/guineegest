@@ -1,0 +1,277 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load inventory_filters %}
+
+{% block title %}Stock Actuel{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Stock Actuel</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item active">Inventaire - Stock Actuel</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-boxes me-1"></i>
+            État du stock actuel
+        </div>
+        <div class="card-body">
+            <!-- Formulaire de recherche -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-search"></i> Recherche
+                        </div>
+                        <div class="card-body">
+                            <form method="get" class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="id_critere" class="form-label">Critère</label>
+                                    {{ form_recherche.critere }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="id_terme" class="form-label">Terme de recherche</label>
+                                    {{ form_recherche.terme }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="id_categorie" class="form-label">Catégorie</label>
+                                    <select name="categorie" id="id_categorie" class="form-select">
+                                        <option value="">Toutes les catégories</option>
+                                        {% for cat in categories %}
+                                            <option value="{{ cat }}" {% if request.GET.categorie == cat %}selected{% endif %}>{{ cat }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="id_alerte" class="form-label">Filtrer par</label>
+                                    <select name="alerte" id="id_alerte" class="form-select">
+                                        <option value="">Tous les produits</option>
+                                        <option value="alerte" {% if request.GET.alerte == 'alerte' %}selected{% endif %}>Produits en alerte</option>
+                                        <option value="rupture" {% if request.GET.alerte == 'rupture' %}selected{% endif %}>Produits en rupture</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12 mt-3 d-flex">
+                                    <button type="submit" class="btn btn-primary me-2">
+                                        <i class="fas fa-search"></i> Rechercher
+                                    </button>
+                                    <a href="{% url 'fleet_app:stock_actuel' %}" class="btn btn-secondary">
+                                        <i class="fas fa-redo"></i> Réinitialiser
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Résumé du stock -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card bg-primary text-white mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">Total Produits</h5>
+                                    <h2 class="mb-0">{{ total_produits }}</h2>
+                                </div>
+                                <div>
+                                    <i class="fas fa-box fa-3x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card bg-success text-white mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">Stock Normal</h5>
+                                    <h2 class="mb-0">{{ produits_normaux }}</h2>
+                                </div>
+                                <div>
+                                    <i class="fas fa-check-circle fa-3x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card bg-warning text-white mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">En Alerte</h5>
+                                    <h2 class="mb-0">{{ produits_alerte }}</h2>
+                                </div>
+                                <div>
+                                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card bg-danger text-white mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">En Rupture</h5>
+                                    <h2 class="mb-0">{{ produits_rupture }}</h2>
+                                </div>
+                                <div>
+                                    <i class="fas fa-times-circle fa-3x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tableau du stock actuel -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID Produit</th>
+                            <th>Nom</th>
+                            <th>Catégorie</th>
+                            <th>Stock Actuel</th>
+                            <th>Unité</th>
+                            <th>Seuil Min.</th>
+                            <th>Statut</th>
+                            <th>Prix Unitaire (GNF)</th>
+                            <th>Valeur Stock (GNF)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produit in produits %}
+                        <tr>
+                            <td>{{ produit.id_produit }}</td>
+                            <td>{{ produit.nom }}</td>
+                            <td>{{ produit.categorie }}</td>
+                            <td class="text-end">{{ produit.get_stock_actuel }}</td>
+                            <td>{{ produit.unite }}</td>
+                            <td class="text-end">{{ produit.seuil_minimum }}</td>
+                            <td class="text-center">
+                                {% if produit.get_stock_actuel == 0 %}
+                                    <span class="badge bg-danger">Rupture</span>
+                                {% elif produit.get_stock_actuel <= produit.seuil_minimum %}
+                                    <span class="badge bg-warning">Alerte</span>
+                                {% else %}
+                                    <span class="badge bg-success">Normal</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ produit.prix_unitaire|floatformat:0 }}</td>
+                            <td class="text-end">{{ produit.get_stock_actuel|multiply:produit.prix_unitaire|floatformat:0 }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'fleet_app:produit_detail' produit.id_produit %}" class="btn btn-info btn-sm" title="Détails">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'fleet_app:entree_stock_create' %}?produit={{ produit.id_produit }}" class="btn btn-success btn-sm" title="Entrée en stock">
+                                        <i class="fas fa-arrow-circle-down"></i>
+                                    </a>
+                                    <a href="{% url 'fleet_app:sortie_stock_create' %}?produit={{ produit.id_produit }}" class="btn btn-danger btn-sm" title="Sortie de stock">
+                                        <i class="fas fa-arrow-circle-up"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center">Aucun produit trouvé.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <th colspan="8" class="text-end">Valeur totale du stock:</th>
+                            <th class="text-end">{{ valeur_totale|floatformat:0 }} GNF</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.categorie %}&categorie={{ request.GET.categorie }}{% endif %}{% if request.GET.alerte %}&alerte={{ request.GET.alerte }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.categorie %}&categorie={{ request.GET.categorie }}{% endif %}{% if request.GET.alerte %}&alerte={{ request.GET.alerte }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.categorie %}&categorie={{ request.GET.categorie }}{% endif %}{% if request.GET.alerte %}&alerte={{ request.GET.alerte }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.categorie %}&categorie={{ request.GET.categorie }}{% endif %}{% if request.GET.alerte %}&alerte={{ request.GET.alerte }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.categorie %}&categorie={{ request.GET.categorie }}{% endif %}{% if request.GET.alerte %}&alerte={{ request.GET.alerte }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Appliquer les classes Bootstrap aux champs du formulaire de recherche
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('id_critere').classList.add('form-select');
+        document.getElementById('id_terme').classList.add('form-control');
+    });
+</script>
+{% endblock %}

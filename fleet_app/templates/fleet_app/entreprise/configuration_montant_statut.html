@@ -1,0 +1,348 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-cogs me-2"></i>{{ titre }}
+            </h5>
+            <a href="{% url 'fleet_app:dashboard' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour au Tableau de Bord
+            </a>
+        </div>
+        <div class="card-body">
+            
+            <!-- Informations d'aide -->
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Configuration personnalisée :</strong> Modifiez directement les montants en Francs Guinéens (GNF) et cliquez sur le bouton de sauvegarde pour chaque statut.
+                <br><i class="fas fa-lightbulb me-2"></i>
+                <strong>Note :</strong> Les modifications sont sauvegardées individuellement et appliquées immédiatement dans la légende des présences.
+            </div>
+
+            <!-- Section Présences -->
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>Présences</h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- P(Am) -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_am" value="{{ config.montant_am }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-success me-2">P(Am)</span>
+                                <span class="me-auto">Présent matin</span>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="saveMontant('montant_am', 'P(Am)')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- P(Pm) -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_pm" value="{{ config.montant_pm }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-success me-2">P(Pm)</span>
+                                <span class="me-auto">Présent après-midi</span>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="saveMontant('montant_pm', 'P(Pm)')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- P(Am&Pm) -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_journee" value="{{ config.montant_journee }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-primary me-2">P(Am&Pm)</span>
+                                <span class="me-auto">Présent journée complète</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="saveMontant('montant_journee', 'P(Am&Pm)')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <h6 class="text-success mt-4 mb-3">Dimanches</h6>
+                            
+                            <!-- P(dim_Am) -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_dim_am" value="{{ config.montant_dim_am }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge text-dark me-2" style="background-color: #8eff8e;">P(dim_Am)</span>
+                                <span class="me-auto">Dimanche matin</span>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="saveMontant('montant_dim_am', 'P(dim_Am)')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- P(dim_Pm) -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_dim_pm" value="{{ config.montant_dim_pm }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge text-dark me-2" style="background-color: #90ee90;">P(dim_Pm)</span>
+                                <span class="me-auto">Dimanche après-midi</span>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="saveMontant('montant_dim_pm', 'P(dim_Pm)')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- P(dim_Am_&_Pm) -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_dim_journee" value="{{ config.montant_dim_journee }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge text-dark me-2" style="background-color: #98fb98;">P(dim_Am_&_Pm)</span>
+                                <span class="me-auto">Dimanche journée</span>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="saveMontant('montant_dim_journee', 'P(dim_Am_&_Pm)')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section Absences & Autres -->
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0"><i class="fas fa-times-circle me-2"></i>Absences & Autres</h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- A -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_absent" value="{{ config.montant_absent }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-danger me-2">A</span>
+                                <span class="me-auto">Absent</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="saveMontant('montant_absent', 'A')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- M -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_maladie" value="{{ config.montant_maladie }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-warning me-2">M</span>
+                                <span class="me-auto">Maladie</span>
+                                <button type="button" class="btn btn-sm btn-outline-warning" 
+                                        onclick="saveMontant('montant_maladie', 'M')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- M(Payer) -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_maladie_payee" value="{{ config.montant_maladie_payee }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-warning text-dark me-2">M(Payer)</span>
+                                <span class="me-auto">Maladie payée</span>
+                                <button type="button" class="btn btn-sm btn-outline-warning" 
+                                        onclick="saveMontant('montant_maladie_payee', 'M(Payer)')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- C -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_conge" value="{{ config.montant_conge }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-info me-2">C</span>
+                                <span class="me-auto">Congé</span>
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="saveMontant('montant_conge', 'C')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- F -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_formation" value="{{ config.montant_formation }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-info me-2">F</span>
+                                <span class="me-auto">Formation</span>
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="saveMontant('montant_formation', 'F')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- OFF -->
+                            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                <input type="number" class="form-control form-control-sm me-2" style="width: 120px;" 
+                                       id="montant_repos" value="{{ config.montant_repos }}" step="0.01" min="0">
+                                <span class="me-2">GNF</span>
+                                <span class="badge bg-secondary me-2">OFF</span>
+                                <span class="me-auto">Repos autorisé</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="saveMontant('montant_repos', 'OFF')">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informations de statut -->
+            <div class="alert alert-success mt-4" id="success-message" style="display: none;">
+                <i class="fas fa-check-circle me-2"></i>
+                <span id="success-text"></span>
+            </div>
+            
+            <div class="alert alert-danger mt-4" id="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span id="error-text"></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction pour sauvegarder un montant individuellement via AJAX
+function saveMontant(fieldName, statusLabel) {
+    const input = document.getElementById(fieldName);
+    const value = parseFloat(input.value);
+    
+    // Validation côté client
+    if (isNaN(value) || value < 0) {
+        showError('Veuillez saisir une valeur numérique positive.');
+        return;
+    }
+    
+    // Désactiver le bouton pendant la sauvegarde
+    const button = input.parentElement.querySelector('button');
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    // Requête AJAX
+    fetch('{% url "fleet_app:save_montant_statut_ajax" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            field_name: fieldName,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess(`Montant pour ${statusLabel} sauvegardé avec succès !`);
+            // Optionnel : mettre à jour l'affichage avec la valeur formatée
+            input.value = value.toFixed(2);
+        } else {
+            showError(data.error || 'Erreur lors de la sauvegarde.');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError('Erreur de connexion. Veuillez réessayer.');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        button.innerHTML = originalContent;
+        button.disabled = false;
+    });
+}
+
+// Fonction pour afficher un message de succès
+function showSuccess(message) {
+    const successDiv = document.getElementById('success-message');
+    const successText = document.getElementById('success-text');
+    const errorDiv = document.getElementById('error-message');
+    
+    errorDiv.style.display = 'none';
+    successText.textContent = message;
+    successDiv.style.display = 'block';
+    
+    // Masquer automatiquement après 3 secondes
+    setTimeout(() => {
+        successDiv.style.display = 'none';
+    }, 3000);
+}
+
+// Fonction pour afficher un message d'erreur
+function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    const successDiv = document.getElementById('success-message');
+    
+    successDiv.style.display = 'none';
+    errorText.textContent = message;
+    errorDiv.style.display = 'block';
+    
+    // Masquer automatiquement après 5 secondes
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
+}
+
+// Fonction pour récupérer le token CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Validation côté client pour les champs numériques
+document.addEventListener('DOMContentLoaded', function() {
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    
+    numberInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.value < 0) {
+                this.value = 0;
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        // Permettre la sauvegarde avec la touche Entrée
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const button = this.parentElement.querySelector('button');
+                if (button) {
+                    button.click();
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

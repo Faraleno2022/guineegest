@@ -1,0 +1,177 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Créer{% endif %} une facture{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{% if form.instance.pk %}Modifier{% else %}Créer{% endif %} une facture</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:facture_list' %}">Factures</a></li>
+        <li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Créer{% endif %} une facture</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-file-invoice me-1"></i>
+            Informations de la facture
+        </div>
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Erreurs dans le formulaire :</strong>
+                    <ul>
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li>{{ field.label }} : {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations générales</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.reference.id_for_label }}" class="form-label">{{ form.reference.label }}</label>
+                            {{ form.reference }}
+                            <div class="form-text">Référence interne ou numéro de commande</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.date_emission.id_for_label }}" class="form-label">{{ form.date_emission.label }}</label>
+                                {{ form.date_emission }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.date_echeance.id_for_label }}" class="form-label">{{ form.date_echeance.label }}</label>
+                                {{ form.date_echeance }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Statut</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.statut.id_for_label }}" class="form-label">{{ form.statut.label }}</label>
+                            {{ form.statut }}
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations du client</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.tiers_nom.id_for_label }}" class="form-label">{{ form.tiers_nom.label }}</label>
+                            {{ form.tiers_nom }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.tiers_adresse.id_for_label }}" class="form-label">{{ form.tiers_adresse.label }}</label>
+                            {{ form.tiers_adresse }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.tiers_telephone.id_for_label }}" class="form-label">{{ form.tiers_telephone.label }}</label>
+                                {{ form.tiers_telephone }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.tiers_email.id_for_label }}" class="form-label">{{ form.tiers_email.label }}</label>
+                                {{ form.tiers_email }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations de paiement</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.mode_paiement.id_for_label }}" class="form-label">{{ form.mode_paiement.label }}</label>
+                            {{ form.mode_paiement }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.delai_paiement.id_for_label }}" class="form-label">{{ form.delai_paiement.label }}</label>
+                            {{ form.delai_paiement }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.banque.id_for_label }}" class="form-label">{{ form.banque.label }}</label>
+                                {{ form.banque }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.rib.id_for_label }}" class="form-label">{{ form.rib.label }}</label>
+                                {{ form.rib }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <h5 class="mb-3">Montants</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.remise.id_for_label }}" class="form-label">{{ form.remise.label }}</label>
+                                {{ form.remise }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.tva.id_for_label }}" class="form-label">{{ form.tva.label }}</label>
+                                {{ form.tva }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <h5 class="mb-3">Notes et observations</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'fleet_app:facture_list' %}" class="btn btn-secondary">Annuler</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>
+                        {% if form.instance.pk %}Mettre à jour{% else %}Créer{% endif %} la facture
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Ajouter des classes Bootstrap aux champs du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+        const formControls = document.querySelectorAll('input, select, textarea');
+        formControls.forEach(control => {
+            if (!control.classList.contains('form-check-input')) {
+                control.classList.add('form-control');
+            }
+        });
+        
+        // Validation du formulaire
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    });
+</script>
+{% endblock %}

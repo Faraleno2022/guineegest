@@ -1,0 +1,613 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Configuration des Heures Supplémentaires{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Messages d'alerte -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            <!-- Zone de recherche dynamique -->
+            <div class="card shadow mb-3">
+                <div class="card-body py-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="searchInput" 
+                                       placeholder="Rechercher par matricule, nom, prénom ou fonction..." 
+                                       autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearch" title="Effacer la recherche">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-flex align-items-center justify-content-end gap-2">
+                                <button class="btn btn-success btn-sm" id="exportExcel" title="Exporter les résultats en Excel">
+                                    <i class="fas fa-file-excel"></i> Excel
+                                </button>
+                                <span class="badge bg-info fs-6" id="resultCount">{{ employes|length }} employé(s)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Tapez pour filtrer instantanément les employés. La recherche s'effectue sur tous les champs visibles.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau des taux spécifiques par employé -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Taux Spécifiques par Employé</h6>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-secondary me-2" id="visibleCount">{{ employes|length }}</span>
+                        <small class="text-muted">employé(s) affiché(s)</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm table-striped" id="dataTable" width="100%" cellspacing="0" style="white-space: nowrap;">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Matricule</th>
+                                    <th>Profession</th>
+                                    <th>Prénom</th>
+                                    <th>Nom</th>
+                                    <th>Salaire base</th>
+                                    <th>Avances</th>
+                                    <th>Sanctions</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employe in employes %}
+                                <tr>
+                                    <td>{{ employe.matricule }}</td>
+                                    <td>{{ employe.fonction }}</td>
+                                    <td>{{ employe.prenom }}</td>
+                                    <td>{{ employe.nom }}</td>
+                                    <td>{{ employe.salaire_journalier|floatformat:2 }} GNF</td>
+                                    <td>{{ employe.avances|floatformat:2 }} GNF</td>
+                                    <td>{{ employe.sanctions|floatformat:2 }} GNF</td>
+                                    <td>
+                                        <!-- Bouton pour ouvrir la modal de modification -->
+                                        <button type="button" class="btn btn-sm btn-primary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#modalModifier{{ employe.id }}">
+                                            <i class="fas fa-edit"></i> Modifier
+                                        </button>
+                                        <!-- Boutons de suppression rapide pour Avances et Sanctions -->
+                                        {% if employe.avances > 0 %}
+                                            <form method="post" class="d-inline" onsubmit="return confirm('Voulez-vous vraiment supprimer l\'avance de {{ employe.avances|floatformat:2 }} GNF pour {{ employe.prenom }} {{ employe.nom }} ?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="supprimer_avance" value="1">
+                                                <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                                                <button type="submit" class="btn btn-sm btn-warning" title="Supprimer l'avance ({{ employe.avances|floatformat:2 }} GNF)">
+                                                    <i class="fas fa-trash"></i> Avance
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                        {% if employe.sanctions > 0 %}
+                                            <form method="post" class="d-inline" onsubmit="return confirm('Voulez-vous vraiment supprimer la sanction de {{ employe.sanctions|floatformat:2 }} GNF pour {{ employe.prenom }} {{ employe.nom }} ?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="supprimer_sanction" value="1">
+                                                <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Supprimer la sanction ({{ employe.sanctions|floatformat:2 }} GNF)">
+                                                    <i class="fas fa-trash"></i> Sanction
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                
+                                <!-- Modal pour modifier l'employé -->
+                                <div class="modal fade" id="modalModifier{{ employe.id }}" tabindex="-1" aria-labelledby="modalModifierLabel{{ employe.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-primary text-white">
+                                                <h5 class="modal-title" id="modalModifierLabel{{ employe.id }}">
+                                                    <i class="fas fa-user-edit me-2"></i>
+                                                    Modifier - {{ employe.matricule }} - {{ employe.prenom }} {{ employe.nom }}
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <form method="post" class="needs-validation" novalidate>
+                                                <div class="modal-body">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="modifier_employe" value="1">
+                                                    <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                                                    
+                                                    <!-- Informations de l'employé -->
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-6">
+                                                            <div class="card border-info">
+                                                                <div class="card-header bg-info text-white">
+                                                                    <i class="fas fa-info-circle me-1"></i> Informations
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <p class="mb-1"><strong>Matricule:</strong> {{ employe.matricule }}</p>
+                                                                    <p class="mb-1"><strong>Fonction:</strong> {{ employe.fonction }}</p>
+                                                                    <p class="mb-0"><strong>Salaire base:</strong> {{ employe.salaire_journalier|floatformat:2 }} GNF</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="card border-warning">
+                                                                <div class="card-header bg-warning text-dark">
+                                                                    <i class="fas fa-clock me-1"></i> Heures Supplémentaires
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <p class="mb-1"><strong>H. Supp. mois:</strong> {{ employe.heures_supp_mois|default:0 }} h</p>
+                                                                    <p class="mb-0"><strong>Montant H. Supp:</strong> {{ employe.montant_supp_mois|floatformat:2|default:0 }} GNF</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Formulaire de modification -->
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <div class="mb-3">
+                                                                <label class="form-label">
+                                                                    <i class="fas fa-percentage text-primary me-1"></i>
+                                                                    Taux jour ouvrable
+                                                                </label>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       name="taux_jour_ouvrable_employe" 
+                                                                       value="{{ employe.taux_horaire_specifique|default:config.taux_jour_ouvrable }}" 
+                                                                       placeholder="Ex: 1.5">
+                                                                <div class="form-text">Multiplicateur pour les heures supplémentaires en jour ouvrable</div>
+                                                            </div>
+                                                            
+                                                            <div class="mb-3">
+                                                                <label class="form-label">
+                                                                    <i class="fas fa-calendar-day text-danger me-1"></i>
+                                                                    Taux dimanche/férié
+                                                                </label>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       name="taux_dimanche_ferie_employe" 
+                                                                       value="{{ employe.taux_dimanche_ferie_specifique|default:config.taux_dimanche_ferie }}" 
+                                                                       placeholder="Ex: 2.0">
+                                                                <div class="form-text">Multiplicateur pour les heures supplémentaires en dimanche/férié</div>
+                                                            </div>
+                                                            
+                                                            <div class="mb-3">
+                                                                <label class="form-label">
+                                                                    <i class="fas fa-coins text-success me-1"></i>
+                                                                    Montant fixe jour (GNF)
+                                                                </label>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       name="montant_jour_ouvrable_employe" 
+                                                                       value="{{ employe.montant_heure_supp_jour_ouvrable|default:0 }}" 
+                                                                       placeholder="Montant par heure">
+                                                                <div class="form-text">Montant fixe par heure supplémentaire (optionnel)</div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <div class="mb-3">
+                                                                <label class="form-label">
+                                                                    <i class="fas fa-hand-holding-usd text-warning me-1"></i>
+                                                                    Avances (GNF)
+                                                                </label>
+                                                                <div class="input-group">
+                                                                    <input type="number" step="0.01" class="form-control" 
+                                                                           name="avances_employe" 
+                                                                           value="{{ employe.avances|default:0 }}" 
+                                                                           placeholder="Montant des avances">
+                                                                    <button type="button" class="btn btn-outline-danger" 
+                                                                            onclick="this.previousElementSibling.value = 0"
+                                                                            title="Remettre à zéro">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <div class="form-text">Avances sur salaire accordées à l'employé</div>
+                                                            </div>
+                                                            
+                                                            <div class="mb-3">
+                                                                <label class="form-label">
+                                                                    <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                                                                    Sanctions (GNF)
+                                                                </label>
+                                                                <div class="input-group">
+                                                                    <input type="number" step="0.01" class="form-control" 
+                                                                           name="sanctions_employe" 
+                                                                           value="{{ employe.sanctions|default:0 }}" 
+                                                                           placeholder="Montant des sanctions">
+                                                                    <button type="button" class="btn btn-outline-danger" 
+                                                                            onclick="this.previousElementSibling.value = 0"
+                                                                            title="Remettre à zéro">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <div class="form-text">Sanctions appliquées à l'employé</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer bg-light">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                        <i class="fas fa-times me-1"></i> Annuler
+                                                    </button>
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="fas fa-save me-1"></i> Enregistrer les modifications
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Modal pour modifier les taux spécifiques -->
+                                <div class="modal fade" id="modalModifierTaux{{ employe.id }}" tabindex="-1" aria-labelledby="modalModifierTauxLabel{{ employe.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="modalModifierTauxLabel{{ employe.id }}">Modifier les taux spécifiques - {{ employe.prenom }} {{ employe.nom }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <form method="post">
+                                                <div class="modal-body">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="modifier_taux_employe" value="1">
+                                                    <input type="hidden" name="employe_id" value="{{ employe.id }}">
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="taux_jour_ouvrable_employe{{ employe.id }}" class="form-label">Taux jour ouvrable</label>
+                                                        <input type="number" step="0.01" class="form-control" id="taux_jour_ouvrable_employe{{ employe.id }}" name="taux_jour_ouvrable_employe" value="{% if employe.taux_horaire_specifique %}{{ employe.taux_horaire_specifique|floatformat:2 }}{% else %}{{ config.taux_jour_ouvrable|floatformat:2 }}{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="taux_dimanche_ferie_employe{{ employe.id }}" class="form-label">Taux dimanche/férié</label>
+                                                        <input type="number" step="0.01" class="form-control" id="taux_dimanche_ferie_employe{{ employe.id }}" name="taux_dimanche_ferie_employe" value="{% if employe.taux_horaire_specifique %}{{ employe.taux_horaire_specifique|floatformat:2 }}{% else %}{{ config.taux_dimanche_ferie|floatformat:2 }}{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="montant_jour_ouvrable_employe{{ employe.id }}" class="form-label">Montant fixe heure supp jour ouvrable (GNF)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="montant_jour_ouvrable_employe{{ employe.id }}" name="montant_jour_ouvrable_employe" value="{% if employe.montant_heure_supp_jour_ouvrable %}{{ employe.montant_heure_supp_jour_ouvrable|floatformat:2 }}{% else %}0.00{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="montant_dimanche_ferie_employe{{ employe.id }}" class="form-label">Montant fixe heure supp dimanche/férié (GNF)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="montant_dimanche_ferie_employe{{ employe.id }}" name="montant_dimanche_ferie_employe" value="{% if employe.montant_heure_supp_dimanche_ferie %}{{ employe.montant_heure_supp_dimanche_ferie|floatformat:2 }}{% else %}0.00{% endif %}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="mode_calcul_employe{{ employe.id }}" class="form-label">Mode de calcul des heures supplémentaires</label>
+                                                        <select class="form-select" id="mode_calcul_employe{{ employe.id }}" name="mode_calcul_employe">
+                                                            <option value="defaut" {% if employe.mode_calcul_heures_supp == 'defaut' %}selected{% endif %}>Utiliser les paramètres par défaut</option>
+                                                            <option value="taux" {% if employe.mode_calcul_heures_supp == 'taux' %}selected{% endif %}>Utiliser les taux</option>
+                                                            <option value="montant" {% if employe.mode_calcul_heures_supp == 'montant' %}selected{% endif %}>Utiliser les montants fixes</option>
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="heures_normales_mois_employe{{ employe.id }}" class="form-label">Heures normales par mois</label>
+                                                        <input type="number" step="0.01" class="form-control" id="heures_normales_mois_employe{{ employe.id }}" name="heures_normales_mois_employe" value="{{ config.heures_normales_mois|floatformat:2 }}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="avances_employe{{ employe.id }}" class="form-label">Avances sur salaire (GNF)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="avances_employe{{ employe.id }}" name="avances_employe" value="{{ employe.avances|floatformat:2 }}">
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="sanctions_employe{{ employe.id }}" class="form-label">Sanctions (GNF)</label>
+                                                        <input type="number" step="0.01" class="form-control" id="sanctions_employe{{ employe.id }}" name="sanctions_employe" value="0">
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Bibliothèque SheetJS pour l'export Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// NOUVELLE RECHERCHE SIMPLE ET FONCTIONNELLE
+function initSimpleSearch() {
+    console.log('🔍 NOUVELLE RECHERCHE SIMPLE - Démarrage');
+    
+    // Attendre que le DOM soit prêt
+    const searchInput = document.querySelector('#searchInput');
+    const clearBtn = document.querySelector('#clearSearch');
+    const resultCount = document.querySelector('#resultCount');
+    const visibleCount = document.querySelector('#visibleCount');
+    const dataTable = document.querySelector('#dataTable');
+    
+    if (!searchInput || !dataTable) {
+        console.log('⚠️ Éléments de recherche non trouvés, nouvelle tentative...');
+        setTimeout(initSimpleSearch, 500);
+        return;
+    }
+    
+    console.log('✅ Éléments trouvés, initialisation de la recherche simple');
+    
+    // Fonction de filtrage simple
+    function filterTable() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const rows = dataTable.querySelectorAll('tbody tr');
+        let visibleRows = 0;
+        
+        console.log('🔎 Filtrage pour:', searchTerm);
+        
+        rows.forEach((row, index) => {
+            // Récupérer tout le texte de la ligne
+            const rowText = row.textContent.toLowerCase();
+            
+            // Vérifier si le terme de recherche est présent
+            const isVisible = searchTerm === '' || rowText.includes(searchTerm);
+            
+            if (isVisible) {
+                row.style.display = '';
+                row.style.backgroundColor = searchTerm ? '#e8f5e8' : '';
+                visibleRows++;
+            } else {
+                row.style.display = 'none';
+                row.style.backgroundColor = '';
+            }
+        });
+        
+        // Mettre à jour les compteurs
+        if (resultCount) resultCount.textContent = visibleRows + ' employé(s)';
+        if (visibleCount) visibleCount.textContent = visibleRows;
+        
+        console.log('📊 Résultat:', visibleRows, 'lignes visibles sur', rows.length);
+        
+        // Message si aucun résultat
+        const existingMsg = dataTable.querySelector('#noResultMsg');
+        if (existingMsg) existingMsg.remove();
+        
+        if (visibleRows === 0 && searchTerm) {
+            const tbody = dataTable.querySelector('tbody');
+            const noResultRow = document.createElement('tr');
+            noResultRow.id = 'noResultMsg';
+            noResultRow.innerHTML = `
+                <td colspan="8" class="text-center py-4 text-muted">
+                    <i class="fas fa-search fa-2x mb-2"></i><br>
+                    <strong>Aucun résultat trouvé</strong><br>
+                    <small>Aucun employé ne correspond à "${searchTerm}"</small>
+                </td>
+            `;
+            tbody.appendChild(noResultRow);
+        }
+    }
+    
+    // Événements de recherche
+    searchInput.addEventListener('input', filterTable);
+    searchInput.addEventListener('keyup', filterTable);
+    
+    // Bouton d'effacement
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            filterTable();
+            searchInput.focus();
+        });
+    }
+    
+    // Raccourci Escape
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            filterTable();
+        }
+    });
+    
+    // Initialisation
+    filterTable();
+    searchInput.focus();
+    
+    console.log('✅ Recherche simple initialisée avec succès!');
+}
+
+// Démarrer la recherche
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSimpleSearch);
+} else {
+    initSimpleSearch();
+}
+
+// Fonction d'export Excel
+function exportToExcel() {
+    const searchInput = document.querySelector('#searchInput');
+    const searchTerm = searchInput ? searchInput.value.trim() : '';
+    const exportData = [];
+    
+    // En-têtes du tableau
+    const headers = [
+        'Matricule',
+        'Profession', 
+        'Prénom',
+        'Nom',
+        'Salaire de base (GNF)',
+        'Avances (GNF)',
+        'Sanctions (GNF)',
+        'Actions'
+    ];
+    exportData.push(headers);
+    
+    // Parcourir les lignes visibles uniquement
+    $('#dataTable tbody tr:visible').each(function() {
+        const row = $(this);
+        if (row.attr('id') !== 'noResults') {
+            const rowData = [
+                row.find('td:eq(0)').text().trim(), // Matricule
+                row.find('td:eq(1)').text().trim(), // Profession
+                row.find('td:eq(2)').text().trim(), // Prénom
+                row.find('td:eq(3)').text().trim(), // Nom
+                row.find('td:eq(4)').text().trim(), // Salaire de base
+                row.find('td:eq(5)').text().trim(), // Avances
+                row.find('td:eq(6)').text().trim(), // Sanctions
+                'Modifier/Supprimer' // Actions (texte générique)
+            ];
+            exportData.push(rowData);
+        }
+    });
+    
+    // Créer le classeur Excel
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(exportData);
+    
+    // Définir la largeur des colonnes
+    const colWidths = [
+        { wch: 12 }, // Matricule
+        { wch: 20 }, // Profession
+        { wch: 15 }, // Prénom
+        { wch: 15 }, // Nom
+        { wch: 18 }, // Salaire de base
+        { wch: 15 }, // Avances
+        { wch: 15 }, // Sanctions
+        { wch: 20 }  // Actions
+    ];
+    ws['!cols'] = colWidths;
+    
+    // Styliser l'en-tête
+    const headerRange = XLSX.utils.decode_range(ws['!ref']);
+    for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (!ws[cellAddress]) continue;
+        ws[cellAddress].s = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "4472C4" } },
+            alignment: { horizontal: "center" }
+        };
+    }
+    
+    // Ajouter la feuille au classeur
+    XLSX.utils.book_append_sheet(wb, ws, "Employés");
+    
+    // Générer le nom du fichier
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+    let fileName = `employes_heures_supplementaires_${dateStr}_${timeStr}.xlsx`;
+    
+    if (searchTerm) {
+        fileName = `employes_recherche_${searchTerm.replace(/[^a-zA-Z0-9]/g, '_')}_${dateStr}_${timeStr}.xlsx`;
+    }
+    
+    // Télécharger le fichier
+    XLSX.writeFile(wb, fileName);
+    
+    // Afficher un message de succès
+    showExportSuccess(exportData.length - 1, fileName);
+}
+
+// Fonction pour afficher le message de succès d'export
+function showExportSuccess(count, fileName) {
+    // Supprimer les anciens messages
+    $('.export-success').remove();
+    
+    // Créer le message de succès
+    const successMessage = $(
+        '<div class="alert alert-success alert-dismissible fade show export-success mt-2" role="alert">' +
+        '<i class="fas fa-check-circle"></i> ' +
+        '<strong>Export réussi !</strong> ' + count + ' employé(s) exporté(s) dans le fichier "' + fileName + '".' +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+        '</div>'
+    );
+    
+    // Ajouter le message après la zone de recherche
+    $('.card:first .card-body').append(successMessage);
+    
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(function() {
+        successMessage.fadeOut(500, function() {
+            $(this).remove();
+        });
+    }, 5000);
+}
+
+// Événement pour le bouton d'export Excel
+$('#exportExcel').on('click', function() {
+    const button = $(this);
+    const originalText = button.html();
+    
+    // Animation du bouton pendant l'export
+    button.prop('disabled', true);
+    button.html('<i class="fas fa-spinner fa-spin"></i> Export...');
+    
+    // Délai pour l'animation
+    setTimeout(function() {
+        try {
+            exportToExcel();
+        } catch (error) {
+            console.error('Erreur lors de l\'export Excel:', error);
+            alert('Erreur lors de l\'export Excel. Veuillez réessayer.');
+        } finally {
+            // Restaurer le bouton
+            button.prop('disabled', false);
+            button.html(originalText);
+        }
+    }, 500);
+});
+</script>
+
+<style>
+/* Styles pour la recherche dynamique */
+.table-warning {
+    background-color: #fff3cd !important;
+    transition: background-color 0.3s ease;
+}
+
+#searchInput {
+    border-left: none;
+    transition: all 0.3s ease;
+}
+
+#searchInput:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.input-group:focus-within {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+.badge {
+    transition: all 0.3s ease;
+}
+
+/* Animation pour les lignes du tableau */
+#dataTable tbody tr {
+    transition: all 0.3s ease;
+}
+
+#dataTable tbody tr:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

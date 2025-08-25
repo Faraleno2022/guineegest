@@ -1,0 +1,130 @@
+{% extends 'fleet_app/accounts/creation_compte_base.html' %}
+{% load static %}
+
+{% block form_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        {% if type_compte == 'personne' %}
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-user me-2"></i>
+                <strong>Informations personnelles</strong> - Veuillez remplir vos informations personnelles.
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-building me-2"></i>
+                <strong>Informations sur l'entreprise</strong> - Veuillez remplir les informations de votre entreprise ou organisation.
+            </div>
+        {% endif %}
+        
+        <form method="post" enctype="multipart/form-data" class="mt-4">
+            {% csrf_token %}
+            
+            {% if type_compte == 'personne' %}
+                <!-- Formulaire pour personne physique -->
+                <div class="mb-3">
+                    <label for="id_nom_prenom" class="form-label">Nom et Prénom(s) <span class="text-danger">*</span></label>
+                    <input type="text" name="nom_prenom" id="id_nom_prenom" class="form-control" placeholder="Votre nom complet" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_date_naissance" class="form-label">Date de naissance</label>
+                    <input type="date" name="date_naissance" id="id_date_naissance" class="form-control">
+                    <small class="text-muted">Optionnel</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_photo" class="form-label">Photo de profil</label>
+                    <input type="file" name="photo" id="id_photo" class="form-control" accept="image/*" onchange="previewImage(this, 'photoPreview')">
+                    <small class="text-muted">Optionnel - Format recommandé : JPEG ou PNG, max 2 Mo</small>
+                    <div class="mt-2 text-center d-none" id="photoPreviewContainer">
+                        <img id="photoPreview" src="#" alt="Aperçu de la photo" class="img-thumbnail" style="max-height: 200px;">
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="clearImagePreview('id_photo', 'photoPreview')">
+                            <i class="fas fa-times"></i> Supprimer
+                        </button>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Formulaire pour entreprise -->
+                <div class="mb-3">
+                    <label for="id_nom_entreprise" class="form-label">Nom de l'entreprise <span class="text-danger">*</span></label>
+                    <input type="text" name="nom_entreprise" id="id_nom_entreprise" class="form-control" placeholder="Nom de votre entreprise ou organisation" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_forme_juridique" class="form-label">Forme juridique <span class="text-danger">*</span></label>
+                    <select name="forme_juridique" id="id_forme_juridique" class="form-select" required>
+                        <option value="" selected disabled>Sélectionnez une forme juridique</option>
+                        <option value="sarl">SARL</option>
+                        <option value="sa">SA</option>
+                        <option value="ong">ONG</option>
+                        <option value="ei">Entreprise Individuelle</option>
+                        <option value="autre">Autre</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_nom_responsable" class="form-label">Nom du responsable <span class="text-danger">*</span></label>
+                    <input type="text" name="nom_responsable" id="id_nom_responsable" class="form-control" placeholder="Nom du gérant ou directeur" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_rccm_nif" class="form-label">RCCM / NIF</label>
+                    <input type="text" name="rccm_nif" id="id_rccm_nif" class="form-control" placeholder="Numéro RCCM ou NIF">
+                    <small class="text-muted">Optionnel mais recommandé</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_logo" class="form-label">Logo de l'entreprise</label>
+                    <input type="file" name="logo" id="id_logo" class="form-control" accept="image/*" onchange="previewImage(this, 'logoPreview')">
+                    <small class="text-muted">Optionnel - Format recommandé : JPEG ou PNG, max 2 Mo</small>
+                    <div class="mt-2 text-center d-none" id="logoPreviewContainer">
+                        <img id="logoPreview" src="#" alt="Aperçu du logo" class="img-thumbnail" style="max-height: 200px;">
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="clearImagePreview('id_logo', 'logoPreview')">
+                            <i class="fas fa-times"></i> Supprimer
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <div class="d-flex justify-content-between mt-5">
+                <a href="{% url 'fleet_app:reinitialiser_creation_compte' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Précédent
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    Continuer <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function previewImage(input, previewId) {
+        const preview = document.getElementById(previewId);
+        const previewContainer = document.getElementById(previewId + 'Container');
+        
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                previewContainer.classList.remove('d-none');
+            };
+            
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
+    function clearImagePreview(inputId, previewId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        const previewContainer = document.getElementById(previewId + 'Container');
+        
+        input.value = '';
+        preview.src = '#';
+        previewContainer.classList.add('d-none');
+    }
+</script>
+{% endblock %}

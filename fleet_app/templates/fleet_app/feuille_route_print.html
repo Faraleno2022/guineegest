@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feuille de Route N°{{ feuille_route.id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            font-size: 12pt;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24pt;
+        }
+        .header p {
+            margin: 5px 0;
+            font-size: 14pt;
+        }
+        .info-section {
+            margin-bottom: 20px;
+        }
+        .info-section h2 {
+            border-bottom: 1px solid #999;
+            padding-bottom: 5px;
+            font-size: 16pt;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            width: 30%;
+        }
+        .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .signature-box {
+            border-top: 1px solid #333;
+            width: 45%;
+            padding-top: 10px;
+            text-align: center;
+        }
+        .alert {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .metric-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            width: 30%;
+            text-align: center;
+        }
+        .metric-box h3 {
+            margin-top: 0;
+            font-size: 14pt;
+        }
+        .metric-box p {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .print-only {
+            display: none;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            .print-only {
+                display: block;
+            }
+            body {
+                padding: 0;
+                margin: 15mm;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+        <button onclick="window.print();" style="padding: 10px 20px; background-color: #4e73df; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            <i class="fas fa-print"></i> Imprimer
+        </button>
+        <a href="{% url 'fleet_app:feuille_route_detail' feuille_route.id %}" style="padding: 10px 20px; background-color: #858796; color: white; border: none; border-radius: 4px; text-decoration: none; margin-left: 10px;">
+            Retour
+        </a>
+    </div>
+
+    <div class="header">
+        <h1>FEUILLE DE ROUTE</h1>
+        <p>N° {{ feuille_route.id }} - {{ feuille_route.date_depart|date:"d/m/Y" }}</p>
+    </div>
+
+    <div class="info-section">
+        <h2>Informations générales</h2>
+        <table>
+            <tr>
+                <th>Véhicule</th>
+                <td>{{ feuille_route.vehicule.marque }} {{ feuille_route.vehicule.modele }} ({{ feuille_route.vehicule.immatriculation }})</td>
+            </tr>
+            <tr>
+                <th>Chauffeur</th>
+                <td>{{ feuille_route.chauffeur.prenom }} {{ feuille_route.chauffeur.nom }}</td>
+            </tr>
+            <tr>
+                <th>Destination</th>
+                <td>{{ feuille_route.destination }}</td>
+            </tr>
+            <tr>
+                <th>Objet du déplacement</th>
+                <td>{{ feuille_route.objet_deplacement }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="info-section">
+        <h2>Informations de départ</h2>
+        <table>
+            <tr>
+                <th>Date de départ</th>
+                <td>{{ feuille_route.date_depart|date:"d/m/Y" }}</td>
+            </tr>
+            <tr>
+                <th>Heure de départ</th>
+                <td>{{ feuille_route.heure_depart }}</td>
+            </tr>
+            <tr>
+                <th>Kilométrage au départ</th>
+                <td>{% if feuille_route.km_depart %}{{ feuille_route.km_depart }} km{% else %}Non renseigné{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Carburant au départ</th>
+                <td>{% if feuille_route.carburant_depart %}{{ feuille_route.carburant_depart }} L{% else %}Non renseigné{% endif %}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="info-section">
+        <h2>Informations de retour</h2>
+        <table>
+            <tr>
+                <th>Date de retour</th>
+                <td>{% if feuille_route.date_retour %}{{ feuille_route.date_retour|date:"d/m/Y" }}{% else %}Non renseigné{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Heure de retour</th>
+                <td>{% if feuille_route.heure_retour %}{{ feuille_route.heure_retour }}{% else %}Non renseigné{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Kilométrage au retour</th>
+                <td>{% if feuille_route.km_retour %}{{ feuille_route.km_retour }} km{% else %}Non renseigné{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Carburant au retour</th>
+                <td>{% if feuille_route.carburant_retour %}{{ feuille_route.carburant_retour }} L{% else %}Non renseigné{% endif %}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if feuille_route.signature_chauffeur %}
+    <div class="info-section">
+        <h2>Calculs automatiques</h2>
+        <div class="metrics">
+            <div class="metric-box">
+                <h3>Distance parcourue</h3>
+                <p>{{ feuille_route.distance_parcourue }} km</p>
+            </div>
+            <div class="metric-box">
+                <h3>Carburant utilisé</h3>
+                <p>{{ feuille_route.carburant_utilise }} L</p>
+            </div>
+            <div class="metric-box">
+                <h3>Consommation moyenne</h3>
+                <p>{{ feuille_route.consommation }} L/100km</p>
+            </div>
+        </div>
+
+        {% if feuille_route.alerte_surconsommation %}
+        <div class="alert">
+            <strong>Alerte de surconsommation :</strong> La consommation de carburant pour ce trajet ({{ feuille_route.consommation }} L/100km) est supérieure à la consommation moyenne du constructeur (8 L/100km).
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="signature-section">
+        <div class="signature-box">
+            <p><strong>Signature du gestionnaire</strong></p>
+            {% if feuille_route.signature_gestionnaire %}
+            <p>Signé électroniquement le {{ feuille_route.date_depart|date:"d/m/Y" }}</p>
+            {% else %}
+            <p>Non signé</p>
+            {% endif %}
+        </div>
+        <div class="signature-box">
+            <p><strong>Signature du chauffeur</strong></p>
+            {% if feuille_route.signature_chauffeur %}
+            <p>Signé électroniquement le {% if feuille_route.date_retour %}{{ feuille_route.date_retour|date:"d/m/Y" }}{% else %}{{ feuille_route.date_depart|date:"d/m/Y" }}{% endif %}</p>
+            {% else %}
+            <p>Non signé</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="print-only" style="margin-top: 50px; font-size: 10pt; text-align: center; color: #999;">
+        <p>Document généré le {{ now|date:"d/m/Y à H:i" }} - Système de gestion de flotte</p>
+    </div>
+</body>
+</html>

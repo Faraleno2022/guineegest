@@ -1,0 +1,167 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Détails Fiche d'Or{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Détails de la Fiche d'Or</h5>
+            <div>
+                <a href="{% url 'fleet_app:fiche_or_list' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+                </a>
+                <a href="{% url 'fleet_app:fiche_or_edit' object.pk %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit me-1"></i>Modifier
+                </a>
+                <a href="{% url 'fleet_app:fiche_or_delete' object.pk %}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash me-1"></i>Supprimer
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Informations générales -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Informations générales</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Date:</div>
+                                <div class="col-sm-8">{{ object.date|date:"d/m/Y" }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Site:</div>
+                                <div class="col-sm-8">{{ object.site }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Responsable:</div>
+                                <div class="col-sm-8">{{ object.responsable }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Équipe:</div>
+                                <div class="col-sm-8">{{ object.equipe }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Totaux et valeurs -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Totaux et valeurs</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Quantité totale:</div>
+                                <div class="col-sm-6">{{ object.quantite_totale }} g</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Prix unitaire:</div>
+                                <div class="col-sm-6">{{ object.prix_unitaire|floatformat:0 }} GNF/g</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Valeur estimée:</div>
+                                <div class="col-sm-6 text-success fw-bold">{{ object.valeur_estimee|floatformat:0 }} GNF</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Nombre d'entrées:</div>
+                                <div class="col-sm-6">
+                                    <span class="badge bg-info">{{ entrees|length }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Observations -->
+                <div class="col-md-12">
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Observations</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if object.observations %}
+                                <p>{{ object.observations|linebreaks }}</p>
+                            {% else %}
+                                <p class="text-muted">Aucune observation</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Entrées de la fiche -->
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h6 class="mb-0">Entrées d'or</h6>
+                            <a href="{% url 'fleet_app:entree_fiche_or_create' %}?fiche_id={{ object.id }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>Ajouter une entrée
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            {% if entrees %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Heure</th>
+                                                <th>Secteur</th>
+                                                <th>Poids brut (g)</th>
+                                                <th>Pureté (%)</th>
+                                                <th>Poids net (g)</th>
+                                                <th>Valeur (GNF)</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for entree in entrees %}
+                                            <tr>
+                                                <td>{{ entree.heure|time:"H:i" }}</td>
+                                                <td>{{ entree.secteur }}</td>
+                                                <td>{{ entree.poids_brut }}</td>
+                                                <td>{{ entree.purete }}%</td>
+                                                <td>{{ entree.poids_net }}</td>
+                                                <td>{{ entree.valeur|floatformat:0 }}</td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="{% url 'fleet_app:entree_fiche_or_edit' entree.pk %}" class="btn btn-warning" title="Modifier">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <a href="{% url 'fleet_app:entree_fiche_or_delete' entree.pk %}" class="btn btn-danger" title="Supprimer">
+                                                            <i class="fas fa-trash"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot class="table-light">
+                                            <tr>
+                                                <th colspan="2">Total</th>
+                                                <th>{{ total_poids_brut|floatformat:2 }} g</th>
+                                                <th>-</th>
+                                                <th>{{ total_poids_net|floatformat:2 }} g</th>
+                                                <th>{{ total_valeur|floatformat:0 }} GNF</th>
+                                                <th></th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <p>Aucune entrée enregistrée pour cette fiche d'or.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">{{ titre }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention :</strong> Cette action est irréversible.
+                    </div>
+                    
+                    {% if ligne %}
+                    <p>Êtes-vous sûr de vouloir supprimer cette ligne de facture ?</p>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Description</th>
+                            <td>{{ ligne.description }}</td>
+                        </tr>
+                        <tr>
+                            <th>Quantité</th>
+                            <td>{{ ligne.quantite }}</td>
+                        </tr>
+                        <tr>
+                            <th>Prix unitaire</th>
+                            <td>{{ ligne.prix_unitaire|floatformat:0 }} GNF</td>
+                        </tr>
+                        <tr>
+                            <th>Montant</th>
+                            <td>{{ ligne.montant|floatformat:0 }} GNF</td>
+                        </tr>
+                    </table>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'fleet_app:facture_detail' pk=facture.numero %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash-alt me-1"></i> Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

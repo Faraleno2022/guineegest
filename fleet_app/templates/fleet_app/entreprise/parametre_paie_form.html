@@ -1,0 +1,102 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if form.instance.pk %}Modifier{% else %}Créer{% endif %} les Paramètres de Paie
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-cogs me-2"></i>
+                {% if form.instance.pk %}Modifier{% else %}Créer{% endif %} les Paramètres de Paie
+            </h5>
+            <a href="{% url 'fleet_app:parametre_paie_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Paramètre de paie -->
+                <div class="col-md-12">
+                    <h6 class="border-bottom pb-2 mb-3">Informations du paramètre</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.cle.id_for_label }}" class="form-label">Clé du paramètre</label>
+                            {{ form.cle }}
+                            {% if form.cle.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.cle.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Identifiant unique du paramètre (ex: TAUX_HORAIRE_BASE)</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.valeur.id_for_label }}" class="form-label">Valeur</label>
+                            {{ form.valeur }}
+                            {% if form.valeur.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.valeur.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Valeur numérique du paramètre</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Description détaillée du paramètre</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                    <a href="{% url 'fleet_app:parametre_paie_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ajouter la classe form-control à tous les inputs du formulaire
+        const formInputs = document.querySelectorAll('form input, form select, form textarea');
+        formInputs.forEach(input => {
+            input.classList.add('form-control');
+        });
+    });
+</script>
+{% endblock %}

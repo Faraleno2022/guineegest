@@ -1,0 +1,296 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}KPI Coûts Financiers - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}KPI Coûts Financiers{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Formulaire d'ajout -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle me-2"></i> Ajouter un coût financier
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.vehicule.id_for_label }}" class="form-label">Véhicule</label>
+                            {{ form.vehicule }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                            {{ form.date }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.type_cout.id_for_label }}" class="form-label">Type de coût</label>
+                            {{ form.type_cout }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.montant.id_for_label }}" class="form-label">Montant (GNF)</label>
+                            {{ form.montant }}
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Graphique des coûts par véhicule -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-chart-bar me-2"></i> Coûts financiers par véhicule
+                </div>
+                <div>
+                    <select id="periodeSelect" class="form-select form-select-sm">
+                        <option value="all">Toutes les périodes</option>
+                        <option value="month">Dernier mois</option>
+                        <option value="quarter">Dernier trimestre</option>
+                        <option value="year">Dernière année</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body" style="height: 250px;">
+                <canvas id="coutsVehiculeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Graphique des coûts par type -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-2"></i> Répartition des coûts par type
+            </div>
+            <div class="card-body" style="height: 250px;">
+                <canvas id="coutsTypeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Tableau des coûts -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-list me-2"></i> Détail des coûts financiers
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('coutsFinanciersTable', 'Couts_Financiers')">
+                        <i class="fas fa-file-excel me-1"></i> Excel
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="exportTableToPDF('coutsFinanciersTable', 'Couts_Financiers')">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </button>
+                    <input type="text" id="searchCout" class="form-control form-control-sm" placeholder="Rechercher...">
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
+                    <table id="coutsFinanciersTable" class="table table-striped table-hover">
+                        <thead style="position: sticky; top: 0; background-color: #f8f9fa;">
+                            <tr>
+                                <th>Véhicule</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Montant</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cout in couts %}
+                            <tr>
+                                <td>{{ cout.vehicule.marque }} {{ cout.vehicule.modele }} ({{ cout.vehicule.immatriculation }})</td>
+                                <td>{{ cout.date }}</td>
+                                <td>{{ cout.type_cout }}</td>
+                                <td>{{ cout.montant_gnf|floatformat:0 }} GNF</td>
+                                <td>{{ cout.description|truncatechars:50 }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'fleet_app:cout_financier_edit' cout.id %}" class="btn btn-warning" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-danger" title="Supprimer" onclick="confirmDelete('{% url 'fleet_app:cout_financier_delete' cout.id %}', 'ce coût financier')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">Aucune donnée de coût financier disponible</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-end">
+                <a href="#" class="btn btn-sm btn-primary" onclick="scrollToTop()">
+                    <i class="fas fa-plus"></i> Ajouter un coût
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    
+    function confirmDelete(url, itemName) {
+        if (confirm(`Êtes-vous sûr de vouloir supprimer ${itemName} ?`)) {
+            window.location.href = url;
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        // Graphique des coûts par véhicule
+        var ctxVehicule = document.getElementById('coutsVehiculeChart').getContext('2d');
+        var coutsVehiculeChart = new Chart(ctxVehicule, {
+            type: 'bar',
+            data: {
+                labels: {{ labels|safe }},
+                datasets: [{
+                    label: 'Coût total (GNF)',
+                    data: {{ data|safe }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'GNF',
+                            font: {
+                                size: 11
+                            }
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            autoSkip: true,
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Graphique des coûts par type
+        var ctxType = document.getElementById('coutsTypeChart').getContext('2d');
+        var coutsTypeChart = new Chart(ctxType, {
+            type: 'pie',
+            data: {
+                labels: {{ types_labels|safe }},
+                datasets: [{
+                    data: {{ types_data|safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)',
+                        'rgba(255, 159, 64, 0.5)',
+                        'rgba(199, 199, 199, 0.5)',
+                        'rgba(83, 102, 255, 0.5)',
+                        'rgba(40, 159, 64, 0.5)',
+                        'rgba(210, 199, 199, 0.5)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(199, 199, 199, 1)',
+                        'rgba(83, 102, 255, 1)',
+                        'rgba(40, 159, 64, 1)',
+                        'rgba(210, 199, 199, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: {
+                                size: 9
+                            },
+                            boxWidth: 10,
+                            padding: 5
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.label || '';
+                                var value = context.raw || 0;
+                                var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                var percentage = Math.round((value / total) * 100);
+                                return label + ': ' + value + ' GNF (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Recherche dans le tableau
+        document.getElementById('searchCout').addEventListener('keyup', function() {
+            var value = this.value.toLowerCase();
+            var rows = document.querySelectorAll('tbody tr');
+            
+            rows.forEach(function(row) {
+                var text = row.textContent.toLowerCase();
+                row.style.display = text.indexOf(value) > -1 ? '' : 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}

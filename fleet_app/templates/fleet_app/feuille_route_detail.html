@@ -1,0 +1,210 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Détails de la Feuille de Route{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Feuille de Route N°{{ feuille_route.id }}</h1>
+        <div>
+            {% if not feuille_route.signature_chauffeur %}
+            <a href="{% url 'fleet_app:feuille_route_edit' feuille_route.id %}" class="d-none d-sm-inline-block btn btn-sm btn-warning shadow-sm">
+                <i class="fas fa-edit fa-sm text-white-50"></i> Compléter
+            </a>
+            {% endif %}
+            <a href="{% url 'fleet_app:feuille_route_print' feuille_route.id %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm ml-2">
+                <i class="fas fa-print fa-sm text-white-50"></i> Imprimer
+            </a>
+            <a href="{% url 'fleet_app:feuille_route_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm ml-2">
+                <i class="fas fa-arrow-left fa-sm text-white-50"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations du gestionnaire -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informations du gestionnaire</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th style="width: 30%">Véhicule</th>
+                                <td>{{ feuille_route.vehicule.marque }} {{ feuille_route.vehicule.modele }} ({{ feuille_route.vehicule.immatriculation }})</td>
+                            </tr>
+                            <tr>
+                                <th>Chauffeur</th>
+                                <td>{{ feuille_route.chauffeur.prenom }} {{ feuille_route.chauffeur.nom }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date de départ</th>
+                                <td>{{ feuille_route.date_depart }}</td>
+                            </tr>
+                            <tr>
+                                <th>Heure de départ</th>
+                                <td>{{ feuille_route.heure_depart }}</td>
+                            </tr>
+                            <tr>
+                                <th>Destination</th>
+                                <td>{{ feuille_route.destination }}</td>
+                            </tr>
+                            <tr>
+                                <th>Objet du déplacement</th>
+                                <td>{{ feuille_route.objet_deplacement }}</td>
+                            </tr>
+                            <tr>
+                                <th>Signature gestionnaire</th>
+                                <td>
+                                    {% if feuille_route.signature_gestionnaire %}
+                                    <span class="badge badge-success">Signé</span>
+                                    {% else %}
+                                    <span class="badge badge-danger">Non signé</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations du chauffeur -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informations du chauffeur</h6>
+                </div>
+                <div class="card-body">
+                    {% if feuille_route.signature_chauffeur %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th style="width: 30%">Kilométrage au départ</th>
+                                <td>{{ feuille_route.km_depart }} km</td>
+                            </tr>
+                            <tr>
+                                <th>Carburant au départ</th>
+                                <td>{{ feuille_route.carburant_depart }} L</td>
+                            </tr>
+                            <tr>
+                                <th>Kilométrage au retour</th>
+                                <td>{{ feuille_route.km_retour }} km</td>
+                            </tr>
+                            <tr>
+                                <th>Carburant au retour</th>
+                                <td>{{ feuille_route.carburant_retour }} L</td>
+                            </tr>
+                            <tr>
+                                <th>Date de retour</th>
+                                <td>{{ feuille_route.date_retour }}</td>
+                            </tr>
+                            <tr>
+                                <th>Heure de retour</th>
+                                <td>{{ feuille_route.heure_retour }}</td>
+                            </tr>
+                            <tr>
+                                <th>Signature chauffeur</th>
+                                <td>
+                                    {% if feuille_route.signature_chauffeur %}
+                                    <span class="badge badge-success">Signé</span>
+                                    {% else %}
+                                    <span class="badge badge-danger">Non signé</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <p><i class="fas fa-exclamation-triangle"></i> Cette feuille de route n'a pas encore été complétée par le chauffeur.</p>
+                        <a href="{% url 'fleet_app:feuille_route_edit' feuille_route.id %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Compléter maintenant
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculs et alertes -->
+    {% if feuille_route.signature_chauffeur %}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Calculs automatiques et alertes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-left-primary shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                                Distance parcourue</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ feuille_route.distance_parcourue }} km</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-road fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card border-left-success shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                Carburant utilisé</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ feuille_route.carburant_utilise }} L</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-gas-pump fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card {% if feuille_route.alerte_surconsommation %}border-left-danger{% else %}border-left-info{% endif %} shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold {% if feuille_route.alerte_surconsommation %}text-danger{% else %}text-info{% endif %} text-uppercase mb-1">
+                                                Consommation moyenne</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ feuille_route.consommation }} L/100km</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-tachometer-alt fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if feuille_route.alerte_surconsommation %}
+                    <div class="alert alert-danger mt-4">
+                        <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Alerte de surconsommation!</h4>
+                        <p>La consommation de carburant pour ce trajet ({{ feuille_route.consommation }} L/100km) est supérieure à la consommation moyenne du constructeur (8 L/100km).</p>
+                        <hr>
+                        <p class="mb-0">Veuillez vérifier l'état du véhicule et les conditions de conduite.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

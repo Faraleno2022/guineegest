@@ -1,0 +1,412 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Statistiques des Paies{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .monthly-chart {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .top-employee-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-left: 4px solid #28a745;
+        transition: all 0.3s ease;
+    }
+    
+    .top-employee-card:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        transform: translateX(5px);
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+    }
+    
+    .filter-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Statistiques des Paies {{ stats_globales.periode_label }}
+                </h2>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" id="exportExcelStats">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button class="btn btn-danger" id="exportPDFStats">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtre par année -->
+    <div class="row">
+        <div class="col-12">
+            <div class="filter-section">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">
+                            <i class="fas fa-filter text-primary me-2"></i>
+                            Filtrer par période
+                        </h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex gap-2 justify-content-end flex-wrap">
+                            <select class="form-select" id="moisSelect" style="width: auto;">
+                                <option value="" {% if not mois_selectionne %}selected{% endif %}>Tous les mois</option>
+                                {% for mois in mois_disponibles %}
+                                <option value="{{ mois.numero }}" {% if mois.numero == mois_selectionne %}selected{% endif %}>
+                                    {{ mois.nom }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <select class="form-select" id="anneeSelect" style="width: auto;">
+                                {% for annee in annees_disponibles %}
+                                <option value="{{ annee }}" {% if annee == annee_selectionnee %}selected{% endif %}>
+                                    {{ annee }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-primary" id="filtrerPeriodeBtn">
+                                <i class="fas fa-search"></i> Filtrer
+                            </button>
+                            {% if mois_selectionne %}
+                            <a href="?annee={{ annee_selectionnee }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Tout voir
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row">
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="stat-value">{{ stats_globales.total_employes }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-users me-1"></i>
+                    Employés Actifs
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stat-value">{{ stats_globales.total_paies_generees }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-file-invoice-dollar me-1"></i>
+                    Paies Générées
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="stat-value">{{ stats_globales.masse_salariale_periode|floatformat:0 }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-coins me-1"></i>
+                    Masse Salariale (GNF)
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <div class="stat-value">{{ stats_globales.total_deductions_periode|floatformat:0 }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-minus-circle me-1"></i>
+                    Total Déductions (GNF)
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333;">
+                <div class="stat-value">{{ stats_globales.net_paye_periode|floatformat:0 }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-hand-holding-usd me-1"></i>
+                    Net Payé (GNF)
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333;">
+                <div class="stat-value">{{ stats_globales.moyenne_salaire|floatformat:0 }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-calculator me-1"></i>
+                    {% if mois_selectionne %}Moyenne par Employé{% else %}Moyenne Mensuelle{% endif %} (GNF)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique mensuel (masqué si un mois spécifique est sélectionné) -->
+    {% if afficher_stats_mensuelles %}
+    <div class="row">
+        <div class="col-12">
+            <div class="monthly-chart">
+                <h5 class="mb-4">
+                    <i class="fas fa-chart-line text-primary me-2"></i>
+                    Évolution Mensuelle des Paies {{ annee_selectionnee }}
+                </h5>
+                <canvas id="monthlyChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau détaillé par mois -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        Détail Mensuel {{ annee_selectionnee }}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mois</th>
+                                    <th class="text-center">Employés Payés</th>
+                                    <th class="text-end">Salaire Brut Total</th>
+                                    <th class="text-end">Déductions Total</th>
+                                    <th class="text-end">Net Payé</th>
+                                    <th class="text-end">Moyenne Brut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in stats_mensuelles %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ stat.nom_mois }}</strong>
+                                        <small class="text-muted d-block">{{ stat.mois }}/{{ annee_selectionnee }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ stat.nb_employes_payes }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-success">{{ stat.total_brut|floatformat:0 }} GNF</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-warning">{{ stat.total_deductions|floatformat:0 }} GNF</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-primary">{{ stat.total_net|floatformat:0 }} GNF</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="text-muted">{{ stat.moyenne_brut|floatformat:0 }} GNF</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Aucune donnée disponible pour {{ annee_selectionnee }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Top 10 des employés -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trophy me-2"></i>
+                        Top 10 des Employés les Mieux Payés ({{ annee_selectionnee }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if top_employes %}
+                        {% for employe_stat in top_employes %}
+                        <div class="top-employee-card">
+                            <div class="row align-items-center">
+                                <div class="col-md-1 text-center">
+                                    <div class="badge bg-primary fs-6">{{ forloop.counter }}</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="fw-bold">{{ employe_stat.employe.prenom }} {{ employe_stat.employe.nom }}</div>
+                                    <small class="text-muted">{{ employe_stat.employe.matricule }} - {{ employe_stat.employe.fonction }}</small>
+                                </div>
+                                <div class="col-md-2 text-center">
+                                    <span class="badge bg-info">{{ employe_stat.nb_paies }} paie(s)</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-success fw-bold">{{ employe_stat.total_brut|floatformat:0 }} GNF</div>
+                                    <small class="text-muted">Salaire Brut Total</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-primary fw-bold">{{ employe_stat.total_net|floatformat:0 }} GNF</div>
+                                    <small class="text-muted">Net Payé Total</small>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <div class="progress progress-bar-custom">
+                                        <div class="progress-bar bg-success" 
+                                             style="width: {% if top_employes.0.total_net > 0 %}{{ employe_stat.total_net|floatformat:2 }}{% else %}0{% endif %}%">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Aucun employé trouvé pour {{ annee_selectionnee }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Filtre par période (mois et année)
+    $('#filtrerPeriodeBtn').on('click', function() {
+        const mois = $('#moisSelect').val();
+        const annee = $('#anneeSelect').val();
+        let url = `?annee=${annee}`;
+        if (mois) {
+            url += `&mois=${mois}`;
+        }
+        window.location.href = url;
+    });
+
+    // Graphique mensuel
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    const monthlyData = {
+        labels: [
+            {% for stat in stats_mensuelles %}
+            '{{ stat.nom_mois }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Salaire Brut Total (GNF)',
+            data: [
+                {% for stat in stats_mensuelles %}
+                {{ stat.total_brut|floatformat:0 }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 2,
+            fill: true
+        }, {
+            label: 'Net Payé (GNF)',
+            data: [
+                {% for stat in stats_mensuelles %}
+                {{ stat.total_net|floatformat:0 }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 2,
+            fill: true
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'line',
+        data: monthlyData,
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Évolution des Salaires par Mois'
+                },
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' GNF';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Export Excel
+    $('#exportExcelStats').on('click', function() {
+        alert('Fonctionnalité d\'export Excel en cours de développement');
+    });
+
+    // Export PDF
+    $('#exportPDFStats').on('click', function() {
+        alert('Fonctionnalité d\'export PDF en cours de développement');
+    });
+});
+</script>
+{% endblock %}

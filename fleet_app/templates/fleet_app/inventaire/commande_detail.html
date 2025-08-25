@@ -1,0 +1,317 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    .info-value {
+        color: #212529;
+    }
+    .table-responsive {
+        margin-bottom: 1rem;
+    }
+    .action-buttons {
+        white-space: nowrap;
+    }
+    .total-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        margin-top: 1rem;
+    }
+    .total-label {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    .total-value {
+        font-weight: 700;
+        font-size: 1.2rem;
+        color: #0d6efd;
+    }
+    .status-Brouillon { background-color: #6c757d; }
+    .status-En-attente { background-color: #ffc107; color: #212529; }
+    .status-Confirmée { background-color: #0d6efd; }
+    .status-Livrée { background-color: #198754; }
+    .status-Annulée { background-color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:commande_list' %}">Commandes</a></li>
+        <li class="breadcrumb-item active">{{ commande.numero }}</li>
+    </ol>
+    
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-file-invoice me-1"></i>
+                        Détails de la commande
+                        <span class="badge status-{{ commande.statut|cut:' ' }} ms-2">{{ commande.statut }}</span>
+                    </div>
+                    <div>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'fleet_app:commande_update' pk=commande.numero %}" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" title="Modifier cette commande">
+                                <i class="fas fa-edit"></i> Modifier
+                            </a>
+                            <a href="{% url 'fleet_app:export_commande_pdf' pk=commande.numero %}" class="btn btn-success btn-sm" data-bs-toggle="tooltip" title="Exporter cette commande au format PDF">
+                                <i class="fas fa-file-pdf"></i> Export PDF
+                            </a>
+                            <a href="{% url 'fleet_app:commande_delete' pk=commande.numero %}" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" title="Supprimer cette commande" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="card-title mb-3">Informations générales</h5>
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Numéro :</div>
+                                <div class="col-sm-8 info-value">{{ commande.numero }}</div>
+                            </div>
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Date de création :</div>
+                                <div class="col-sm-8 info-value">{{ commande.date_creation|date:"d/m/Y" }}</div>
+                            </div>
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Date de livraison prévue :</div>
+                                <div class="col-sm-8 info-value">
+                                    {% if commande.date_livraison_prevue %}
+                                        {{ commande.date_livraison_prevue|date:"d/m/Y" }}
+                                    {% else %}
+                                        <span class="text-muted">Non spécifiée</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <!-- Removed user reference as it no longer exists in the model -->
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Statut :</div>
+                                <div class="col-sm-8 info-value">
+                                    <span class="badge bg-{{ commande.statut|lower|slugify }}">{{ commande.statut }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="card-title mb-3">Informations du fournisseur</h5>
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Fournisseur :</div>
+                                <div class="col-sm-8 info-value">{{ commande.fournisseur }}</div>
+                            </div>
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Adresse :</div>
+                                <div class="col-sm-8 info-value">
+                                    {% if commande.adresse_fournisseur %}
+                                        {{ commande.adresse_fournisseur }}
+                                    {% else %}
+                                        <span class="text-muted">Non spécifiée</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Téléphone :</div>
+                                <div class="col-sm-8 info-value">
+                                    {% if commande.telephone_fournisseur %}
+                                        {{ commande.telephone_fournisseur }}
+                                    {% else %}
+                                        <span class="text-muted">Non spécifié</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-2 row">
+                                <div class="col-sm-4 info-label">Email :</div>
+                                <div class="col-sm-8 info-value">
+                                    {% if commande.email_fournisseur %}
+                                        {{ commande.email_fournisseur }}
+                                    {% else %}
+                                        <span class="text-muted">Non spécifié</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if commande.notes %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5 class="card-title mb-2">Notes</h5>
+                            <div class="p-3 bg-light rounded">{{ commande.notes|linebreaks }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Section pour le document signé -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5 class="card-title mb-2">Document signé</h5>
+                            {% if commande.document_signe %}
+                                <div class="p-3 bg-light rounded mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-file-signature me-2"></i>
+                                            <a href="{{ commande.document_signe.url }}" target="_blank" class="text-primary">
+                                                {{ commande.document_signe.name|slice:"9:" }}
+                                            </a>
+                                            <span class="text-muted ms-2">({{ commande.document_signe.size|filesizeformat }})</span>
+                                        </div>
+                                        <a href="{{ commande.document_signe.url }}" download class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download me-1"></i> Télécharger
+                                        </a>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Aucun document signé n'a été joint à cette commande.
+                                </div>
+                                <form method="post" enctype="multipart/form-data" class="mt-3">
+                                    {% csrf_token %}
+                                    <div class="mb-3">
+                                        <label for="id_document_signe" class="form-label">Joindre un document signé (PDF ou image)</label>
+                                        {{ form_document.document_signe }}
+                                        <div class="form-text">Formats acceptés: PDF, JPG, PNG, TIFF. Taille max: 5 MB</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-upload me-1"></i> Envoyer le document
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-list me-1"></i>
+                        Lignes de commande
+                    </div>
+                    <div>
+                        <a href="{% url 'fleet_app:ajouter_ligne_commande' commande_pk=commande.numero %}" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Ajouter un nouveau produit à cette commande">
+                            <i class="fas fa-plus"></i> Ajouter un produit
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if lignes %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Référence</th>
+                                    <th>Produit</th>
+                                    <th>Catégorie</th>
+                                    <th>Quantité</th>
+                                    <th>Prix unitaire</th>
+                                    <th>Prix total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in lignes %}
+                                <tr>
+                                    <td>{{ ligne.produit.id_produit }}</td>
+                                    <td>{{ ligne.nom_produit }}</td>
+                                    <td>{{ ligne.categorie }}</td>
+                                    <td>{{ ligne.quantite }}</td>
+                                    <td>{{ ligne.prix_unitaire|floatformat:0 }} GNF</td>
+                                    <td>{{ ligne.prix_total|floatformat:0 }} GNF</td>
+                                    <td class="action-buttons">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'fleet_app:modifier_ligne_commande' pk=ligne.id %}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Modifier cette ligne de commande">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'fleet_app:supprimer_ligne_commande' pk=ligne.id %}" class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Supprimer cette ligne de commande">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 ms-auto">
+                            <div class="total-section">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="total-label">Montant total :</span>
+                                    <span class="total-value">{{ commande.montant_total|floatformat:0 }} GNF</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="total-label">Remise ({{ commande.remise }}%) :</span>
+                                    <span class="total-value text-danger">-{{ commande.montant_remise|floatformat:0 }} GNF</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span class="total-label">Montant final :</span>
+                                    <span class="total-value">{{ commande.montant_final|floatformat:0 }} GNF</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        Aucun produit n'a été ajouté à cette commande. 
+                        <a href="{% url 'fleet_app:ajouter_ligne_commande' commande_pk=commande.numero %}" class="alert-link">
+                            Ajouter un produit
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialisation des tooltips
+        $('[data-bs-toggle="tooltip"]').tooltip();
+        
+        // Confirmation pour la suppression
+        $('.btn-danger').on('click', function(e) {
+            if ($(this).attr('href').includes('supprimer')) {
+                if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

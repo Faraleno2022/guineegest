@@ -1,0 +1,80 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Nouvelle Feuille de Route{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">{{ title }}</h1>
+        <a href="{% url 'fleet_app:feuille_route_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Informations à remplir par le gestionnaire</h6>
+            <div class="dropdown no-arrow">
+                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
+                    <div class="dropdown-header">Actions:</div>
+                    <a class="dropdown-item" href="{% url 'fleet_app:feuille_route_list' %}">Annuler</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.vehicule|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.chauffeur|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.date_depart|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.heure_depart|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.destination|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.objet_deplacement|as_crispy_field }}
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="signature_gestionnaire" checked disabled>
+                            <label class="custom-control-label" for="signature_gestionnaire">
+                                <strong>Signature du gestionnaire</strong> - En créant cette feuille de route, vous la signez électroniquement.
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Enregistrer la feuille de route
+                    </button>
+                    <a href="{% url 'fleet_app:feuille_route_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

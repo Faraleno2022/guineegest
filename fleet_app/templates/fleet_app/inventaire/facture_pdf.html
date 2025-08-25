@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Facture {{ facture.numero }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .container {
+            width: 100%;
+        }
+        .header {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .header-left {
+            width: 60%;
+            float: left;
+        }
+        .header-right {
+            width: 40%;
+            float: right;
+            text-align: right;
+        }
+        .clearfix:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            text-align: center;
+            padding: 10px 0;
+            border-bottom: 2px solid #2c3e50;
+        }
+        .subtitle {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .info-block {
+            margin-bottom: 20px;
+        }
+        .info-block h3 {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #ddd;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .table th {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        .table .text-right {
+            text-align: right;
+        }
+        .table .text-center {
+            text-align: center;
+        }
+        .total-block {
+            width: 40%;
+            float: right;
+            margin-top: 20px;
+        }
+        .total-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .total-table th, .total-table td {
+            padding: 5px;
+            border: 1px solid #ddd;
+        }
+        .total-table th {
+            text-align: left;
+            background-color: #f5f5f5;
+        }
+        .total-table td {
+            text-align: right;
+        }
+        .total-table .total-row {
+            font-weight: bold;
+            background-color: #eee;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 11px;
+        }
+        .payment-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .signature {
+            margin-top: 50px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">FACTURE</div>
+        
+        <div class="header clearfix">
+            <div class="header-left">
+                <div class="subtitle">N° : {{ facture.numero }}</div>
+                <div>Date : {{ facture.date_emission|date:"d/m/Y" }}</div>
+                {% if facture.reference %}
+                <div>Référence : {{ facture.reference }}</div>
+                {% endif %}
+            </div>
+            <div class="header-right">
+                {% if facture.date_echeance %}
+                <div>Date d'échéance : {{ facture.date_echeance|date:"d/m/Y" }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="clearfix">
+            <div class="info-block" style="width: 45%; float: left;">
+                <h3>ÉMETTEUR (VENDEUR / PRESTATAIRE)</h3>
+                <p>
+                    <strong>Nom de l'entreprise :</strong> {{ entreprise.nom|default:"Fleet Management" }}<br>
+                    <strong>Adresse :</strong> {{ entreprise.adresse|default:"123 Rue Principale, Conakry" }}<br>
+                    <strong>Téléphone :</strong> {{ entreprise.telephone|default:"(+224) 62 12 34 56" }}<br>
+                    <strong>Email :</strong> {{ entreprise.email|default:"contact@fleetmanagement.com" }}<br>
+                    <strong>NIF :</strong> {{ entreprise.nif|default:"123456789" }}
+                </p>
+            </div>
+            
+            <div class="info-block" style="width: 45%; float: right;">
+                <h3>CLIENT</h3>
+                <p>
+                    <strong>Nom / Société :</strong> {{ facture.tiers_nom }}<br>
+                    {% if facture.tiers_adresse %}
+                    <strong>Adresse :</strong> {{ facture.tiers_adresse }}<br>
+                    {% endif %}
+                    {% if facture.tiers_telephone %}
+                    <strong>Téléphone :</strong> {{ facture.tiers_telephone }}<br>
+                    {% endif %}
+                    {% if facture.tiers_email %}
+                    <strong>Email :</strong> {{ facture.tiers_email }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        
+        <div class="info-block">
+            <h3>DÉTAILS DE LA FACTURE</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 45%;">Désignation</th>
+                        <th style="width: 15%;" class="text-center">Quantité</th>
+                        <th style="width: 20%;" class="text-right">Prix Unitaire (GNF)</th>
+                        <th style="width: 20%;" class="text-right">Total (GNF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in facture.lignes.all %}
+                    <tr>
+                        <td>{{ ligne.description }}</td>
+                        <td class="text-center">{{ ligne.quantite }}</td>
+                        <td class="text-right">{{ ligne.prix_unitaire|floatformat:0 }}</td>
+                        <td class="text-right">{{ ligne.montant|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center;">Aucune ligne de facture</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="total-block">
+            <table class="total-table">
+                <tr>
+                    <th>Total HT</th>
+                    <td>{{ facture.montant_total|floatformat:0 }} GNF</td>
+                </tr>
+                {% if facture.remise > 0 %}
+                <tr>
+                    <th>Remise</th>
+                    <td>{{ facture.remise|floatformat:0 }} GNF</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th>TVA (18%)</th>
+                    <td>{{ facture.tva|floatformat:0 }} GNF</td>
+                </tr>
+                <tr class="total-row">
+                    <th>Total TTC</th>
+                    <td>{{ facture.montant_final|floatformat:0 }} GNF</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="clearfix"></div>
+        
+        <div class="payment-info">
+            <h3>MODALITÉS DE PAIEMENT</h3>
+            <p>
+                <strong>Mode de paiement :</strong> {{ facture.mode_paiement }}<br>
+                <strong>Délai de paiement :</strong> {{ facture.delai_paiement }}<br>
+                {% if facture.banque %}
+                <strong>Banque :</strong> {{ facture.banque }}<br>
+                {% endif %}
+                {% if facture.rib %}
+                <strong>RIB :</strong> {{ facture.rib }}
+                {% endif %}
+            </p>
+        </div>
+        
+        {% if facture.notes %}
+        <div class="info-block">
+            <h3>OBSERVATIONS / REMARQUES</h3>
+            <p>{{ facture.notes|linebreaks }}</p>
+        </div>
+        {% else %}
+        <div class="info-block">
+            <h3>OBSERVATIONS / REMARQUES</h3>
+            <p>Merci pour votre confiance.<br>
+            Facture établie sans escompte pour paiement anticipé.</p>
+        </div>
+        {% endif %}
+        
+        <div class="signature">
+            <p>Fait à Conakry, le {{ facture.date_emission|date:"d F Y" }}</p>
+            <p>Signature et cachet</p>
+        </div>
+        
+        <div class="footer">
+            <p>{{ entreprise.nom|default:"Fleet Management" }} - {{ entreprise.adresse|default:"123 Rue Principale, Conakry" }} - Tél : {{ entreprise.telephone|default:"(+224) 62 12 34 56" }}</p>
+        </div>
+    </div>
+</body>
+</html>

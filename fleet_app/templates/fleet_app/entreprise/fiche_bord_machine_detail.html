@@ -1,0 +1,169 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Détails Fiche de Bord Machine{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Détails de la Fiche de Bord Machine</h5>
+            <div>
+                <a href="{% url 'fleet_app:fiche_bord_machine_list' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+                </a>
+                <a href="{% url 'fleet_app:fiche_bord_machine_edit' object.pk %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit me-1"></i>Modifier
+                </a>
+                <a href="{% url 'fleet_app:fiche_bord_machine_delete' object.pk %}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash me-1"></i>Supprimer
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Informations générales -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Informations générales</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Date:</div>
+                                <div class="col-sm-8">{{ object.date|date:"d/m/Y" }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Machine:</div>
+                                <div class="col-sm-8">{{ object.machine.nom }} ({{ object.machine.immatriculation }})</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Chauffeur:</div>
+                                <div class="col-sm-8">{{ object.chauffeur.prenom }} {{ object.chauffeur.nom }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Site:</div>
+                                <div class="col-sm-8">{{ object.site }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-4 fw-bold">Heures de travail:</div>
+                                <div class="col-sm-8">{{ object.heures_travail }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Consommation et compteurs -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Consommation et compteurs</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Compteur début:</div>
+                                <div class="col-sm-6">{{ object.compteur_debut }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Compteur fin:</div>
+                                <div class="col-sm-6">{{ object.compteur_fin }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Distance parcourue:</div>
+                                <div class="col-sm-6">{{ object.distance_parcourue }} km</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Carburant consommé:</div>
+                                <div class="col-sm-6">{{ object.carburant_consomme }} litres</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-sm-6 fw-bold">Consommation moyenne:</div>
+                                <div class="col-sm-6">
+                                    {% if object.distance_parcourue and object.carburant_consomme %}
+                                        {{ object.consommation_moyenne|floatformat:2 }} L/100km
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Observations -->
+                <div class="col-md-12">
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Observations</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if object.observations %}
+                                <p>{{ object.observations|linebreaks }}</p>
+                            {% else %}
+                                <p class="text-muted">Aucune observation</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Entrées de la fiche -->
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h6 class="mb-0">Entrées de la fiche</h6>
+                            <a href="{% url 'fleet_app:entree_fiche_bord_create' %}?fiche_id={{ object.id }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>Ajouter une entrée
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            {% if entrees %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Heure</th>
+                                                <th>Lieu</th>
+                                                <th>Type d'activité</th>
+                                                <th>Quantité</th>
+                                                <th>Unité</th>
+                                                <th>Observations</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for entree in entrees %}
+                                            <tr>
+                                                <td>{{ entree.heure|time:"H:i" }}</td>
+                                                <td>{{ entree.lieu }}</td>
+                                                <td>{{ entree.type_activite }}</td>
+                                                <td>{{ entree.quantite }}</td>
+                                                <td>{{ entree.unite }}</td>
+                                                <td>{{ entree.observations|truncatechars:50 }}</td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="{% url 'fleet_app:entree_fiche_bord_edit' entree.pk %}" class="btn btn-warning" title="Modifier">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <a href="{% url 'fleet_app:entree_fiche_bord_delete' entree.pk %}" class="btn btn-danger" title="Supprimer">
+                                                            <i class="fas fa-trash"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <p>Aucune entrée enregistrée pour cette fiche de bord.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

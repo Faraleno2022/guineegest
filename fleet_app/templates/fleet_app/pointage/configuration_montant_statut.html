@@ -1,0 +1,393 @@
+{% extends 'fleet_app/base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Configuration des Montants par Statut{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .config-header {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        margin: 0;
+    }
+    
+    .employe-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .employe-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    
+    .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 15px;
+        padding: 20px;
+    }
+    
+    .statut-config {
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 15px;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+    
+    .statut-config:hover {
+        border-color: #007bff;
+        background: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,123,255,0.15);
+    }
+    
+    .statut-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .statut-badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-weight: bold;
+    }
+    
+    .montant-input {
+        position: relative;
+    }
+    
+    .montant-input input {
+        padding-right: 50px;
+    }
+    
+    .currency-suffix {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .form-selector {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .btn-config {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-config:hover {
+        background: linear-gradient(135deg, #218838, #1e7e34);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(40,167,69,0.3);
+    }
+    
+    .summary-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .summary-table th {
+        background: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 12px;
+    }
+    
+    .summary-table td {
+        border: none;
+        padding: 10px 12px;
+        vertical-align: middle;
+    }
+    
+    .montant-cell {
+        font-weight: 500;
+        text-align: right;
+    }
+    
+    .montant-zero {
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .montant-positive {
+        color: #28a745;
+    }
+    
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-cogs me-2"></i>Configuration des Montants par Statut</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Accueil</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'fleet_app:pointage_journalier' %}">Pointage</a></li>
+                        <li class="breadcrumb-item active">Configuration Montants</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélecteur d'employé -->
+    <div class="form-selector">
+        <h5><i class="fas fa-user-cog me-2"></i>Configurer les montants pour un employé</h5>
+        {% if demo_mode %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Mode Démonstration :</strong> Cette fonctionnalité est en cours de développement. L'interface est disponible pour visualisation.
+        </div>
+        {% endif %}
+        <form method="get" class="row align-items-end">
+            <div class="col-md-8">
+                <select name="employe_id" class="form-select">
+                    <option value="">-- Sélectionner un employé --</option>
+                    {% for employe in form.employe.queryset %}
+                    <option value="{{ employe.id }}" {% if employe.id == employe_selectionne_id %}selected{% endif %}>
+                        {{ employe.nom }} {{ employe.prenom }} ({{ employe.matricule }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">Sélectionnez un employé pour configurer ses montants par statut</small>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-config w-100">
+                    <i class="fas fa-search me-2"></i>Configurer
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if employe_selectionne_id %}
+    <!-- Formulaire de configuration -->
+    {% for employe_config in employes_avec_configs %}
+        {% if employe_config.employe.id == employe_selectionne_id %}
+        <div class="config-card">
+            <div class="config-header">
+                <div class="employe-info">
+                    <div class="employe-avatar">
+                        {{ employe_config.employe.nom.0 }}{{ employe_config.employe.prenom.0 }}
+                    </div>
+                    <div>
+                        <h4 class="mb-1">{{ employe_config.employe.nom }} {{ employe_config.employe.prenom }}</h4>
+                        <p class="mb-0 opacity-75">
+                            <i class="fas fa-id-badge me-2"></i>{{ employe_config.employe.matricule }}
+                            <span class="ms-3"><i class="fas fa-briefcase me-2"></i>{{ employe_config.employe.fonction|default:"Non spécifié" }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="employe_id" value="{{ employe_config.employe.id }}">
+                <div class="config-grid">
+                    {% for statut_code, statut_label in statut_choices %}
+                    <div class="statut-config">
+                        <div class="statut-label">
+                            <span class="statut-badge bg-primary text-white">
+                                {{ statut_code }}
+                            </span>
+                            {{ statut_label }}
+                        </div>
+                        <div class="montant-input">
+                            <input type="number" 
+                                   name="montant_{{ statut_code }}" 
+                                   class="form-control" 
+                                   value="{{ employe_config.configurations|default:0 }}"
+                                   step="0.01" 
+                                   min="0" 
+                                   placeholder="0.00"
+                                   {% if demo_mode %}disabled{% endif %}>
+                            <span class="currency-suffix">GNF</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="p-3 border-top bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Les montants sont en Francs Guinéens (GNF). Laissez vide ou 0 pour les statuts non rémunérés.
+                        </small>
+                        <button type="submit" class="btn btn-config" {% if demo_mode %}disabled{% endif %}>
+                            <i class="fas fa-save me-2"></i>{% if demo_mode %}Démo - {% endif %}Enregistrer les configurations
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    <!-- Tableau récapitulatif -->
+    <div class="mt-4">
+        <h5><i class="fas fa-table me-2"></i>Récapitulatif des configurations</h5>
+        <div class="table-responsive">
+            <table class="table summary-table">
+                <thead>
+                    <tr>
+                        <th>Employé</th>
+                        <th>Matricule</th>
+                        {% for statut_code, statut_label in statut_choices %}
+                        <th class="text-center">{{ statut_code }}</th>
+                        {% endfor %}
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employe_config in employes_avec_configs %}
+                    <tr {% if employe_config.employe.id == employe_selectionne_id %}class="table-primary"{% endif %}>
+                        <td>
+                            <strong>{{ employe_config.employe.nom }} {{ employe_config.employe.prenom }}</strong>
+                            <br><small class="text-muted">{{ employe_config.employe.fonction|default:"Non spécifié" }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ employe_config.employe.matricule }}</span>
+                        </td>
+                        {% for statut_code, statut_label in statut_choices %}
+                        <td class="montant-cell">
+                            {% with montant=employe_config.configurations|default_if_none:0 %}
+                                {% if montant == 0 %}
+                                <span class="montant-zero">0</span>
+                                {% else %}
+                                <span class="montant-positive">{{ montant|floatformat:0 }}</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {% endfor %}
+                        <td class="text-center">
+                            <a href="?employe_id={{ employe_config.employe.id }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ statut_choices|length|add:3 }}" class="text-center text-muted py-4">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <br>Aucun employé trouvé
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Container pour les toasts -->
+<div class="toast-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit du formulaire de sélection d'employé
+    const employeSelect = document.querySelector('select[name="employe_id"]');
+    if (employeSelect) {
+        employeSelect.addEventListener('change', function() {
+            if (this.value) {
+                window.location.href = `?employe_id=${this.value}`;
+            }
+        });
+    }
+    
+    // Fonction pour afficher les toasts
+    function showToast(message, type) {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastId = 'toast-' + Date.now();
+        
+        const toastHtml = `
+            <div id="${toastId}" class="toast" role="alert">
+                <div class="toast-header">
+                    <i class="fas fa-${type === 'success' ? 'check-circle text-success' : 'exclamation-triangle text-warning'} me-2"></i>
+                    <strong class="me-auto">Configuration</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+        
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            this.remove();
+        });
+    }
+    
+    // Validation des montants
+    const montantInputs = document.querySelectorAll('input[type="number"]');
+    montantInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            const value = parseFloat(this.value);
+            if (value < 0) {
+                this.value = 0;
+                showToast('Les montants ne peuvent pas être négatifs', 'warning');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

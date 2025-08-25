@@ -1,0 +1,43 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Supprimer une feuille de route{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Supprimer une feuille de route</h1>
+        <a href="{% url 'fleet_app:feuille_route_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Confirmation de suppression</h6>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <p>Êtes-vous sûr de vouloir supprimer la feuille de route N°{{ feuille_route.id }} ?</p>
+                <p><strong>Détails de la feuille de route :</strong></p>
+                <ul>
+                    <li>Véhicule : {{ feuille_route.vehicule.marque }} {{ feuille_route.vehicule.modele }} ({{ feuille_route.vehicule.immatriculation }})</li>
+                    <li>Chauffeur : {{ feuille_route.chauffeur.prenom }} {{ feuille_route.chauffeur.nom }}</li>
+                    <li>Date de départ : {{ feuille_route.date_depart }}</li>
+                    <li>Destination : {{ feuille_route.destination }}</li>
+                </ul>
+                <p>Cette action est irréversible et supprimera définitivement cette feuille de route.</p>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Confirmer la suppression
+                </button>
+                <a href="{% url 'fleet_app:feuille_route_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

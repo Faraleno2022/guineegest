@@ -1,0 +1,120 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}{{ title }} | Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>{{ title }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.vehicule.id_for_label }}" class="form-label">Véhicule</label>
+                                    {{ form.vehicule }}
+                                    {% if form.vehicule.errors %}
+                                        <div class="text-danger">{{ form.vehicule.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_incident.id_for_label }}" class="form-label">Date de l'incident</label>
+                                    {{ form.date_incident }}
+                                    {% if form.date_incident.errors %}
+                                        <div class="text-danger">{{ form.date_incident.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.conducteur.id_for_label }}" class="form-label">Conducteur</label>
+                                    {{ form.conducteur }}
+                                    {% if form.conducteur.errors %}
+                                        <div class="text-danger">{{ form.conducteur.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.lieu.id_for_label }}" class="form-label">Lieu de l'incident</label>
+                                    {{ form.lieu }}
+                                    {% if form.lieu.errors %}
+                                        <div class="text-danger">{{ form.lieu.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.type_incident.id_for_label }}" class="form-label">Type d'incident</label>
+                                    {{ form.type_incident }}
+                                    {% if form.type_incident.errors %}
+                                        <div class="text-danger">{{ form.type_incident.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.gravite.id_for_label }}" class="form-label">Gravité</label>
+                                    {{ form.gravite }}
+                                    {% if form.gravite.errors %}
+                                        <div class="text-danger">{{ form.gravite.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description de l'incident</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.mesures_prises.id_for_label }}" class="form-label">Mesures prises</label>
+                            {{ form.mesures_prises }}
+                            {% if form.mesures_prises.errors %}
+                                <div class="text-danger">{{ form.mesures_prises.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.commentaires.id_for_label }}" class="form-label">Commentaires additionnels</label>
+                            {{ form.commentaires }}
+                            {% if form.commentaires.errors %}
+                                <div class="text-danger">{{ form.commentaires.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'fleet_app:kpi_incidents' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

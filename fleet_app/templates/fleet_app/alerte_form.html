@@ -1,0 +1,86 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Nouvelle Alerte - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}Nouvelle Alerte{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-bell me-2"></i> Créer une nouvelle alerte
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'fleet_app:alerte_nouvelle' %}">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="vehicule" class="form-label">Véhicule concerné</label>
+                <select class="form-select" id="vehicule" name="vehicule">
+                    <option value="">-- Sélectionner un véhicule (optionnel) --</option>
+                    {% for vehicule in vehicules %}
+                    <option value="{{ vehicule.id_vehicule }}">{{ vehicule }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="type_alerte" class="form-label">Type d'alerte</label>
+                <input type="text" class="form-control" id="type_alerte" name="type_alerte" required>
+                <div class="form-text">Exemple: Maintenance requise, Document expiré, Incident signalé...</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="niveau_urgence" class="form-label">Niveau d'urgence</label>
+                <select class="form-select" id="niveau_urgence" name="niveau_urgence" required>
+                    {% for niveau_code, niveau_label in niveaux_urgence %}
+                    <option value="{{ niveau_code }}">{{ niveau_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'fleet_app:alerte_list' %}" class="btn btn-secondary">Annuler</a>
+                <button type="submit" class="btn btn-primary">Créer l'alerte</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Ajouter une classe visuelle en fonction du niveau d'urgence sélectionné
+    document.addEventListener('DOMContentLoaded', function() {
+        const niveauSelect = document.getElementById('niveau_urgence');
+        
+        niveauSelect.addEventListener('change', function() {
+            // Supprimer toutes les classes de couleur
+            this.classList.remove('border-danger', 'border-warning', 'border-info', 'border-secondary');
+            
+            // Ajouter la classe appropriée selon le niveau sélectionné
+            switch(this.value) {
+                case 'Critique':
+                    this.classList.add('border-danger');
+                    break;
+                case 'Élevé':
+                    this.classList.add('border-warning');
+                    break;
+                case 'Moyen':
+                    this.classList.add('border-info');
+                    break;
+                case 'Faible':
+                    this.classList.add('border-secondary');
+                    break;
+            }
+        });
+        
+        // Déclencher l'événement change pour appliquer le style initial
+        niveauSelect.dispatchEvent(new Event('change'));
+    });
+</script>
+{% endblock %}

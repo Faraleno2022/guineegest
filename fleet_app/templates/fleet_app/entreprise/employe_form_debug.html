@@ -1,0 +1,106 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}
+Debug Formulaire Employé
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Debug Formulaire Employé</h5>
+        </div>
+        <div class="card-body">
+            <h6>Informations de debug:</h6>
+            <ul>
+                <li>Form instance: {{ form.instance }}</li>
+                <li>Form errors: {{ form.errors }}</li>
+                <li>Form non-field errors: {{ form.non_field_errors }}</li>
+            </ul>
+            
+            <h6>Champs du formulaire:</h6>
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Champs du modèle:</h6>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.matricule.id_for_label }}" class="form-label">Matricule</label>
+                            {{ form.matricule }}
+                            <small>Value: {{ form.matricule.value|default:"None" }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.nom.id_for_label }}" class="form-label">Nom</label>
+                            {{ form.nom }}
+                            <small>Value: {{ form.nom.value|default:"None" }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.prenom.id_for_label }}" class="form-label">Prénom</label>
+                            {{ form.prenom }}
+                            <small>Value: {{ form.prenom.value|default:"None" }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.fonction.id_for_label }}" class="form-label">Fonction</label>
+                            {{ form.fonction }}
+                            <small>Value: {{ form.fonction.value|default:"None" }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.telephone.id_for_label }}" class="form-label">Téléphone</label>
+                            {{ form.telephone }}
+                            <small>Value: {{ form.telephone.value|default:"None" }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.statut.id_for_label }}" class="form-label">Statut</label>
+                            {{ form.statut }}
+                            <small>Value: {{ form.statut.value|default:"None" }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Champs additionnels:</h6>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.date_naissance.id_for_label }}" class="form-label">Date de naissance</label>
+                            {{ form.date_naissance }}
+                            <small>Value: {{ form.date_naissance.value|default:"None" }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.lieu_naissance.id_for_label }}" class="form-label">Lieu de naissance</label>
+                            {{ form.lieu_naissance }}
+                            <small>Value: {{ form.lieu_naissance.value|default:"None" }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.adresse.id_for_label }}" class="form-label">Adresse</label>
+                            {{ form.adresse }}
+                            <small>Value: {{ form.adresse.value|default:"None" }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Tester</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const formInputs = document.querySelectorAll('form input, form select, form textarea');
+        formInputs.forEach(input => {
+            input.classList.add('form-control');
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,387 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Archive {{ nom_mois }} {{ archive.annee }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .archive-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .data-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .employee-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #007bff;
+    }
+    
+    .presence-item {
+        background: white;
+        border-radius: 8px;
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid #28a745;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .status-badge {
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-present {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-absent {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-repos {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .financial-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête de l'archive -->
+    <div class="archive-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-archive me-2"></i>
+                    Archive {{ nom_mois }} {{ archive.annee }}
+                </h2>
+                <p class="mb-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Données archivées le {{ archive.date_cloture|date:"d/m/Y à H:i" }}
+                </p>
+                {% if archive.commentaires %}
+                <div class="alert alert-light mb-0">
+                    <i class="fas fa-comment me-2"></i>
+                    <strong>Commentaires :</strong> {{ archive.commentaires }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'fleet_app:archive_mensuelle' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Retour aux archives
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ archive.nb_employes_actifs }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-users me-1"></i>
+                    Employés Actifs
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_presences }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-calendar-check me-1"></i>
+                    Total Présences
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ archive.total_salaire_brut|floatformat:0 }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-coins me-1"></i>
+                    Salaire Brut (GNF)
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value">{{ archive.total_net_paye|floatformat:0 }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-hand-holding-usd me-1"></i>
+                    Net Payé (GNF)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglets pour les différentes sections -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs nav-fill mb-4" id="archiveTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="presences-tab" data-bs-toggle="tab" 
+                            data-bs-target="#presences" type="button" role="tab">
+                        <i class="fas fa-calendar-check me-2"></i>
+                        Présences ({{ total_presences }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="paies-tab" data-bs-toggle="tab" 
+                            data-bs-target="#paies" type="button" role="tab">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        Paies ({{ total_paies }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="heures-supp-tab" data-bs-toggle="tab" 
+                            data-bs-target="#heures-supp" type="button" role="tab">
+                        <i class="fas fa-clock me-2"></i>
+                        Heures Supp. ({{ total_heures_supp }})
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Contenu des onglets -->
+    <div class="tab-content" id="archiveTabContent">
+        <!-- Onglet Présences -->
+        <div class="tab-pane fade show active" id="presences" role="tabpanel">
+            <div class="data-section">
+                <h4 class="mb-4">
+                    <i class="fas fa-calendar-check me-2"></i>
+                    Données de Présence
+                </h4>
+                
+                {% if presences_par_employe %}
+                    {% for employe_key, presences_list in presences_par_employe.items %}
+                    <div class="employee-card">
+                        <h6 class="mb-3">
+                            <i class="fas fa-user me-2"></i>
+                            {{ employe_key }}
+                        </h6>
+                        <div class="row">
+                            {% for presence in presences_list %}
+                            <div class="col-md-6 col-lg-4 mb-2">
+                                <div class="presence-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold">{{ presence.date }}</span>
+                                        <span class="status-badge status-present">{{ presence.statut }}</span>
+                                    </div>
+                                    {% if presence.commentaires %}
+                                    <small class="text-muted d-block mt-1">{{ presence.commentaires }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune donnée de présence archivée</h5>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Onglet Paies -->
+        <div class="tab-pane fade" id="paies" role="tabpanel">
+            <div class="data-section">
+                <h4 class="mb-4">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    Données de Paie
+                </h4>
+                
+                {% if paies_par_employe %}
+                    <div class="financial-table">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-header">
+                                <tr>
+                                    <th>Employé</th>
+                                    <th class="text-end">Salaire Base</th>
+                                    <th class="text-end">Prime Discipline</th>
+                                    <th class="text-end">Cherté Vie</th>
+                                    <th class="text-end">Transport</th>
+                                    <th class="text-end">Logement</th>
+                                    <th class="text-end">H. Supp.</th>
+                                    <th class="text-end">CNSS</th>
+                                    <th class="text-end">RTS</th>
+                                    <th class="text-end">Net à Payer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employe_key, paie in paies_par_employe.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ paie.employe_matricule }}</strong><br>
+                                        <small class="text-muted">{{ paie.employe_nom }}</small>
+                                    </td>
+                                    <td class="text-end">{{ paie.salaire_base|floatformat:0 }}</td>
+                                    <td class="text-end">{{ paie.prime_discipline|floatformat:0 }}</td>
+                                    <td class="text-end">{{ paie.cherete_vie|floatformat:0 }}</td>
+                                    <td class="text-end">{{ paie.indemnite_transport|floatformat:0 }}</td>
+                                    <td class="text-end">{{ paie.indemnite_logement|floatformat:0 }}</td>
+                                    <td class="text-end">{{ paie.montant_heures_supplementaires|floatformat:0 }}</td>
+                                    <td class="text-end text-warning">-{{ paie.cnss|floatformat:0 }}</td>
+                                    <td class="text-end text-warning">-{{ paie.rts|floatformat:0 }}</td>
+                                    <td class="text-end">
+                                        <strong class="text-success">{{ paie.salaire_net_a_payer|floatformat:0 }}</strong>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune donnée de paie archivée</h5>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Onglet Heures Supplémentaires -->
+        <div class="tab-pane fade" id="heures-supp" role="tabpanel">
+            <div class="data-section">
+                <h4 class="mb-4">
+                    <i class="fas fa-clock me-2"></i>
+                    Données d'Heures Supplémentaires
+                </h4>
+                
+                {% if heures_supp_par_employe %}
+                    <div class="financial-table">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-header">
+                                <tr>
+                                    <th>Employé</th>
+                                    <th class="text-end">Heures Normales</th>
+                                    <th class="text-end">Heures Supplémentaires</th>
+                                    <th class="text-end">Montant Supplémentaire</th>
+                                    <th class="text-end">Avance</th>
+                                    <th class="text-end">Sanction</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employe_key, heure in heures_supp_par_employe.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ heure.employe_matricule }}</strong><br>
+                                        <small class="text-muted">{{ heure.employe_nom }}</small>
+                                    </td>
+                                    <td class="text-end">{{ heure.heures_normales|floatformat:1 }}h</td>
+                                    <td class="text-end">{{ heure.heures_supplementaires|floatformat:1 }}h</td>
+                                    <td class="text-end text-success">{{ heure.montant_supplementaire|floatformat:0 }}</td>
+                                    <td class="text-end text-info">{{ heure.avance|floatformat:0 }}</td>
+                                    <td class="text-end text-danger">{{ heure.sanction|floatformat:0 }}</td>
+                                    <td class="text-end">
+                                        <strong>{{ heure.montant_supplementaire|add:heure.avance|add:heure.sanction|floatformat:0 }}</strong>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune donnée d'heures supplémentaires archivée</h5>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <div class="btn-group" role="group">
+                <button class="btn btn-success" id="exportArchiveExcel">
+                    <i class="fas fa-file-excel me-2"></i>
+                    Export Excel
+                </button>
+                <button class="btn btn-danger" id="exportArchivePDF">
+                    <i class="fas fa-file-pdf me-2"></i>
+                    Export PDF
+                </button>
+                <button class="btn btn-info" id="printArchive">
+                    <i class="fas fa-print me-2"></i>
+                    Imprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Export Excel
+    $('#exportArchiveExcel').on('click', function() {
+        alert('Fonctionnalité d\'export Excel en cours de développement');
+    });
+    
+    // Export PDF
+    $('#exportArchivePDF').on('click', function() {
+        alert('Fonctionnalité d\'export PDF en cours de développement');
+    });
+    
+    // Impression
+    $('#printArchive').on('click', function() {
+        window.print();
+    });
+});
+</script>
+{% endblock %}

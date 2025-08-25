@@ -1,0 +1,227 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if form.instance.pk %}Modifier{% else %}Ajouter{% endif %} une Entrée d'Or
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-coins me-2"></i>
+                {% if form.instance.pk %}Modifier{% else %}Ajouter{% endif %} une Entrée d'Or
+            </h5>
+            {% if fiche_or %}
+            <a href="{% url 'fleet_app:fiche_or_detail' fiche_or.id %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la fiche
+            </a>
+            {% else %}
+            <a href="{% url 'fleet_app:fiche_or_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+            </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if not fiche_or %}
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <p>Sélectionnez d'abord la fiche d'or à laquelle cette entrée sera associée.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-12">
+                    <label for="{{ form.fiche_or.id_for_label }}" class="form-label">Fiche d'or</label>
+                    {{ form.fiche_or }}
+                    {% if form.fiche_or.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.fiche_or.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <input type="hidden" name="fiche_or" value="{{ fiche_or.id }}">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <p>Ajout d'une entrée pour la fiche d'or du <strong>{{ fiche_or.date|date:"d/m/Y" }}</strong> - Site: <strong>{{ fiche_or.site }}</strong> - Responsable: <strong>{{ fiche_or.responsable }}</strong></p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Informations générales</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.heure.id_for_label }}" class="form-label">Heure</label>
+                            {{ form.heure }}
+                            {% if form.heure.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.heure.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.secteur.id_for_label }}" class="form-label">Secteur</label>
+                            {{ form.secteur }}
+                            {% if form.secteur.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.secteur.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2 mb-3">Poids et valeur</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.poids_brut.id_for_label }}" class="form-label">Poids brut (g)</label>
+                            {{ form.poids_brut }}
+                            {% if form.poids_brut.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.poids_brut.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.purete.id_for_label }}" class="form-label">Pureté (%)</label>
+                            {{ form.purete }}
+                            {% if form.purete.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.purete.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="poids_net" class="form-label">Poids net (g)</label>
+                            <input type="text" class="form-control" id="poids_net" readonly>
+                            <small class="form-text text-muted">Calculé automatiquement</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="valeur" class="form-label">Valeur (GNF)</label>
+                            <input type="text" class="form-control" id="valeur" readonly>
+                            <small class="form-text text-muted">Calculé automatiquement</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12">
+                    <h6 class="border-bottom pb-2 mb-3">Observations</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="{{ form.observations.id_for_label }}" class="form-label">Observations</label>
+                            {{ form.observations }}
+                            {% if form.observations.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.observations.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                    {% if fiche_or %}
+                    <a href="{% url 'fleet_app:fiche_or_detail' fiche_or.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </a>
+                    {% else %}
+                    <a href="{% url 'fleet_app:fiche_or_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ajouter la classe form-control à tous les inputs du formulaire
+        const formInputs = document.querySelectorAll('form input, form select, form textarea');
+        formInputs.forEach(input => {
+            input.classList.add('form-control');
+        });
+        
+        // Calculer automatiquement le poids net et la valeur
+        const poidsBrut = document.getElementById('{{ form.poids_brut.id_for_label }}');
+        const purete = document.getElementById('{{ form.purete.id_for_label }}');
+        const poidsNet = document.getElementById('poids_net');
+        const valeur = document.getElementById('valeur');
+        
+        // Récupérer le prix unitaire de la fiche d'or
+        {% if fiche_or %}
+        const prixUnitaire = {{ fiche_or.prix_unitaire }};
+        {% else %}
+        const prixUnitaire = 30000; // Valeur par défaut si pas de fiche_or
+        {% endif %}
+        
+        function calculer() {
+            const poids = parseFloat(poidsBrut.value) || 0;
+            const pourcentage = parseFloat(purete.value) || 0;
+            
+            const net = (poids * pourcentage / 100).toFixed(2);
+            poidsNet.value = net;
+            
+            valeur.value = (net * prixUnitaire).toFixed(0);
+        }
+        
+        poidsBrut.addEventListener('input', calculer);
+        purete.addEventListener('input', calculer);
+        
+        // Initialiser l'heure actuelle si c'est une nouvelle entrée
+        {% if not form.instance.pk %}
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}`;
+        document.getElementById('{{ form.heure.id_for_label }}').value = formattedTime;
+        
+        // Initialiser la pureté par défaut
+        document.getElementById('{{ form.purete.id_for_label }}').value = "95";
+        {% endif %}
+        
+        // Calculer les valeurs initiales
+        calculer();
+    });
+</script>
+{% endblock %}

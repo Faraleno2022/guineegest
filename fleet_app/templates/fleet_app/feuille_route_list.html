@@ -1,0 +1,106 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Feuilles de Route Chauffeur{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Feuilles de Route Chauffeur — Modèle intelligent</h1>
+        <a href="{% url 'fleet_app:feuille_route_add' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-plus fa-sm text-white-50"></i> Nouvelle feuille de route
+        </a>
+    </div>
+
+    {% include 'fleet_app/components/search_box.html' with table='feuilles_route' placeholder='Rechercher une feuille de route par destination, véhicule, chauffeur...' target_div='search-results-feuilles' %}
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Feuilles de route enregistrées</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Véhicule</th>
+                            <th>Chauffeur</th>
+                            <th>Destination</th>
+                            <th>Distance (km)</th>
+                            <th>Consommation (L/100km)</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for feuille in feuilles_route %}
+                        <tr>
+                            <td>{{ feuille.date_depart }}</td>
+                            <td>{{ feuille.vehicule.immatriculation }}</td>
+                            <td>{{ feuille.chauffeur.nom }} {{ feuille.chauffeur.prenom }}</td>
+                            <td>{{ feuille.destination }}</td>
+                            <td>
+                                {% if feuille.distance_parcourue %}
+                                {{ feuille.distance_parcourue }} km
+                                {% else %}
+                                <span class="text-muted">Non complété</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if feuille.consommation %}
+                                {{ feuille.consommation }} L/100km
+                                {% if feuille.alerte_surconsommation %}
+                                <span class="badge badge-danger">Surconsommation</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted">Non complété</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if feuille.signature_chauffeur %}
+                                <span class="badge badge-success">Complété</span>
+                                {% else %}
+                                <span class="badge badge-warning">En attente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'fleet_app:feuille_route_detail' feuille.id %}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'fleet_app:feuille_route_edit' feuille.id %}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'fleet_app:feuille_route_print' feuille.id %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                                <a href="{% url 'fleet_app:feuille_route_delete' feuille.id %}" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">Aucune feuille de route enregistrée</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#dataTable').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/French.json"
+            },
+            "order": [[0, "desc"]]
+        });
+    });
+</script>
+{% endblock %}

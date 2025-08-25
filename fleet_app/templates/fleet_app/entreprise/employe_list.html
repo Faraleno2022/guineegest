@@ -1,0 +1,484 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Employés{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Liste des Employés</h5>
+            <a href="{% url 'fleet_app:employe_create' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i>Nouvel employé
+            </a>
+        </div>
+        <div class="card-body">
+            <!-- Recherche dynamique inline -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-gradient-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-search"></i> Recherche dynamique inline
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="nomSearch" class="form-label fw-bold">
+                                        <i class="fas fa-user text-primary"></i> Nom
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="nomSearch" 
+                                               placeholder="Rechercher par nom ou prénom..." 
+                                               autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="posteSearch" class="form-label fw-bold">
+                                        <i class="fas fa-briefcase text-primary"></i> Poste
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="posteSearch" 
+                                               placeholder="Rechercher par poste..." 
+                                               autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="statutFilter" class="form-label fw-bold">
+                                        <i class="fas fa-toggle-on text-primary"></i> Statut
+                                    </label>
+                                    <select class="form-select" id="statutFilter">
+                                        <option value="">Tous les statuts</option>
+                                        <option value="Actif">Actif</option>
+                                        <option value="Inactif">Inactif</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-grid">
+                                        <button type="button" class="btn btn-outline-secondary" id="clearEmployeeFilters">
+                                            <i class="fas fa-eraser"></i> Effacer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Compteurs et statut -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex gap-3">
+                                            <span class="badge bg-success fs-6" id="employeeResultCount">
+                                                <i class="fas fa-users"></i> {{ employes|length }} employé(s)
+                                            </span>
+                                            <span class="badge bg-info fs-6" id="employeeFilterStatus">
+                                                <i class="fas fa-filter"></i> Aucun filtre actif
+                                            </span>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-success btn-sm" id="exportEmployeesExcel">
+                                                <i class="fas fa-file-excel"></i> Excel
+                                            </button>
+                                            <a href="{% url 'fleet_app:employe_create' %}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-plus"></i> Nouvel employé
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau des employés -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Matricule</th>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Poste</th>
+                            <th>Date d'embauche</th>
+                            <th>Salaire de base (GNF)</th>
+                            <th>Téléphone</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeTableBody">
+                        {% for employe in employes %}
+                        <tr>
+                            <td>{{ employe.matricule }}</td>
+                            <td>{{ employe.nom }}</td>
+                            <td>{{ employe.prenom }}</td>
+                            <td>{{ employe.fonction }}</td>
+                            <td>{% if employe.date_embauche %}{{ employe.date_embauche|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                            <td>{{ employe.salaire_journalier|floatformat:0|intcomma }}</td>
+                            <td>{{ employe.telephone }}</td>
+                            <td>
+                                <span class="badge {% if employe.statut == 'Actif' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ employe.statut }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'fleet_app:employe_detail' employe.pk %}" class="btn btn-info" title="Détails">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'fleet_app:employe_edit' employe.pk %}" class="btn btn-warning" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'fleet_app:employe_delete' employe.pk %}" class="btn btn-danger" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    <a href="{% url 'fleet_app:paie_employe_create' employe.pk %}" class="btn btn-success" title="Créer une paie">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                <div class="alert alert-info">
+                                    <h5><i class="fas fa-info-circle"></i> Aucun employé enregistré</h5>
+                                    <p class="mb-0">
+                                        Vous n'avez pas encore d'employés dans votre compte.<br>
+                                        <a href="{% url 'fleet_app:employe_create' %}" class="btn btn-primary btn-sm mt-2">
+                                            <i class="fas fa-plus"></i> Ajouter un employé
+                                        </a>
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if employes.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if employes.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ employes.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                    {% endif %}
+
+                    {% for i in employes.paginator.page_range %}
+                    {% if employes.number == i %}
+                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if employes.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ employes.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// DIAGNOSTIC SIMPLE POUR RECHERCHE DYNAMIQUE EMPLOYÉS + EXPORT EXCEL
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DIAGNOSTIC - Démarrage du script employés');
+    
+    // Test 1: Vérifier les éléments DOM
+    console.log('=== TEST 1: ÉLÉMENTS DOM ===');
+    const nomSearch = document.getElementById('nomSearch');
+    const posteSearch = document.getElementById('posteSearch');
+    const statutFilter = document.getElementById('statutFilter');
+    const tableBody = document.getElementById('employeeTableBody');
+    const exportExcel = document.getElementById('exportEmployeesExcel');
+    
+    console.log('nomSearch:', nomSearch);
+    console.log('posteSearch:', posteSearch);
+    console.log('statutFilter:', statutFilter);
+    console.log('tableBody:', tableBody);
+    console.log('exportExcel:', exportExcel);
+    
+    if (!nomSearch) {
+        console.error('❌ ERREUR: nomSearch non trouvé');
+        return;
+    }
+    if (!posteSearch) {
+        console.error('❌ ERREUR: posteSearch non trouvé');
+        return;
+    }
+    if (!statutFilter) {
+        console.error('❌ ERREUR: statutFilter non trouvé');
+        return;
+    }
+    if (!tableBody) {
+        console.error('❌ ERREUR: tableBody non trouvé');
+        return;
+    }
+    if (!exportExcel) {
+        console.error('❌ ERREUR: exportExcel non trouvé');
+        return;
+    }
+    
+    console.log('✅ Tous les éléments DOM trouvés');
+    
+    // Test 1.5: Vérifier la bibliothèque XLSX
+    console.log('=== TEST 1.5: BIBLIOTHÈQUE XLSX ===');
+    if (typeof XLSX === 'undefined') {
+        console.error('❌ ERREUR: Bibliothèque XLSX non chargée');
+        console.error('Vérifiez que le CDN XLSX est accessible');
+        return;
+    } else {
+        console.log('✅ Bibliothèque XLSX chargée:', XLSX.version);
+    }
+    
+    // Test 2: Vérifier les lignes du tableau
+    console.log('=== TEST 2: LIGNES DU TABLEAU ===');
+    const rows = tableBody.querySelectorAll('tr');
+    console.log('Nombre de lignes:', rows.length);
+    
+    if (rows.length === 0) {
+        console.error('❌ ERREUR: Aucune ligne trouvée dans le tableau');
+        return;
+    }
+    
+    // Analyser la première ligne
+    const firstRow = rows[0];
+    const cells = firstRow.querySelectorAll('td');
+    console.log('Première ligne - nombre de cellules:', cells.length);
+    
+    if (cells.length > 0) {
+        console.log('Contenu des cellules de la première ligne:');
+        cells.forEach((cell, index) => {
+            console.log(`  Cellule ${index}:`, cell.textContent.trim());
+        });
+    }
+    
+    // Test 3: Fonction de filtrage simple
+    console.log('=== TEST 3: FONCTION DE FILTRAGE ===');
+    
+    function testFilter() {
+        console.log('🔍 Test de filtrage...');
+        const nomValue = nomSearch.value.toLowerCase().trim();
+        const posteValue = posteSearch.value.toLowerCase().trim();
+        const statutValue = statutFilter.value;
+        
+        console.log('Valeurs de recherche:', { nomValue, posteValue, statutValue });
+        
+        let visibleCount = 0;
+        
+        rows.forEach((row, index) => {
+            const cells = row.querySelectorAll('td');
+            
+            if (cells.length === 0) {
+                console.log(`Ligne ${index}: Ignorée (pas de cellules)`);
+                return;
+            }
+            
+            // Extraire les données
+            const matricule = (cells[0]?.textContent || '').toLowerCase();
+            const nom = (cells[1]?.textContent || '').toLowerCase();
+            const prenom = (cells[2]?.textContent || '').toLowerCase();
+            const poste = (cells[3]?.textContent || '').toLowerCase();
+            const statut = (cells[7]?.textContent || '').trim();
+            
+            console.log(`Ligne ${index}:`, { matricule, nom, prenom, poste, statut });
+            
+            let shouldShow = true;
+            
+            // Test nom
+            if (nomValue && shouldShow) {
+                if (!nom.includes(nomValue) && !prenom.includes(nomValue) && !matricule.includes(nomValue)) {
+                    shouldShow = false;
+                    console.log(`Ligne ${index}: Cachée par filtre nom`);
+                }
+            }
+            
+            // Test poste
+            if (posteValue && shouldShow) {
+                if (!poste.includes(posteValue)) {
+                    shouldShow = false;
+                    console.log(`Ligne ${index}: Cachée par filtre poste`);
+                }
+            }
+            
+            // Test statut
+            if (statutValue && shouldShow) {
+                if (!statut.includes(statutValue)) {
+                    shouldShow = false;
+                    console.log(`Ligne ${index}: Cachée par filtre statut`);
+                }
+            }
+            
+            // Appliquer la visibilité
+            if (shouldShow) {
+                row.style.display = '';
+                row.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+                visibleCount++;
+                console.log(`Ligne ${index}: Visible`);
+            } else {
+                row.style.display = 'none';
+                console.log(`Ligne ${index}: Cachée`);
+            }
+        });
+        
+        console.log(`✅ Filtrage terminé: ${visibleCount} ligne(s) visible(s)`);
+    }
+    
+    // Test 4: Fonction d'export Excel
+    console.log('=== TEST 4: FONCTION EXPORT EXCEL ===');
+    
+    function exportToExcel() {
+        console.log('📊 DÉBUT EXPORT EXCEL');
+        
+        try {
+            // Vérifier XLSX
+            if (typeof XLSX === 'undefined') {
+                console.error('❌ XLSX non disponible pour l\'export');
+                alert('❌ Erreur: Bibliothèque Excel non chargée');
+                return;
+            }
+            
+            // Récupérer les lignes visibles
+            const visibleRows = Array.from(tableBody.querySelectorAll('tr')).filter(row => 
+                row.style.display !== 'none'
+            );
+            
+            console.log('Lignes visibles pour export:', visibleRows.length);
+            
+            if (visibleRows.length === 0) {
+                console.warn('⚠️ Aucune ligne visible à exporter');
+                alert('❌ Aucun employé à exporter');
+                return;
+            }
+            
+            // Préparer les données
+            const data = [];
+            const headers = [
+                'Matricule', 'Nom', 'Prénom', 'Poste', 'Date d\'embauche',
+                'Salaire de base', 'Téléphone', 'Statut'
+            ];
+            data.push(headers);
+            console.log('En-têtes Excel:', headers);
+            
+            visibleRows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                const rowData = [];
+                
+                for (let i = 0; i < cells.length - 1; i++) { // -1 pour exclure Actions
+                    let cellText = cells[i]?.textContent?.trim() || '';
+                    // Nettoyer le texte des badges pour la colonne Statut
+                    if (i === 7) {
+                        cellText = cellText.replace(/\s+/g, ' ').trim();
+                    }
+                    rowData.push(cellText);
+                }
+                
+                data.push(rowData);
+                console.log(`Ligne ${index} ajoutée:`, rowData);
+            });
+            
+            console.log('Données Excel préparées:', data.length, 'lignes');
+            
+            // Créer le fichier Excel
+            console.log('Création du workbook...');
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Auto-ajuster la largeur des colonnes
+            const colWidths = headers.map(() => ({ wch: 15 }));
+            ws['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Employés');
+            console.log('Workbook créé avec succès');
+            
+            // Télécharger le fichier
+            const fileName = `employes_${new Date().toISOString().split('T')[0]}.xlsx`;
+            console.log('Téléchargement du fichier:', fileName);
+            
+            XLSX.writeFile(wb, fileName);
+            
+            console.log('✅ EXPORT EXCEL RÉUSSI:', fileName);
+            alert('✅ Export Excel réussi ! Fichier: ' + fileName);
+            
+        } catch (error) {
+            console.error('❌ ERREUR EXPORT EXCEL:', error);
+            console.error('Stack trace:', error.stack);
+            alert('❌ Erreur lors de l\'export Excel: ' + error.message);
+        }
+    }
+    
+    // Test 5: Event listeners
+    console.log('=== TEST 5: EVENT LISTENERS ===');
+    
+    nomSearch.addEventListener('input', function() {
+        console.log('📝 Event: Input nom =', this.value);
+        testFilter();
+    });
+    
+    posteSearch.addEventListener('input', function() {
+        console.log('📝 Event: Input poste =', this.value);
+        testFilter();
+    });
+    
+    statutFilter.addEventListener('change', function() {
+        console.log('📝 Event: Change statut =', this.value);
+        testFilter();
+    });
+    
+    exportExcel.addEventListener('click', function() {
+        console.log('📝 Event: Click export Excel');
+        exportToExcel();
+    });
+    
+    console.log('✅ Event listeners attachés (y compris export Excel)');
+    
+    // Test initial
+    console.log('=== TEST INITIAL ===');
+    testFilter();
+    
+    console.log('🎉 DIAGNOSTIC TERMINÉ - Tapez dans les champs pour tester');
+    console.log('📊 Cliquez sur le bouton Excel pour tester l\'export');
+});
+</script>
+
+<style>
+/* Styles de base pour le diagnostic */
+.table tbody tr {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

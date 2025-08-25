@@ -1,0 +1,198 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if form.instance.pk %}Modifier{% else %}Ajouter{% endif %} une Entrée de Fiche de Bord
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-clipboard-list me-2"></i>
+                {% if form.instance.pk %}Modifier{% else %}Ajouter{% endif %} une Entrée de Fiche de Bord
+            </h5>
+            {% if fiche_bord %}
+            <a href="{% url 'fleet_app:fiche_bord_machine_detail' fiche_bord.id %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la fiche
+            </a>
+            {% else %}
+            <a href="{% url 'fleet_app:fiche_bord_machine_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+            </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if not fiche_bord %}
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <p>Sélectionnez d'abord la fiche de bord à laquelle cette entrée sera associée.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-12">
+                    <label for="{{ form.fiche_bord.id_for_label }}" class="form-label">Fiche de bord</label>
+                    {{ form.fiche_bord }}
+                    {% if form.fiche_bord.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.fiche_bord.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <input type="hidden" name="fiche_bord" value="{{ fiche_bord.id }}">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <p>Ajout d'une entrée pour la fiche de bord du <strong>{{ fiche_bord.date|date:"d/m/Y" }}</strong> - Machine: <strong>{{ fiche_bord.machine.nom }}</strong> ({{ fiche_bord.machine.immatriculation }}) - Chauffeur: <strong>{{ fiche_bord.chauffeur.prenom }} {{ fiche_bord.chauffeur.nom }}</strong></p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="col-md-6">
+                    <label for="{{ form.heure.id_for_label }}" class="form-label">Heure</label>
+                    {{ form.heure }}
+                    {% if form.heure.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.heure.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="{{ form.lieu.id_for_label }}" class="form-label">Lieu</label>
+                    {{ form.lieu }}
+                    {% if form.lieu.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.lieu.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="{{ form.type_activite.id_for_label }}" class="form-label">Type d'activité</label>
+                    {{ form.type_activite }}
+                    {% if form.type_activite.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.type_activite.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="{{ form.quantite.id_for_label }}" class="form-label">Quantité</label>
+                    {{ form.quantite }}
+                    {% if form.quantite.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.quantite.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="{{ form.unite.id_for_label }}" class="form-label">Unité</label>
+                    {{ form.unite }}
+                    {% if form.unite.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.unite.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-12">
+                    <label for="{{ form.observations.id_for_label }}" class="form-label">Observations</label>
+                    {{ form.observations }}
+                    {% if form.observations.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.observations.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                    {% if fiche_bord %}
+                    <a href="{% url 'fleet_app:fiche_bord_machine_detail' fiche_bord.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </a>
+                    {% else %}
+                    <a href="{% url 'fleet_app:fiche_bord_machine_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ajouter la classe form-control à tous les inputs du formulaire
+        const formInputs = document.querySelectorAll('form input, form select, form textarea');
+        formInputs.forEach(input => {
+            input.classList.add('form-control');
+        });
+        
+        // Initialiser l'heure actuelle si c'est une nouvelle entrée
+        {% if not form.instance.pk %}
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}`;
+        document.getElementById('{{ form.heure.id_for_label }}').value = formattedTime;
+        {% endif %}
+        
+        // Adapter les unités en fonction du type d'activité
+        const typeActivite = document.getElementById('{{ form.type_activite.id_for_label }}');
+        const unite = document.getElementById('{{ form.unite.id_for_label }}');
+        
+        typeActivite.addEventListener('change', function() {
+            const selectedType = this.value.toLowerCase();
+            
+            if (selectedType.includes('transport') || selectedType.includes('livraison')) {
+                unite.value = 'tonnes';
+            } else if (selectedType.includes('excavation') || selectedType.includes('terrassement')) {
+                unite.value = 'm³';
+            } else if (selectedType.includes('carburant') || selectedType.includes('ravitaillement')) {
+                unite.value = 'litres';
+            } else if (selectedType.includes('distance') || selectedType.includes('trajet')) {
+                unite.value = 'km';
+            } else if (selectedType.includes('temps') || selectedType.includes('durée')) {
+                unite.value = 'heures';
+            }
+        });
+    });
+</script>
+{% endblock %}

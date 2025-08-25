@@ -1,0 +1,218 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Liste des Factures{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item active">Liste des Factures</li>
+    </ol>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Formulaire de recherche -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-search me-1"></i>
+            Recherche de factures
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'fleet_app:facture_list' %}" class="row g-3">
+                <div class="col-md-3">
+                    <label for="numero" class="form-label">Numéro de facture</label>
+                    <input type="text" class="form-control" id="numero" name="numero" value="{{ request.GET.numero|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="client" class="form-label">Client</label>
+                    <input type="text" class="form-control" id="client" name="client" value="{{ request.GET.client|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_debut" class="form-label">Date début</label>
+                    <input type="date" class="form-control" id="date_debut" name="date_debut" value="{{ request.GET.date_debut|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_fin" class="form-label">Date fin</label>
+                    <input type="date" class="form-control" id="date_fin" name="date_fin" value="{{ request.GET.date_fin|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="statut" class="form-label">Statut</label>
+                    <select class="form-select" id="statut" name="statut">
+                        <option value="">Tous</option>
+                        <option value="brouillon" {% if request.GET.statut == 'brouillon' %}selected{% endif %}>Brouillon</option>
+                        <option value="validee" {% if request.GET.statut == 'validee' %}selected{% endif %}>Validée</option>
+                        <option value="envoyee" {% if request.GET.statut == 'envoyee' %}selected{% endif %}>Envoyée</option>
+                        <option value="payee" {% if request.GET.statut == 'payee' %}selected{% endif %}>Payée</option>
+                        <option value="annulee" {% if request.GET.statut == 'annulee' %}selected{% endif %}>Annulée</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+                    <a href="{% url 'fleet_app:facture_list' %}" class="btn btn-secondary"><i class="fas fa-redo"></i> Réinitialiser</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des factures -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-file-invoice me-1"></i>
+                Liste des factures
+            </div>
+            <div>
+                <a href="{% url 'fleet_app:facture_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nouvelle Facture</a>
+                <a href="{% url 'fleet_app:export_factures_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-primary btn-sm"><i class="fas fa-file-excel"></i> Exporter Excel</a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if factures %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Numéro</th>
+                                <th>Date émission</th>
+                                <th>Client</th>
+                                <th>Montant HT (GNF)</th>
+                                <th>TVA (GNF)</th>
+                                <th>Montant TTC (GNF)</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for facture in factures %}
+                                <tr>
+                                    <td>{{ facture.numero }}</td>
+                                    <td>{{ facture.date_emission|date:"d/m/Y" }}</td>
+                                    <td>{{ facture.tiers_nom }}</td>
+                                    <td class="text-right">{{ facture.montant_total|floatformat:2 }}</td>
+                                    <td class="text-right">{{ facture.tva|floatformat:2 }}</td>
+                                    <td class="text-right">{{ facture.montant_final|floatformat:2 }}</td>
+                                    <td>
+                                        {% if facture.statut == 'brouillon' %}
+                                            <span class="badge bg-secondary">Brouillon</span>
+                                        {% elif facture.statut == 'validee' %}
+                                            <span class="badge bg-primary">Validée</span>
+                                        {% elif facture.statut == 'envoyee' %}
+                                            <span class="badge bg-info">Envoyée</span>
+                                        {% elif facture.statut == 'payee' %}
+                                            <span class="badge bg-success">Payée</span>
+                                        {% elif facture.statut == 'annulee' %}
+                                            <span class="badge bg-danger">Annulée</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group" aria-label="Actions">
+                                            <a href="{% url 'fleet_app:facture_detail' facture.numero %}" class="btn btn-sm btn-info" title="Détails"><i class="fas fa-eye"></i></a>
+                                            <a href="{% url 'fleet_app:facture_update' facture.numero %}" class="btn btn-sm btn-warning" title="Modifier"><i class="fas fa-edit"></i></a>
+                                            <a href="{% url 'fleet_app:export_facture_pdf' facture.numero %}" class="btn btn-sm btn-primary" title="Exporter PDF"><i class="fas fa-file-pdf"></i></a>
+                                            <a href="{% url 'fleet_app:facture_delete' facture.numero %}" class="btn btn-sm btn-danger" title="Supprimer"><i class="fas fa-trash-alt"></i></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if factures.has_other_pages %}
+                    <nav aria-label="Pagination des factures">
+                        <ul class="pagination justify-content-center">
+                            {% if factures.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Première page">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ factures.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Précédent">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Première page">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for i in factures.paginator.page_range %}
+                                {% if factures.number == i %}
+                                    <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                {% elif i > factures.number|add:'-3' and i < factures.number|add:'3' %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if factures.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ factures.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Suivant">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ factures.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Dernière page">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Dernière page">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i> Aucune facture trouvée.
+                    {% if request.GET %}
+                        <a href="{% url 'fleet_app:facture_list' %}" class="alert-link">Réinitialiser les filtres</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Activer le menu Factures
+        document.querySelector('#inventaire-menu').classList.add('active');
+        
+        // Initialiser les datepickers
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            // Si vous utilisez un plugin datepicker, vous pouvez l'initialiser ici
+        });
+    });
+</script>
+{% endblock %}

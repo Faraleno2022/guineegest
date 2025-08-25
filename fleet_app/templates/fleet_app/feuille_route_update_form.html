@@ -1,0 +1,124 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Mise à jour de la Feuille de Route{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">{{ title }}</h1>
+        <a href="{% url 'fleet_app:feuille_route_detail' feuille_route.id %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Retour aux détails
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informations du gestionnaire (lecture seule)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th style="width: 30%">Véhicule</th>
+                                <td>{{ feuille_route.vehicule.marque }} {{ feuille_route.vehicule.modele }} ({{ feuille_route.vehicule.immatriculation }})</td>
+                            </tr>
+                            <tr>
+                                <th>Chauffeur</th>
+                                <td>{{ feuille_route.chauffeur.prenom }} {{ feuille_route.chauffeur.nom }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date de départ</th>
+                                <td>{{ feuille_route.date_depart }}</td>
+                            </tr>
+                            <tr>
+                                <th>Heure de départ</th>
+                                <td>{{ feuille_route.heure_depart }}</td>
+                            </tr>
+                            <tr>
+                                <th>Destination</th>
+                                <td>{{ feuille_route.destination }}</td>
+                            </tr>
+                            <tr>
+                                <th>Objet du déplacement</th>
+                                <td>{{ feuille_route.objet_deplacement }}</td>
+                            </tr>
+                            <tr>
+                                <th>Signature gestionnaire</th>
+                                <td>
+                                    {% if feuille_route.signature_gestionnaire %}
+                                    <span class="badge badge-success">Signé</span>
+                                    {% else %}
+                                    <span class="badge badge-danger">Non signé</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informations à remplir par le chauffeur</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <!-- Removed km_depart and carburant_depart fields as they don't exist in the form -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.date_retour|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.heure_retour|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.km_retour|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.carburant_retour|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.date_retour|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.heure_retour|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="signature_chauffeur" checked disabled>
+                                    <label class="custom-control-label" for="signature_chauffeur">
+                                        <strong>Signature du chauffeur</strong> - En mettant à jour cette feuille de route, vous la signez électroniquement.
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Enregistrer les informations
+                            </button>
+                            <a href="{% url 'fleet_app:feuille_route_detail' feuille_route.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

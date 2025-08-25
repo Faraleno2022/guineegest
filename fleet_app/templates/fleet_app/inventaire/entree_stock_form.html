@@ -1,0 +1,175 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:entree_stock_list' %}">Inventaire - Entrées en stock</a></li>
+        <li class="breadcrumb-item active">{{ titre }}</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-arrow-circle-down me-1"></i>
+            {% if entree %}Modifier{% else %}Ajouter{% endif %} une entrée en stock
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.id_entree.id_for_label }}" class="form-label">{{ form.id_entree.label }}</label>
+                            {{ form.id_entree }}
+                            {% if form.id_entree.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.id_entree.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Format: ENTxxx (ex: ENT001)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.date.id_for_label }}" class="form-label">{{ form.date.label }}</label>
+                            {{ form.date }}
+                            {% if form.date.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.date.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.produit.id_for_label }}" class="form-label">{{ form.produit.label }}</label>
+                            {{ form.produit }}
+                            {% if form.produit.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.produit.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.quantite.id_for_label }}" class="form-label">{{ form.quantite.label }}</label>
+                            {{ form.quantite }}
+                            {% if form.quantite.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.quantite.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.prix_unitaire.id_for_label }}" class="form-label">{{ form.prix_unitaire.label }}</label>
+                            {{ form.prix_unitaire }}
+                            {% if form.prix_unitaire.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.prix_unitaire.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.fournisseur.id_for_label }}" class="form-label">{{ form.fournisseur.label }}</label>
+                            {{ form.fournisseur }}
+                            {% if form.fournisseur.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.fournisseur.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="{{ form.reference_facture.id_for_label }}" class="form-label">{{ form.reference_facture.label }}</label>
+                            {{ form.reference_facture }}
+                            {% if form.reference_facture.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.reference_facture.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Format: FACyyyy-xxxx (ex: FAC2025-0001)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Enregistrer
+                        </button>
+                        <a href="{% url 'fleet_app:entree_stock_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Appliquer les classes Bootstrap aux champs du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('{{ form.id_entree.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.date.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.produit.id_for_label }}').classList.add('form-select');
+        document.getElementById('{{ form.quantite.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.prix_unitaire.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.fournisseur.id_for_label }}').classList.add('form-control');
+        document.getElementById('{{ form.reference_facture.id_for_label }}').classList.add('form-control');
+        
+        // Récupérer les informations du produit lorsqu'il est sélectionné
+        const produitSelect = document.getElementById('{{ form.produit.id_for_label }}');
+        const prixUnitaireInput = document.getElementById('{{ form.prix_unitaire.id_for_label }}');
+        const fournisseurInput = document.getElementById('{{ form.fournisseur.id_for_label }}');
+        
+        produitSelect.addEventListener('change', function() {
+            const produitId = this.value;
+            if (produitId) {
+                fetch(`/api/produit-info/?id_produit=${produitId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            prixUnitaireInput.value = data.prix_unitaire;
+                            fournisseurInput.value = data.fournisseur;
+                        }
+                    })
+                    .catch(error => console.error('Erreur:', error));
+            }
+        });
+    });
+</script>
+{% endblock %}

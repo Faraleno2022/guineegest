@@ -1,0 +1,433 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Présence-Paie{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+{% include 'fleet_app/components/period_selector.html' with module_name='dashboard-paie' %}
+<style>
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.metric-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 5px solid #007bff;
+    transition: transform 0.3s;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+}
+
+.metric-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 10px;
+}
+
+.metric-label {
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.metric-sublabel {
+    font-size: 0.8rem;
+    color: #adb5bd;
+    margin-top: 5px;
+}
+
+.status-excellent { border-left-color: #28a745; }
+.status-excellent .metric-number { color: #28a745; }
+
+.status-good { border-left-color: #17a2b8; }
+.status-good .metric-number { color: #17a2b8; }
+
+.status-warning { border-left-color: #ffc107; }
+.status-warning .metric-number { color: #ffc107; }
+
+.status-danger { border-left-color: #dc3545; }
+.status-danger .metric-number { color: #dc3545; }
+
+.charts-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.chart-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.actions-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.quick-action {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    color: white;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+    margin: 5px;
+    transition: all 0.3s;
+}
+
+.quick-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.quick-action.secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+}
+
+.quick-action.warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+}
+
+.quick-action.info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+.problemes-section {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.employe-probleme {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid #dc3545;
+}
+
+.progress-coherence {
+    height: 8px;
+    border-radius: 4px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.progress-bar-coherence {
+    height: 100%;
+    transition: width 0.6s ease;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- En-tête -->
+    <div class="dashboard-header">
+        <h1><i class="fas fa-chart-bar"></i> Dashboard Présence-Paie</h1>
+        <p>{{ mois_noms|lookup:mois }} {{ annee }} - Vue d'ensemble de la synchronisation</p>
+    </div>
+
+    <!-- Métriques principales -->
+    <div class="metrics-grid">
+        <div class="metric-card {% if statistiques_globales.coherence_ok == statistiques_globales.employes_total %}status-excellent{% elif statistiques_globales.coherence_ok > statistiques_globales.coherence_ko %}status-good{% elif statistiques_globales.coherence_ko > 0 %}status-warning{% else %}status-danger{% endif %}">
+            <div class="metric-number">{{ statistiques_globales.coherence_ok }}</div>
+            <div class="metric-label">Paies cohérentes</div>
+            <div class="metric-sublabel">sur {{ statistiques_globales.employes_total }} employés</div>
+        </div>
+
+        <div class="metric-card {% if statistiques_globales.coherence_ko == 0 %}status-excellent{% elif statistiques_globales.coherence_ko <= 2 %}status-warning{% else %}status-danger{% endif %}">
+            <div class="metric-number">{{ statistiques_globales.coherence_ko }}</div>
+            <div class="metric-label">À synchroniser</div>
+            <div class="metric-sublabel">incohérences détectées</div>
+        </div>
+
+        <div class="metric-card {% if statistiques_globales.paies_existantes == statistiques_globales.employes_total %}status-excellent{% elif statistiques_globales.paies_manquantes <= 2 %}status-good{% else %}status-warning{% endif %}">
+            <div class="metric-number">{{ statistiques_globales.paies_existantes }}</div>
+            <div class="metric-label">Paies créées</div>
+            <div class="metric-sublabel">{{ statistiques_globales.paies_manquantes }} manquantes</div>
+        </div>
+
+        <div class="metric-card status-good">
+            <div class="metric-number">
+                {% widthratio statistiques_globales.coherence_ok statistiques_globales.employes_total 100 %}%
+            </div>
+            <div class="metric-label">Taux de cohérence</div>
+            <div class="metric-sublabel">objectif: 100%</div>
+        </div>
+    </div>
+
+    <!-- Barre de progression de cohérence -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between mb-2">
+            <span><strong>Cohérence globale</strong></span>
+            <span>{% widthratio statistiques_globales.coherence_ok statistiques_globales.employes_total 100 %}%</span>
+        </div>
+        <div class="progress-coherence">
+            <div class="progress-bar-coherence bg-success" 
+                 style="width: {% widthratio statistiques_globales.coherence_ok statistiques_globales.employes_total 100 %}%"></div>
+        </div>
+    </div>
+
+    <!-- Graphiques de présence -->
+    {% if rapport_presence %}
+    <div class="charts-section">
+        <div class="chart-card">
+            <h5><i class="fas fa-chart-pie"></i> Répartition des présences</h5>
+            <div class="row text-center mt-3">
+                <div class="col-4">
+                    <div class="h4 text-success">{{ rapport_presence.resume_global.total_jours_presence }}</div>
+                    <small>Jours présence</small>
+                </div>
+                <div class="col-4">
+                    <div class="h4 text-primary">{{ rapport_presence.resume_global.total_sundays }}</div>
+                    <small>Sundays</small>
+                </div>
+                <div class="col-4">
+                    <div class="h4 text-danger">{{ rapport_presence.resume_global.total_absences }}</div>
+                    <small>Absences</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h5><i class="fas fa-chart-bar"></i> Statuts spéciaux</h5>
+            <div class="row text-center mt-3">
+                <div class="col-4">
+                    <div class="h4 text-warning">{{ rapport_presence.resume_global.total_maladies }}</div>
+                    <small>Maladies</small>
+                </div>
+                <div class="col-4">
+                    <div class="h4 text-info">{{ rapport_presence.resume_global.total_maladies_payees }}</div>
+                    <small>M.Payer</small>
+                </div>
+                <div class="col-4">
+                    <div class="h4 text-secondary">{{ rapport_presence.resume_global.total_jours_repos }}</div>
+                    <small>J.Repos</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions rapides -->
+    <div class="actions-section">
+        <h5><i class="fas fa-bolt"></i> Actions rapides</h5>
+        <div class="mt-3">
+            <a href="{% url 'fleet_app:synchroniser_presence_paie' %}" class="quick-action">
+                <i class="fas fa-sync-alt"></i> Synchroniser tout
+            </a>
+            <a href="{% url 'fleet_app:paie_employe_list_enhanced' %}?mois={{ mois }}&annee={{ annee }}" class="quick-action secondary">
+                <i class="fas fa-list"></i> Voir les paies
+            </a>
+            <a href="{% url 'fleet_app:rapport_presence_mois' %}?mois={{ mois }}&annee={{ annee }}" class="quick-action info">
+                <i class="fas fa-chart-line"></i> Rapport présence
+            </a>
+            <a href="{% url 'fleet_app:verifier_coherence' %}?mois={{ mois }}&annee={{ annee }}" class="quick-action warning">
+                <i class="fas fa-search"></i> Vérifier cohérence
+            </a>
+        </div>
+    </div>
+
+    <!-- Problèmes détectés -->
+    {% if rapport_coherence.problemes %}
+    <div class="problemes-section">
+        <h5><i class="fas fa-exclamation-triangle"></i> Incohérences détectées</h5>
+        <p class="mb-3">{{ rapport_coherence.employes_incoherents }} employé(s) ont des incohérences entre les données de présence et de paie.</p>
+        
+        <div class="row">
+            {% for probleme in rapport_coherence.problemes|slice:":6" %}
+            <div class="col-md-6 mb-3">
+                <div class="employe-probleme">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>{{ probleme.employe.nom }}</strong>
+                        <span class="badge bg-danger">{{ probleme.problemes|length }} problème(s)</span>
+                    </div>
+                    <small class="text-muted">Matricule: {{ probleme.employe.matricule }}</small>
+                    <ul class="list-unstyled mt-2 mb-0">
+                        {% for pb in probleme.problemes|slice:":3" %}
+                        <li><small class="text-danger">• {{ pb }}</small></li>
+                        {% endfor %}
+                        {% if probleme.problemes|length > 3 %}
+                        <li><small class="text-muted">• ... et {{ probleme.problemes|length|add:"-3" }} autre(s)</small></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if rapport_coherence.problemes|length > 6 %}
+        <div class="text-center mt-3">
+            <a href="{% url 'fleet_app:verifier_coherence' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-warning">
+                Voir tous les problèmes ({{ rapport_coherence.problemes|length }})
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Statistiques par employé (top 5) -->
+    {% if rapport_presence.employes %}
+    <div class="chart-card">
+        <h5><i class="fas fa-users"></i> Top 5 employés - Taux de présence</h5>
+        <div class="table-responsive mt-3">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Employé</th>
+                        <th>Présence</th>
+                        <th>Taux</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employe_data in rapport_presence.employes|slice:":5" %}
+                    {% with stats=employe_data.statistiques %}
+                    <tr>
+                        <td>
+                            <strong>{{ employe_data.employe.matricule }}</strong><br>
+                            <small>{{ employe_data.employe.nom }}</small>
+                        </td>
+                        <td>{{ stats.jours_presence }}/{{ stats.total_jours_mois }}</td>
+                        <td>
+                            {% widthratio stats.jours_presence stats.total_jours_mois 100 %}%
+                        </td>
+                        <td>
+                            {% widthratio stats.jours_presence stats.total_jours_mois 100 as taux %}
+                            {% if taux >= 90 %}
+                            <span class="badge bg-success">Excellent</span>
+                            {% elif taux >= 75 %}
+                            <span class="badge bg-info">Bon</span>
+                            {% elif taux >= 50 %}
+                            <span class="badge bg-warning">Moyen</span>
+                            {% else %}
+                            <span class="badge bg-danger">Faible</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation rapide -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <a href="{% url 'fleet_app:historique_pointage' %}" class="btn btn-outline-primary w-100">
+                <i class="fas fa-clock"></i> Pointage journalier
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'fleet_app:heures_supplementaires_list' %}" class="btn btn-outline-success w-100">
+                <i class="fas fa-plus-circle"></i> Heures supplémentaires
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'fleet_app:bulletin_paie_list' %}" class="btn btn-outline-info w-100">
+                <i class="fas fa-file-alt"></i> Bulletins de paie
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'fleet_app:archive_mensuelle' %}" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-archive"></i> Archivage mensuel
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des métriques
+    const metricNumbers = document.querySelectorAll('.metric-number');
+    metricNumbers.forEach(function(element) {
+        const text = element.textContent.trim();
+        const finalValue = parseInt(text.replace('%', ''));
+        
+        if (!isNaN(finalValue)) {
+            let currentValue = 0;
+            const increment = finalValue / 30;
+            const isPercentage = text.includes('%');
+            
+            const timer = setInterval(function() {
+                currentValue += increment;
+                if (currentValue >= finalValue) {
+                    element.textContent = finalValue + (isPercentage ? '%' : '');
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(currentValue) + (isPercentage ? '%' : '');
+                }
+            }, 30);
+        }
+    });
+    
+    // Animation de la barre de progression
+    const progressBar = document.querySelector('.progress-bar-coherence');
+    if (progressBar) {
+        setTimeout(function() {
+            progressBar.style.width = progressBar.style.width;
+        }, 500);
+    }
+    
+    // Auto-refresh toutes les 5 minutes
+    setInterval(function() {
+        const url = new URL(window.location);
+        url.searchParams.set('refresh', Date.now());
+        
+        // Afficher un indicateur de rafraîchissement
+        const refreshIndicator = document.createElement('div');
+        refreshIndicator.className = 'alert alert-info position-fixed';
+        refreshIndicator.style.cssText = 'top: 20px; right: 20px; z-index: 9999; opacity: 0.8;';
+        refreshIndicator.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Actualisation...';
+        document.body.appendChild(refreshIndicator);
+        
+        setTimeout(function() {
+            window.location.href = url.toString();
+        }, 1000);
+    }, 300000); // 5 minutes
+});
+</script>
+{% endblock %}

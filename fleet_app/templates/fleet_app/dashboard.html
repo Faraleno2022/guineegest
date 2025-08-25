@@ -1,0 +1,1485 @@
+{% extends 'fleet_app/base.html' %}
+{% load fleet_filters %}
+
+{% block title %}Tableau de bord - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<!-- Statistiques générales -->
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-tachometer-alt me-2"></i> Vue d'ensemble de la flotte
+            </div>
+            <div class="card-body p-0">
+                <div class="row m-0">
+                    <div class="col-md-3 p-4 text-center border-end">
+                        <div class="stat-card">
+                            <i class="fas fa-car fa-2x mb-2 text-primary"></i>
+                            <div class="stat-value">{{ total_vehicules }}</div>
+                            <div class="stat-label">Véhicules au total</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 p-4 text-center border-end">
+                        <div class="stat-card">
+                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                            <div class="stat-value">{{ vehicules_actifs }}</div>
+                            <div class="stat-label">Véhicules actifs</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 p-4 text-center border-end">
+                        <div class="stat-card">
+                            <i class="fas fa-tools fa-2x mb-2 text-warning"></i>
+                            <div class="stat-value">{{ vehicules_maintenance }}</div>
+                            <div class="stat-label">En maintenance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 p-4 text-center">
+                        <div class="stat-card">
+                            <i class="fas fa-ban fa-2x mb-2 text-danger"></i>
+                            <div class="stat-value">{{ vehicules_hors_service }}</div>
+                            <div class="stat-label">Hors service</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Graphique de répartition par catégorie -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-2"></i> Répartition par catégorie
+            </div>
+            <div class="card-body">
+                <canvas id="categoriesChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertes KPI -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-bell me-2"></i> Alertes KPI
+            </div>
+            <div class="card-body">
+                <div id="alertes-kpi-container">
+                    {% if alertes_kpi %}
+                        {% for alerte in alertes_kpi %}
+                            <div class="alert alert-{% if alerte.severite == 'Critique' %}danger{% elif alerte.severite == 'Élevé' %}warning{% else %}info{% endif %} mb-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ alerte.type_kpi }}</strong>: {{ alerte.vehicule.marque }} {{ alerte.vehicule.modele }} ({{ alerte.vehicule.immatriculation }})
+                                    <div class="small">
+                                        <span class="me-2">Valeur: {{ alerte.valeur_actuelle|floatformat:2 }} {{ alerte.unite }}</span>
+                                        <span class="me-2">Seuil: {{ alerte.seuil|floatformat:2 }} {{ alerte.unite }}</span>
+                                        <span class="me-2">Écart: {{ alerte.ecart|floatformat:2 }} {{ alerte.unite }}</span>
+                                        <span class="badge bg-{% if alerte.severite == 'Critique' %}danger{% elif alerte.severite == 'Élevé' %}warning{% else %}info{% endif %}">{{ alerte.severite }}</span>
+                                    </div>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/vehicules/{{ alerte.vehicule.id_vehicule }}/" class="btn btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-success btn-resoudre-alerte" data-vehicule-id="{{ alerte.vehicule.id_vehicule }}" data-type-kpi="{{ alerte.type_kpi }}">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning btn-ignorer-alerte" data-vehicule-id="{{ alerte.vehicule.id_vehicule }}" data-type-kpi="{{ alerte.type_kpi }}">
+                                        <i class="fas fa-bell-slash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-success">Aucune alerte KPI active</div>
+                    {% endif %}
+                </div>
+                <div class="text-end mt-3">
+                    <a href="#kpi-section" class="btn btn-sm btn-outline-primary">Voir tous les KPI</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4" id="kpi-section">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-chart-line me-2"></i> Indicateurs Clés de Performance (KPI)
+            </div>
+            <div class="card-body p-0">
+                <nav>
+                    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                        <button class="nav-link active" id="nav-distance-tab" data-bs-toggle="tab" data-bs-target="#nav-distance" type="button" role="tab" aria-controls="nav-distance" aria-selected="true">
+                            <i class="fas fa-road me-1"></i> Distance
+                        </button>
+                        <button class="nav-link" id="nav-consommation-tab" data-bs-toggle="tab" data-bs-target="#nav-consommation" type="button" role="tab" aria-controls="nav-consommation" aria-selected="false">
+                            <i class="fas fa-gas-pump me-1"></i> Consommation
+                        </button>
+                        <button class="nav-link" id="nav-disponibilite-tab" data-bs-toggle="tab" data-bs-target="#nav-disponibilite" type="button" role="tab" aria-controls="nav-disponibilite" aria-selected="false">
+                            <i class="fas fa-calendar-check me-1"></i> Disponibilité
+                        </button>
+                        <button class="nav-link" id="nav-utilisation-tab" data-bs-toggle="tab" data-bs-target="#nav-utilisation" type="button" role="tab" aria-controls="nav-utilisation" aria-selected="false">
+                            <i class="fas fa-tachometer-alt me-1"></i> Utilisation
+                        </button>
+                        <button class="nav-link" id="nav-securite-tab" data-bs-toggle="tab" data-bs-target="#nav-securite" type="button" role="tab" aria-controls="nav-securite" aria-selected="false">
+                            <i class="fas fa-shield-alt me-1"></i> Sécurité
+                        </button>
+                        <button class="nav-link" id="nav-couts-tab" data-bs-toggle="tab" data-bs-target="#nav-couts" type="button" role="tab" aria-controls="nav-couts" aria-selected="false">
+                            <i class="fas fa-money-bill-wave me-1"></i> Coûts
+                        </button>
+                    </div>
+                </nav>
+                <!-- Tableau récapitulatif des KPI -->                
+                <div class="p-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Vue d'ensemble des KPI</h5>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#kpiTableCollapse" aria-expanded="false" aria-controls="kpiTableCollapse">
+                            <i class="fas fa-table me-1"></i> Afficher/Masquer
+                        </button>
+                    </div>
+                    <div class="collapse show" id="kpiTableCollapse">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="width: 5%">KPI</th>
+                                        <th style="width: 25%">Définition</th>
+                                        <th style="width: 35%">Objectif / Cible</th>
+                                        <th style="width: 35%">Résultat actuel</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>1. Distance parcourue</strong></td>
+                                        <td>Km total effectué pendant une période.</td>
+                                        <td>Exemples : 30 000 km/an pour un moteur diesel ; 15 000 km pour essence ; 10 000 km pour moto.</td>
+                                        <td class="fw-bold {% if kpi_resultats_actuels.distance < 10000 %}text-danger{% elif kpi_resultats_actuels.distance < 15000 %}text-warning{% else %}text-success{% endif %}">
+                                            {{ kpi_resultats_actuels.distance|floatformat:0|intcomma }} km
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar bg-{% if kpi_resultats_actuels.distance < 10000 %}danger{% elif kpi_resultats_actuels.distance < 15000 %}warning{% else %}success{% endif %}" role="progressbar" style="width: {{ kpi_resultats_actuels.distance|floatformat:0|default:0|divide:300 }}%;" aria-valuenow="{{ kpi_resultats_actuels.distance|floatformat:0|default:0 }}" aria-valuemin="0" aria-valuemax="30000"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>2. Consommation de carburant</strong></td>
+                                        <td>L/100 km calculée avec : (litres consommés * 100) / distance parcourue.</td>
+                                        <td>Se rapprocher des valeurs constructeurs (+3 L/100 km en terrain difficile).</td>
+                                        <td class="fw-bold {% if kpi_resultats_actuels.consommation > 12 %}text-danger{% elif kpi_resultats_actuels.consommation > 9 %}text-warning{% else %}text-success{% endif %}">
+                                            {{ kpi_resultats_actuels.consommation|floatformat:1 }} L/100km
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar bg-{% if kpi_resultats_actuels.consommation > 12 %}danger{% elif kpi_resultats_actuels.consommation > 9 %}warning{% else %}success{% endif %}" role="progressbar" style="width: {{ kpi_resultats_actuels.consommation|floatformat:1|default:0|multiply:10 }}%;" aria-valuenow="{{ kpi_resultats_actuels.consommation|floatformat:1|default:0 }}" aria-valuemin="0" aria-valuemax="15"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>3. Disponibilité</strong></td>
+                                        <td>Pourcentage de jours où le véhicule est opérationnel.</td>
+                                        <td>Cible : entre 80% et 95%.</td>
+                                        <td class="fw-bold {% if kpi_resultats_actuels.disponibilite < 80 %}text-danger{% elif kpi_resultats_actuels.disponibilite > 95 %}text-warning{% else %}text-success{% endif %}">
+                                            {{ kpi_resultats_actuels.disponibilite|floatformat:1 }}%
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar bg-{% if kpi_resultats_actuels.disponibilite < 80 %}danger{% elif kpi_resultats_actuels.disponibilite > 95 %}warning{% else %}success{% endif %}" role="progressbar" style="width: {{ kpi_resultats_actuels.disponibilite|floatformat:1|default:0 }}%;" aria-valuenow="{{ kpi_resultats_actuels.disponibilite|floatformat:1|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>4. Utilisation des actifs</strong></td>
+                                        <td>Taux d'utilisation réelle sur les jours disponibles : (jours utilisés / jours disponibles) * 100.</td>
+                                        <td>Cible : entre 70% et 95%.</td>
+                                        <td class="fw-bold {% if kpi_resultats_actuels.utilisation < 70 %}text-danger{% elif kpi_resultats_actuels.utilisation > 95 %}text-warning{% else %}text-success{% endif %}">
+                                            {{ kpi_resultats_actuels.utilisation|floatformat:1 }}%
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar bg-{% if kpi_resultats_actuels.utilisation < 70 %}danger{% elif kpi_resultats_actuels.utilisation > 95 %}warning{% else %}success{% endif %}" role="progressbar" style="width: {{ kpi_resultats_actuels.utilisation|floatformat:1|default:0 }}%;" aria-valuenow="{{ kpi_resultats_actuels.utilisation|floatformat:1|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>5. Sécurité</strong></td>
+                                        <td>Nombre d'accidents, incidents ou défauts critiques.</td>
+                                        <td>Objectif : 0.</td>
+                                        <td class="fw-bold {% if kpi_resultats_actuels.incidents > 0 %}text-danger{% else %}text-success{% endif %}">
+                                            {{ kpi_resultats_actuels.incidents }} incident(s)
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar bg-{% if kpi_resultats_actuels.incidents > 0 %}danger{% else %}success{% endif %}" role="progressbar" style="width: {{ kpi_resultats_actuels.incidents|multiply:20|default:0 }}%;" aria-valuenow="{{ kpi_resultats_actuels.incidents|default:0 }}" aria-valuemin="0" aria-valuemax="5"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>6. Coût de fonctionnement par km</strong></td>
+                                        <td>Inclut : carburant, pneus, entretiens, réparations.</td>
+                                        <td>Formule : Total coûts / km parcourus.</td>
+                                        <td class="fw-bold">
+                                            {{ kpi_resultats_actuels.cout_fonctionnement|multiply:11500|floatformat:0|intcomma }} GNF/km
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar" role="progressbar" style="width: {{ kpi_resultats_actuels.cout_fonctionnement|multiply:500|default:0 }}%;" aria-valuenow="{{ kpi_resultats_actuels.cout_fonctionnement|default:0 }}" aria-valuemin="0" aria-valuemax="0.2"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>7. Coût financier par km</strong></td>
+                                        <td>Inclut : location, amortissement, assurance, taxes.</td>
+                                        <td>Formule : Total coûts / km parcourus.</td>
+                                        <td class="fw-bold">
+                                            {{ kpi_resultats_actuels.cout_financier|multiply:11500|floatformat:0|intcomma }} GNF/km
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar" role="progressbar" style="width: {{ kpi_resultats_actuels.cout_financier|multiply:500|default:0 }}%;" aria-valuenow="{{ kpi_resultats_actuels.cout_financier|default:0 }}" aria-valuemin="0" aria-valuemax="0.2"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content p-3" id="nav-tabContent">
+                    <!-- 1. Distance parcourue -->
+                    <div class="tab-pane fade show active" id="nav-distance" role="tabpanel" aria-labelledby="nav-distance-tab">
+                        <h5 class="mb-3">Distance parcourue</h5>
+                        <p class="text-muted">Kilométrage total effectué pendant une période. Cible : 30 000 km/an (diesel), 15 000 km/an (essence), 10 000 km/an (autres).</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Véhicule</th>
+                                        <th>Type</th>
+                                        <th>Distance (km)</th>
+                                        <th>Objectif</th>
+                                        <th>Progression</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for distance in distances %}
+                                    <tr>
+                                        <td><strong>{{ distance.marque }} {{ distance.modele }}</strong><br><small class="text-muted">{{ distance.immatriculation }}</small></td>
+                                        <td>{{ distance.type_moteur }}</td>
+                                        <td>{{ distance.distance_totale|floatformat:0 }} km</td>
+                                        <td>{{ distance.objectif|floatformat:0 }} km</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar {% if distance.pourcentage > 90 %}bg-success{% elif distance.pourcentage > 70 %}bg-info{% elif distance.pourcentage > 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                    role="progressbar" style="width: {{ distance.pourcentage }}%;" 
+                                                    aria-valuenow="{{ distance.pourcentage }}" aria-valuemin="0" aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ distance.pourcentage|floatformat:0 }}%</small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-3">Aucune donnée disponible</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-2">
+                            <a href="{% url 'fleet_app:kpi_distance' %}" class="btn btn-sm btn-primary">Voir toutes les données</a>
+                        </div>
+                    </div>
+                    
+                    <!-- 2. Consommation de carburant -->
+                    <div class="tab-pane fade" id="nav-consommation" role="tabpanel" aria-labelledby="nav-consommation-tab">
+                        <h5 class="mb-3">Consommation de carburant</h5>
+                        <p class="text-muted">L/100 km calculée avec : (litres consommés * 100) / distance parcourue. Cible : valeurs constructeurs +3 L/100 km en terrain difficile.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Véhicule</th>
+                                        <th>Type</th>
+                                        <th>Consommation</th>
+                                        <th>Cible</th>
+                                        <th>Dépassement</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for conso in consommations %}
+                                    <tr {% if conso.alerte %}class="table-warning"{% endif %}>
+                                        <td><strong>{{ conso.marque }} {{ conso.modele }}</strong><br><small class="text-muted">{{ conso.immatriculation }}</small></td>
+                                        <td>{{ conso.type_moteur }}</td>
+                                        <td>{{ conso.consommation_moyenne|floatformat:1 }} L/100km</td>
+                                        <td>{{ conso.cible|floatformat:1 }} L/100km</td>
+                                        <td>
+                                            {% if conso.depassement > 0 %}
+                                                <span class="badge {% if conso.alerte %}bg-danger{% else %}bg-warning{% endif %}">
+                                                    +{{ conso.depassement|floatformat:1 }} L/100km
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-success">Conforme</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-3">Aucune donnée disponible</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-2">
+                            <a href="{% url 'fleet_app:kpi_consommation' %}" class="btn btn-sm btn-primary">Voir toutes les données</a>
+                        </div>
+                    </div>
+                    
+                    <!-- 3. Disponibilité -->
+                    <div class="tab-pane fade" id="nav-disponibilite" role="tabpanel" aria-labelledby="nav-disponibilite-tab">
+                        <h5 class="mb-3">Disponibilité des véhicules</h5>
+                        <p class="text-muted">Pourcentage de jours où le véhicule est opérationnel. Cible : entre 80% et 95%.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Véhicule</th>
+                                        <th>Disponibilité</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dispo in disponibilites %}
+                                    <tr {% if dispo.alerte %}class="table-danger"{% endif %}>
+                                        <td><strong>{{ dispo.marque }} {{ dispo.modele }}</strong><br><small class="text-muted">{{ dispo.immatriculation }}</small></td>
+                                        <td>{{ dispo.disponibilite_moyenne|floatformat:1 }}%</td>
+                                        <td>
+                                            {% if dispo.disponibilite_moyenne >= 90 %}
+                                                <span class="badge bg-success">Excellent</span>
+                                            {% elif dispo.disponibilite_moyenne >= 80 %}
+                                                <span class="badge bg-info">Bon</span>
+                                            {% elif dispo.disponibilite_moyenne >= 70 %}
+                                                <span class="badge bg-warning">Moyen</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Insuffisant</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-3">Aucune donnée disponible</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-2">
+                            <a href="{% url 'fleet_app:kpi_disponibilite' %}" class="btn btn-sm btn-primary">Voir toutes les données</a>
+                        </div>
+                    </div>
+                    
+                    <!-- 4. Utilisation des actifs -->
+                    <div class="tab-pane fade" id="nav-utilisation" role="tabpanel" aria-labelledby="nav-utilisation-tab">
+                        <h5 class="mb-3">Utilisation des actifs</h5>
+                        <p class="text-muted">Taux d'utilisation réelle sur les jours disponibles : (jours utilisés / jours disponibles) * 100. Cible : entre 70% et 95%.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Véhicule</th>
+                                        <th>Taux d'utilisation</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for util in utilisations %}
+                                    <tr {% if util.alerte %}class="table-warning"{% endif %}>
+                                        <td><strong>{{ util.marque }} {{ util.modele }}</strong><br><small class="text-muted">{{ util.immatriculation }}</small></td>
+                                        <td>{{ util.utilisation_moyenne|floatformat:1 }}%</td>
+                                        <td>
+                                            {% if util.utilisation_moyenne >= 90 %}
+                                                <span class="badge bg-success">Excellent</span>
+                                            {% elif util.utilisation_moyenne >= 80 %}
+                                                <span class="badge bg-info">Bon</span>
+                                            {% elif util.utilisation_moyenne >= 70 %}
+                                                <span class="badge bg-warning">Moyen</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Sous-utilisé</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-3">Aucune donnée disponible</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-2">
+                            <a href="{% url 'fleet_app:kpi_utilisation' %}" class="btn btn-sm btn-primary">Voir toutes les données</a>
+                        </div>
+                    </div>
+                    
+                    <!-- 5. Sécurité -->
+                    <div class="tab-pane fade" id="nav-securite" role="tabpanel" aria-labelledby="nav-securite-tab">
+                        <h5 class="mb-3">Sécurité</h5>
+                        <p class="text-muted">Nombre d'accidents, incidents ou défauts critiques. Objectif : 0.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Véhicule</th>
+                                        <th>Incidents</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for incident in incidents_par_vehicule %}
+                                    <tr {% if incident.alerte %}class="table-danger"{% endif %}>
+                                        <td><strong>{{ incident.marque }} {{ incident.modele }}</strong><br><small class="text-muted">{{ incident.immatriculation }}</small></td>
+                                        <td>{{ incident.total_incidents }}</td>
+                                        <td>
+                                            {% if incident.total_incidents == 0 %}
+                                                <span class="badge bg-success">Aucun incident</span>
+                                            {% elif incident.total_incidents == 1 %}
+                                                <span class="badge bg-warning">1 incident</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">{{ incident.total_incidents }} incidents</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-3">Aucune donnée disponible</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-2">
+                            <a href="{% url 'fleet_app:kpi_incidents' %}" class="btn btn-sm btn-primary">Voir toutes les données</a>
+                        </div>
+                    </div>
+                    
+                    <!-- 6 & 7. Coûts -->
+                    <div class="tab-pane fade" id="nav-couts" role="tabpanel" aria-labelledby="nav-couts-tab">
+                        <h5 class="mb-3">Coûts par kilomètre</h5>
+                        <p class="text-muted">Coûts de fonctionnement (carburant, pneus, entretiens, réparations) et coûts financiers (location, amortissement, assurance, taxes) par kilomètre parcouru.</p>
+                        
+                        <ul class="nav nav-pills mb-3" id="couts-tab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="couts-fonctionnement-tab" data-bs-toggle="pill" data-bs-target="#couts-fonctionnement" type="button" role="tab" aria-controls="couts-fonctionnement" aria-selected="true">Coûts de fonctionnement</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="couts-financiers-tab" data-bs-toggle="pill" data-bs-target="#couts-financiers" type="button" role="tab" aria-controls="couts-financiers" aria-selected="false">Coûts financiers</button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="couts-tabContent">
+                            <!-- Coûts de fonctionnement -->
+                            <div class="tab-pane fade show active" id="couts-fonctionnement" role="tabpanel" aria-labelledby="couts-fonctionnement-tab">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Véhicule</th>
+                                                <th>Catégorie</th>
+                                                <th>Coût/km</th>
+                                                <th>Seuil</th>
+                                                <th>Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for cout in couts_fonctionnement %}
+                                            <tr {% if cout.alerte %}class="table-warning"{% endif %}>
+                                                <td><strong>{{ cout.marque }} {{ cout.modele }}</strong><br><small class="text-muted">{{ cout.immatriculation }}</small></td>
+                                                <td>{{ cout.categorie }}</td>
+                                                <td>{{ cout.cout_moyen|floatformat:0 }} GNF/km</td>
+                                                <td>{{ cout.seuil }} GNF/km</td>
+                                                <td>
+                                                    {% if cout.alerte %}
+                                                        <span class="badge bg-danger">Coût élevé</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">Coût optimal</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-center py-3">Aucune donnée disponible</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="text-end mt-2">
+                                    <a href="{% url 'fleet_app:kpi_couts_fonctionnement' %}" class="btn btn-sm btn-primary">Voir toutes les données</a>
+                                </div>
+                            </div>
+                            
+                            <!-- Coûts financiers -->
+                            <div class="tab-pane fade" id="couts-financiers" role="tabpanel" aria-labelledby="couts-financiers-tab">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Véhicule</th>
+                                                <th>Catégorie</th>
+                                                <th>Coût/km</th>
+                                                <th>Seuil</th>
+                                                <th>Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for cout in couts_financiers %}
+                                            <tr {% if cout.alerte %}class="table-warning"{% endif %}>
+                                                <td><strong>{{ cout.marque }} {{ cout.modele }}</strong><br><small class="text-muted">{{ cout.immatriculation }}</small></td>
+                                                <td>{{ cout.categorie }}</td>
+                                                <td>{{ cout.cout_moyen|floatformat:0 }} GNF/km</td>
+                                                <td>{{ cout.seuil }} GNF/km</td>
+                                                <td>
+                                                    {% if cout.alerte %}
+                                                        <span class="badge bg-danger">Coût élevé</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">Coût optimal</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-center py-3">Aucune donnée disponible</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="text-end mt-2">
+                                    <a href="{% url 'fleet_app:kpi_couts_financiers' %}" class="btn btn-sm btn-primary">Voir toutes les données</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section des feuilles de route -->
+{% include 'fleet_app/dashboard_feuilles_route.html' %}
+
+<!-- Nouvelle section d'analyse et recommandations -->
+<div class="row mt-4" id="analyse-section">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-chart-bar me-2"></i> Analyse et Recommandations
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="analyseTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="alertes-tab" data-bs-toggle="tab" data-bs-target="#alertes" type="button" role="tab" aria-controls="alertes" aria-selected="true">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Alertes KPI
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="comparaison-tab" data-bs-toggle="tab" data-bs-target="#comparaison" type="button" role="tab" aria-controls="comparaison" aria-selected="false">
+                            <i class="fas fa-balance-scale me-1"></i> Comparaison
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="recommandations-tab" data-bs-toggle="tab" data-bs-target="#recommandations" type="button" role="tab" aria-controls="recommandations" aria-selected="false">
+                            <i class="fas fa-lightbulb me-1"></i> Recommandations
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="evolution-tab" data-bs-toggle="tab" data-bs-target="#evolution" type="button" role="tab" aria-controls="evolution" aria-selected="false">
+                            <i class="fas fa-chart-line me-1"></i> Évolution
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content p-3" id="analyseTabContent">
+                    <!-- Alertes KPI -->
+                    <div class="tab-pane fade show active" id="alertes" role="tabpanel" aria-labelledby="alertes-tab">
+                        <h5 class="mb-3">Alertes automatiques sur les KPI</h5>
+                        <p class="text-muted">Les alertes sont générées automatiquement lorsque les KPI dépassent les seuils définis.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>KPI</th>
+                                        <th>Véhicule</th>
+                                        <th>Valeur actuelle</th>
+                                        <th>Seuil</th>
+                                        <th>Écart</th>
+                                        <th>Sévérité</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for alerte in alertes_kpi %}
+                                    <tr>
+                                        <td>{{ alerte.type_kpi }}</td>
+                                        <td>
+                                            <a href="{% url 'fleet_app:vehicule_detail' alerte.vehicule.id_vehicule %}">
+                                                {{ alerte.vehicule.marque }} {{ alerte.vehicule.modele }} ({{ alerte.vehicule.immatriculation }})
+                                            </a>
+                                        </td>
+                                        <td class="fw-bold {% if alerte.severite == 'Critique' %}text-danger{% elif alerte.severite == 'Élevé' %}text-warning{% else %}text-info{% endif %}">
+                                            {{ alerte.valeur_actuelle|floatformat:1 }} {{ alerte.unite }}
+                                        </td>
+                                        <td>{{ alerte.seuil|floatformat:1 }} {{ alerte.unite }}</td>
+                                        <td class="{% if alerte.severite == 'Critique' %}text-danger{% elif alerte.severite == 'Élevé' %}text-warning{% else %}text-info{% endif %}">
+                                            {{ alerte.ecart|floatformat:1 }} {{ alerte.unite }}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if alerte.severite == 'Critique' %}danger{% elif alerte.severite == 'Élevé' %}warning{% else %}info{% endif %}">
+                                                {{ alerte.severite }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Voir détails">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">Aucune alerte active pour le moment.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Comparaison -->
+                    <div class="tab-pane fade" id="comparaison" role="tabpanel" aria-labelledby="comparaison-tab">
+                        <h5 class="mb-3">Comparaison des performances</h5>
+                        <p class="text-muted">Comparez les performances par véhicule, conducteur, site ou programme.</p>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <select class="form-select" id="comparaison-type">
+                                    <option value="vehicule">Par véhicule</option>
+                                    <option value="conducteur">Par conducteur</option>
+                                    <option value="categorie">Par catégorie</option>
+                                    <option value="departement">Par département</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="comparaison-kpi">
+                                    <option value="consommation">Consommation</option>
+                                    <option value="disponibilite">Disponibilité</option>
+                                    <option value="utilisation">Utilisation</option>
+                                    <option value="couts">Coûts par km</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="comparaison-periode">
+                                    <option value="mois">Mois en cours</option>
+                                    <option value="trimestre">Trimestre en cours</option>
+                                    <option value="annee">Année en cours</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" id="btn-comparer">
+                                    <i class="fas fa-sync-alt me-1"></i> Comparer
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container" style="position: relative; height:400px;">
+                            <canvas id="comparaisonChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Recommandations -->
+                    <div class="tab-pane fade" id="recommandations" role="tabpanel" aria-labelledby="recommandations-tab">
+                        <h5 class="mb-3">Recommandations pour retrait/remplacement</h5>
+                        <p class="text-muted">Véhicules identifiés comme peu rentables ou problématiques, basés sur les KPI et l'analyse des coûts.</p>
+                        
+                        <div class="row">
+                            {% for vehicule in vehicules_a_remplacer %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100 border-danger">
+                                    <div class="card-header bg-danger text-white">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">{{ vehicule.vehicule.marque }} {{ vehicule.vehicule.modele }}</h6>
+                                            <span class="badge bg-light text-danger">Score: {{ vehicule.score }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text"><strong>Immatriculation:</strong> {{ vehicule.vehicule.immatriculation }}</p>
+                                        <p class="card-text"><strong>Catégorie:</strong> {{ vehicule.vehicule.categorie }}</p>
+                                        <p class="card-text"><strong>Raisons:</strong></p>
+                                        <ul class="list-group list-group-flush mb-3">
+                                            {% for raison in vehicule.raisons %}
+                                            <li class="list-group-item text-danger">{{ raison }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <div class="card-footer bg-light">
+                                        <a href="{% url 'fleet_app:vehicule_detail' vehicule.vehicule.id_vehicule %}" class="btn btn-sm btn-outline-danger w-100">
+                                            <i class="fas fa-info-circle me-1"></i> Voir détails
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i> Aucun véhicule n'est actuellement recommandé pour remplacement.
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Évolution -->
+                    <div class="tab-pane fade" id="evolution" role="tabpanel" aria-labelledby="evolution-tab">
+                        <h5 class="mb-3">Évolution des KPI</h5>
+                        <p class="text-muted">Visualisez l'évolution mensuelle ou annuelle des indicateurs clés.</p>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <select class="form-select" id="evolution-kpi">
+                                    <option value="distance">Distance parcourue</option>
+                                    <option value="consommation">Consommation</option>
+                                    <option value="disponibilite">Disponibilité</option>
+                                    <option value="utilisation">Utilisation</option>
+                                    <option value="incidents">Incidents</option>
+                                    <option value="couts">Coûts par km</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="evolution-periode">
+                                    <option value="mensuelle">Évolution mensuelle</option>
+                                    <option value="trimestrielle">Évolution trimestrielle</option>
+                                    <option value="annuelle">Évolution annuelle</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary" id="btn-evolution">
+                                    <i class="fas fa-chart-line me-1"></i> Afficher l'évolution
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container" style="position: relative; height:400px;">
+                            <canvas id="evolutionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Coûts moyens par catégorie -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-money-bill-wave me-2"></i> Coûts moyens par catégorie (GNF/km)
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Catégorie</th>
+                                <th class="text-end">Coût fonctionnement<br><small class="text-muted">(GNF/km)</small></th>
+                                <th class="text-end">Coût financier<br><small class="text-muted">(GNF/km)</small></th>
+                                <th class="text-end">Coût total<br><small class="text-muted">(GNF/km)</small></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cout in couts_moyens_par_categorie %}
+                                <tr>
+                                    <td><strong>{{ cout.categorie }}</strong></td>
+                                    <td class="text-end">{{ cout.cout_fonctionnement|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ cout.cout_financier|floatformat:0|intcomma }}</td>
+                                    <td class="text-end fw-bold">{{ cout.cout_total|floatformat:0|intcomma }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucune donnée disponible</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <canvas id="coutsChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions rapides -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bolt me-2"></i> Actions rapides
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <a href="{% url 'fleet_app:vehicule_list' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-car me-2"></i> Gérer les véhicules
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{% url 'fleet_app:kpi_distance' %}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-road me-2"></i> Voir les distances
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{% url 'fleet_app:kpi_consommation' %}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-gas-pump me-2"></i> Consommation
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="#" class="btn btn-outline-secondary w-100 disabled" title="Fonctionnalité non disponible actuellement">
+                            <i class="fas fa-file-alt me-2"></i> Générer un rapport
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inclusion de la section des feuilles de route -->
+{% include 'fleet_app/dashboard_feuilles_route.html' %}
+{% include 'fleet_app/dashboard_chauffeurs.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Graphique de répartition par catégorie
+        var ctxCategories = document.getElementById('categoriesChart').getContext('2d');
+        var categoriesChart = new Chart(ctxCategories, {
+            type: 'pie',
+            data: {
+                labels: {{ categories_labels|safe }},
+                datasets: [{
+                    data: {{ categories_data|safe }},
+                    backgroundColor: [
+                        '#3498db',
+                        '#2ecc71',
+                        '#e74c3c',
+                        '#f39c12',
+                        '#9b59b6',
+                        '#1abc9c',
+                        '#34495e'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+        
+        // Graphique des coûts moyens par catégorie
+        const coutsCtx = document.getElementById('coutsChart').getContext('2d');
+        
+        // Récupération des données du template
+        const categories = [
+            {% for cout in couts_moyens_fonctionnement %}
+                "{{ cout.vehicule__categorie }}",
+            {% endfor %}
+        ];
+        
+        const coutsFonctionnement = [
+            {% for cout in couts_moyens_fonctionnement %}
+                {{ cout.moyenne|floatformat:2 }},
+            {% endfor %}
+        ];
+        
+        const coutsFinanciers = [
+            {% for cout in couts_moyens_fonctionnement %}
+                {% for cf in couts_moyens_financiers %}
+                    {% if cf.vehicule__categorie == cout.vehicule__categorie %}
+                        {{ cf.moyenne|floatformat:2 }},
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        ];
+        
+        const coutsChart = new Chart(coutsCtx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: [
+                    {
+                        label: 'Coûts de fonctionnement (€/km)',
+                        data: coutsFonctionnement,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Coûts financiers (€/km)',
+                        data: coutsFinanciers,
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '€/km'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Catégorie de véhicule'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Comparaison des coûts par catégorie de véhicule',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + ' €/km';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Ajout d'un gestionnaire d'événements pour les onglets KPI
+        const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabEls.forEach(tabEl => {
+            tabEl.addEventListener('shown.bs.tab', function (event) {
+                // Redimensionner les graphiques si nécessaire
+                if (coutsChart) {
+                    coutsChart.resize();
+                }
+            });
+        });
+    });
+</script>
+
+<!-- Script pour exporter les données KPI -->
+<script>
+    function exportKPIData(format) {
+        const activeTab = document.querySelector('.tab-pane.active');
+        const tabId = activeTab.id;
+        const title = document.querySelector(`[aria-controls="${tabId}"] i`).nextSibling.textContent.trim();
+        const table = activeTab.querySelector('table');
+        
+        if (!table) {
+            alert('Aucune donnée à exporter');
+            return;
+        }
+        
+        if (format === 'excel') {
+            // Utilisation de SheetJS pour l'export Excel
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.table_to_sheet(table);
+            XLSX.utils.book_append_sheet(wb, ws, `KPI_${title}`);
+            XLSX.writeFile(wb, `KPI_${title}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        } else if (format === 'pdf') {
+            // Utilisation de html2pdf pour l'export PDF
+            const element = document.createElement('div');
+            element.innerHTML = `<h2>KPI - ${title}</h2>`;
+            element.appendChild(table.cloneNode(true));
+            
+            const opt = {
+                margin: 1,
+                filename: `KPI_${title}_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'cm', format: 'a4', orientation: 'landscape' }
+            };
+            
+            html2pdf().set(opt).from(element).save();
+        }
+    }
+    
+    // Ajouter des boutons d'export aux sections KPI
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        tabPanes.forEach(pane => {
+            const btnContainer = pane.querySelector('.text-end');
+            if (btnContainer) {
+                const exportGroup = document.createElement('div');
+                exportGroup.className = 'btn-group ms-2';
+                exportGroup.innerHTML = `
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-download me-1"></i> Exporter
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportKPIData('excel')"><i class="fas fa-file-excel me-1"></i> Excel</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportKPIData('pdf')"><i class="fas fa-file-pdf me-1"></i> PDF</a></li>
+                    </ul>
+                `;
+                btnContainer.appendChild(exportGroup);
+            }
+        });
+        
+        // Graphique de comparaison
+        var ctxComparaison = document.getElementById('comparaisonChart');
+        if (ctxComparaison) {
+            // Préparer les données de comparaison de consommation
+            const vehiculesLabels = [];
+            const consommationData = [];
+            
+            {% for item in comparaison_consommation %}
+                vehiculesLabels.push("{{ item.vehicule }}");
+                consommationData.push({{ item.consommation }});
+            {% endfor %}
+            
+            var comparaisonChart = new Chart(ctxComparaison, {
+                type: 'bar',
+                data: {
+                    labels: vehiculesLabels.length > 0 ? vehiculesLabels : ['Aucune donnée disponible'],
+                    datasets: [{
+                        label: 'Consommation (L/100km)',
+                        data: consommationData.length > 0 ? consommationData : [0],
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Consommation (L/100km)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Véhicules'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Comparaison de la consommation par véhicule'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw + ' L/100km';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Graphique d'évolution
+        var ctxEvolution = document.getElementById('evolutionChart');
+        if (ctxEvolution) {
+            // Récupérer les données d'évolution depuis le contexte Django
+            var evolutionData = {% if evolution_data %}{{ evolution_data|safe }}{% else %}{labels: [], consommation: [], disponibilite: [], couts: []}{% endif %};
+            
+            var evolutionChart = new Chart(ctxEvolution, {
+                type: 'line',
+                data: {
+                    labels: evolutionData.labels.length > 0 ? evolutionData.labels : ['Aucune donnée'],
+                    datasets: [{
+                        label: 'Consommation moyenne (L/100km)',
+                        data: evolutionData.consommation.length > 0 ? evolutionData.consommation : [0],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Consommation (L/100km)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Mois'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Évolution de la consommation moyenne sur l\'année'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Gestionnaire d'événements pour les boutons de comparaison et d'évolution
+        document.getElementById('btn-comparer')?.addEventListener('click', function() {
+            const type = document.getElementById('comparaison-type').value;
+            const kpi = document.getElementById('comparaison-kpi').value;
+            const periode = document.getElementById('comparaison-periode').value;
+            
+            // Mettre à jour le titre du graphique
+            let title = '';
+            if (kpi === 'consommation') title = 'Consommation (L/100km)';
+            else if (kpi === 'disponibilite') title = 'Disponibilité (%)';
+            else if (kpi === 'utilisation') title = 'Utilisation (%)';
+            else if (kpi === 'couts') title = 'Coûts par km (€)';
+            
+            // Simuler une mise à jour avec les données disponibles
+            // Dans une implémentation réelle, on ferait un appel AJAX pour récupérer les données
+            let labels = [];
+            let data = [];
+            
+            {% for item in comparaison_consommation %}
+                if (kpi === 'consommation') {
+                    labels.push("{{ item.vehicule }}");
+                    data.push({{ item.consommation }});
+                }
+            {% endfor %}
+            
+            {% for item in comparaison_disponibilite %}
+                if (kpi === 'disponibilite') {
+                    labels.push("{{ item.vehicule }}");
+                    data.push({{ item.disponibilite }});
+                }
+            {% endfor %}
+            
+            {% for item in comparaison_couts %}
+                if (kpi === 'couts') {
+                    labels.push("{{ item.vehicule }}");
+                    data.push({{ item.cout }});
+                }
+            {% endfor %}
+            
+            // Mettre à jour le graphique
+            var chart = Chart.getChart('comparaisonChart');
+            if (chart) {
+                chart.data.labels = labels.length > 0 ? labels : ['Aucune donnée disponible'];
+                chart.data.datasets[0].data = data.length > 0 ? data : [0];
+                chart.data.datasets[0].label = title;
+                chart.options.scales.y.title.text = title;
+                chart.options.plugins.title.text = 'Comparaison de ' + title + ' par ' + type;
+                chart.update();
+            }
+        });
+        
+        document.getElementById('btn-evolution')?.addEventListener('click', function() {
+            const kpi = document.getElementById('evolution-kpi').value;
+            const periode = document.getElementById('evolution-periode').value;
+            
+            // Récupérer les données d'évolution depuis le contexte Django
+            var evolutionData = {% if evolution_data %}{{ evolution_data|safe }}{% else %}{labels: [], consommation: [], disponibilite: [], couts: []}{% endif %};
+            
+            // Mettre à jour le titre et les données selon le KPI sélectionné
+            let title = '';
+            let data = [];
+            let color = '';
+            
+            if (kpi === 'consommation') {
+                title = 'Consommation (L/100km)';
+                data = evolutionData.consommation;
+                color = 'rgba(75, 192, 192, 1)';
+                bgColor = 'rgba(75, 192, 192, 0.2)';
+            } else if (kpi === 'disponibilite') {
+                title = 'Disponibilité (%)';
+                data = evolutionData.disponibilite;
+                color = 'rgba(54, 162, 235, 1)';
+                bgColor = 'rgba(54, 162, 235, 0.2)';
+            } else if (kpi === 'couts') {
+                title = 'Coûts par km (€)';
+                data = evolutionData.couts;
+                color = 'rgba(255, 99, 132, 1)';
+                bgColor = 'rgba(255, 99, 132, 0.2)';
+            }
+            
+            // Mettre à jour le graphique
+            var chart = Chart.getChart('evolutionChart');
+            if (chart) {
+                chart.data.datasets[0].label = title;
+                chart.data.datasets[0].data = data.length > 0 ? data : [0];
+                chart.data.datasets[0].borderColor = color;
+                chart.data.datasets[0].backgroundColor = bgColor;
+                chart.options.scales.y.title.text = title;
+                chart.options.plugins.title.text = 'Évolution de ' + title + ' - ' + periode;
+                chart.update();
+            }
+        });
+    });
+</script>
+
+<!-- Script pour la mise à jour automatique des alertes KPI -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fonction pour mettre à jour les alertes KPI
+        function updateAlertesKPI() {
+            fetch('{% url "fleet_app:api_alertes_kpi" %}')
+                .then(response => response.json())
+                .then(data => {
+                    const alertesKpiContainer = document.getElementById('alertes-kpi-container');
+                    if (!alertesKpiContainer) return;
+                    
+                    // Vider le conteneur
+                    alertesKpiContainer.innerHTML = '';
+                    
+                    // Si aucune alerte, afficher un message
+                    if (data.total_actives === 0) {
+                        alertesKpiContainer.innerHTML = '<div class="alert alert-success">Aucune alerte KPI active</div>';
+                        return;
+                    }
+                    
+                    // Afficher les alertes récentes
+                    data.alertes_recentes.forEach(alerte => {
+                        const alerteClass = alerte.niveau === 'Critique' ? 'danger' : 
+                                          alerte.niveau === 'Élevé' ? 'warning' : 'info';
+                        
+                        const alerteHtml = `
+                            <div class="alert alert-${alerteClass} mb-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${alerte.titre}</strong>
+                                    <div class="small">
+                                        <span class="me-2">Véhicule: ${alerte.vehicule}</span>
+                                        <span class="me-2">Date: ${alerte.date}</span>
+                                    </div>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/vehicules/${alerte.vehicule_id}/" class="btn btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button class="btn btn-outline-success btn-resoudre" data-id="${alerte.id}">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-ignorer" data-id="${alerte.id}">
+                                        <i class="fas fa-bell-slash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        alertesKpiContainer.innerHTML += alerteHtml;
+                    });
+                    
+                    // Ajouter un lien vers toutes les alertes si plus de 5
+                    if (data.total_actives > 5) {
+                        alertesKpiContainer.innerHTML += `
+                            <div class="text-end mt-2">
+                                <a href="{% url 'fleet_app:alerte_list' %}" class="btn btn-sm btn-outline-primary">
+                                    Voir toutes les alertes (${data.total_actives})
+                                </a>
+                            </div>
+                        `;
+                    }
+                    
+                    // Configurer les boutons d'action
+                    setupAlertButtons();
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la récupération des alertes:', error);
+                    const alertesKpiContainer = document.getElementById('alertes-kpi-container');
+                    if (alertesKpiContainer) {
+                        alertesKpiContainer.innerHTML = '<div class="alert alert-danger">Erreur lors de la récupération des alertes</div>';
+                    }
+                });
+        }
+        
+        // Fonction pour gérer les clics sur les boutons d'action des alertes
+        function setupAlertButtons() {
+            // Boutons pour résoudre une alerte
+            document.querySelectorAll('.btn-resoudre').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const alerteId = this.getAttribute('data-id');
+                    const alerteElement = this.closest('.alert');
+                    
+                    // Afficher une boîte de dialogue modale pour la résolution
+                    const modalHtml = `
+                        <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Résoudre l'alerte</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="resolveForm">
+                                            <div class="mb-3">
+                                                <label for="resolution" class="form-label">Description de la résolution</label>
+                                                <textarea class="form-control" id="resolution" rows="3" required></textarea>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                        <button type="button" class="btn btn-success" id="confirmResolve">Résoudre</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Ajouter la modale au DOM
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                    // Afficher la modale
+                    const modal = new bootstrap.Modal(document.getElementById('resolveModal'));
+                    modal.show();
+                    
+                    // Gérer la confirmation
+                    document.getElementById('confirmResolve').addEventListener('click', function() {
+                        const resolution = document.getElementById('resolution').value;
+                        if (!resolution) {
+                            alert('Veuillez fournir une description de la résolution.');
+                            return;
+                        }
+                        
+                        // Envoyer la requête pour résoudre l'alerte
+                        fetch(`/alertes/${alerteId}/resoudre/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRFToken': getCsrfToken()
+                            },
+                            body: `resolution=${encodeURIComponent(resolution)}`
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                // Supprimer l'alerte de l'interface
+                                alerteElement.remove();
+                                showToast('Alerte résolue avec succès', 'success');
+                                
+                                // Mettre à jour le compteur d'alertes
+                                updateAlertesKPI();
+                            } else {
+                                throw new Error('Erreur lors de la résolution de l'alerte');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur:', error);
+                            showToast(`Erreur: ${error.message}`, 'danger');
+                        })
+                        .finally(() => {
+                            modal.hide();
+                            document.getElementById('resolveModal').remove();
+                        });
+                    });
+                });
+            });
+            
+            // Boutons pour ignorer une alerte
+            document.querySelectorAll('.btn-ignorer').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!confirm('Êtes-vous sûr de vouloir ignorer cette alerte?')) return;
+                    
+                    const alerteId = this.getAttribute('data-id');
+                    const alerteElement = this.closest('.alert');
+                    
+                    fetch(`/alertes/${alerteId}/ignorer/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken()
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Supprimer l'alerte de l'interface
+                            alerteElement.remove();
+                            showToast('Alerte ignorée', 'info');
+                            
+                            // Mettre à jour le compteur d'alertes
+                            updateAlertesKPI();
+                        } else {
+                            throw new Error('Erreur lors de l\'ignorance de l\'alerte');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showToast(`Erreur: ${error.message}`, 'danger');
+                    });
+                });
+            });
+        }
+        
+        // Fonction pour récupérer le token CSRF
+        function getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+        
+        // Fonction pour afficher un toast
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = `toast-${Date.now()}`;
+            
+            const toastHtml = `
+                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header bg-${type} text-white">
+                        <strong class="me-auto">Notification</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+            
+            // Supprimer le toast après qu'il soit caché
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
+        
+        // Mettre à jour les alertes KPI au chargement de la page
+        updateAlertesKPI();
+        
+        // Mettre à jour les alertes toutes les 5 minutes
+        setInterval(updateAlertesKPI, 5 * 60 * 1000);
+    });
+</script>
+{% endblock %}

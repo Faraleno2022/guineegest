@@ -1,0 +1,113 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Détails du chauffeur{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Détails du chauffeur</h1>
+        <div>
+            <a href="{% url 'fleet_app:chauffeur_edit' chauffeur.id_chauffeur %}" class="d-none d-sm-inline-block btn btn-sm btn-warning shadow-sm">
+                <i class="fas fa-edit fa-sm text-white-50"></i> Modifier
+            </a>
+            <a href="{% url 'fleet_app:chauffeur_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm ml-2">
+                <i class="fas fa-arrow-left fa-sm text-white-50"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informations personnelles</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th style="width: 30%">Nom</th>
+                                <td>{{ chauffeur.nom }}</td>
+                            </tr>
+                            <tr>
+                                <th>Prénom</th>
+                                <td>{{ chauffeur.prenom }}</td>
+                            </tr>
+                            <tr>
+                                <th>Numéro de permis</th>
+                                <td>{{ chauffeur.numero_permis }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date d'embauche</th>
+                                <td>{{ chauffeur.date_embauche }}</td>
+                            </tr>
+                            <tr>
+                                <th>Téléphone</th>
+                                <td>{{ chauffeur.telephone }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email</th>
+                                <td>{{ chauffeur.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Statut</th>
+                                <td>
+                                    {% if chauffeur.statut == 'Actif' %}
+                                    <span class="badge badge-success">{{ chauffeur.statut }}</span>
+                                    {% else %}
+                                    <span class="badge badge-secondary">{{ chauffeur.statut }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Feuilles de route récentes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Véhicule</th>
+                                    <th>Destination</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for feuille in chauffeur.feuillederoute_set.all|slice:":5" %}
+                                <tr>
+                                    <td>{{ feuille.date_depart }}</td>
+                                    <td>{{ feuille.vehicule.immatriculation }}</td>
+                                    <td>{{ feuille.destination }}</td>
+                                    <td>
+                                        <a href="{% url 'fleet_app:feuille_route_detail' feuille.id %}" class="btn btn-info btn-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucune feuille de route</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <a href="{% url 'fleet_app:feuille_route_list' %}" class="btn btn-primary btn-sm btn-block">
+                            Voir toutes les feuilles de route
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

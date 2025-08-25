@@ -1,0 +1,55 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Résoudre Alerte - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}Résoudre Alerte{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-check-circle me-2"></i> Résoudre l'alerte
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <h5>{{ alerte.titre }}</h5>
+            <p>{{ alerte.description }}</p>
+            <div class="d-flex justify-content-between">
+                <span>
+                    <strong>Niveau:</strong> 
+                    <span class="badge {% if alerte.niveau == 'Critique' %}bg-danger{% elif alerte.niveau == 'Élevé' %}bg-warning{% elif alerte.niveau == 'Moyen' %}bg-info{% else %}bg-secondary{% endif %}">
+                        {{ alerte.niveau }}
+                    </span>
+                </span>
+                <span><strong>Date:</strong> {{ alerte.date_creation|date:"d/m/Y H:i" }}</span>
+            </div>
+            {% if alerte.vehicule %}
+            <div>
+                <strong>Véhicule concerné:</strong> 
+                <a href="{% url 'fleet_app:vehicule_detail' alerte.vehicule.id_vehicule %}">
+                    {{ alerte.vehicule.immatriculation }} - {{ alerte.vehicule.marque }} {{ alerte.vehicule.modele }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="post" action="{% url 'fleet_app:alerte_resoudre' alerte.id %}">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="resolution" class="form-label">Description de la résolution</label>
+                <textarea class="form-control" id="resolution" name="resolution" rows="3" required 
+                          placeholder="Décrivez les actions entreprises pour résoudre cette alerte..."></textarea>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'fleet_app:alerte_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-check"></i> Marquer comme résolu
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,492 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}{{ titre }} - Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-chart-line me-2"></i> {{ description }}
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-1"></i> Exporter Excel
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger ms-2" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf me-1"></i> Exporter PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div style="height: 300px;">
+                            <canvas id="kpiChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <i class="fas fa-info-circle me-2"></i> Statistiques
+                            </div>
+                            <div class="card-body">
+                                {% if 'distances' in request.path %}
+                                    <div class="stat-card">
+                                        <i class="fas fa-road fa-2x mb-2 text-primary"></i>
+                                        <div class="stat-value">{{ distances|length }}</div>
+                                        <div class="stat-label">Véhicules analysés</div>
+                                    </div>
+                                    <hr>
+                                    <div class="stat-card">
+                                        <i class="fas fa-tachometer-alt fa-2x mb-2 text-success"></i>
+                                        <div class="stat-value">{{ distances.0.distance_totale|floatformat:0 }} km</div>
+                                        <div class="stat-label">Distance maximale</div>
+                                    </div>
+                                {% elif 'consommation' in request.path %}
+                                    <div class="stat-card">
+                                        <i class="fas fa-gas-pump fa-2x mb-2 text-primary"></i>
+                                        <div class="stat-value">{{ consommations|length }}</div>
+                                        <div class="stat-label">Véhicules analysés</div>
+                                    </div>
+                                    <hr>
+                                    <div class="stat-card">
+                                        <i class="fas fa-tachometer-alt fa-2x mb-2 text-warning"></i>
+                                        <div class="stat-value">{{ consommations.0.consommation_moyenne|floatformat:1 }} L/100km</div>
+                                        <div class="stat-label">Consommation moyenne</div>
+                                    </div>
+                                {% elif 'disponibilite' in request.path %}
+                                    <div class="stat-card">
+                                        <i class="fas fa-check-circle fa-2x mb-2 text-primary"></i>
+                                        <div class="stat-value">{{ disponibilites|length }}</div>
+                                        <div class="stat-label">Véhicules analysés</div>
+                                    </div>
+                                    <hr>
+                                    <div class="stat-card">
+                                        <i class="fas fa-percentage fa-2x mb-2 text-success"></i>
+                                        <div class="stat-value">{{ disponibilites.0.disponibilite|floatformat:1 }}%</div>
+                                        <div class="stat-label">Disponibilité maximale</div>
+                                    </div>
+                                {% elif 'utilisation' in request.path %}
+                                    <div class="stat-card">
+                                        <i class="fas fa-car fa-2x mb-2 text-primary"></i>
+                                        <div class="stat-value">{{ utilisations|length }}</div>
+                                        <div class="stat-label">Véhicules analysés</div>
+                                    </div>
+                                    <hr>
+                                    <div class="stat-card">
+                                        <i class="fas fa-percentage fa-2x mb-2 text-info"></i>
+                                        <div class="stat-value">{{ utilisations.0.taux_utilisation|floatformat:1 }}%</div>
+                                        <div class="stat-label">Taux d'utilisation max</div>
+                                    </div>
+                                {% elif 'incidents' in request.path %}
+                                    <div class="stat-card">
+                                        <i class="fas fa-exclamation-triangle fa-2x mb-2 text-danger"></i>
+                                        <div class="stat-value">{{ incidents|length }}</div>
+                                        <div class="stat-label">Véhicules analysés</div>
+                                    </div>
+                                    <hr>
+                                    <div class="stat-card">
+                                        <i class="fas fa-car-crash fa-2x mb-2 text-warning"></i>
+                                        <div class="stat-value">{{ incidents.0.nombre_incidents }}</div>
+                                        <div class="stat-label">Incidents maximum</div>
+                                    </div>
+                                {% elif 'couts_fonctionnement' in request.path %}
+                                    <div class="stat-card">
+                                        <i class="fas fa-tools fa-2x mb-2 text-primary"></i>
+                                        <div class="stat-value">{{ couts|length }}</div>
+                                        <div class="stat-label">Véhicules analysés</div>
+                                    </div>
+                                    <hr>
+                                    <div class="stat-card">
+                                        <i class="fas fa-money-bill fa-2x mb-2 text-danger"></i>
+                                        <div class="stat-value">{{ couts.0.cout_moyen_formatte }}</div>
+                                        <div class="stat-label">Coût max par km</div>
+                                    </div>
+                                {% elif 'couts_financiers' in request.path %}
+                                    <div class="stat-card">
+                                        <i class="fas fa-money-bill fa-2x mb-2 text-success"></i>
+                                        <div class="stat-value">{{ couts|length }}</div>
+                                        <div class="stat-label">Véhicules analysés</div>
+                                    </div>
+                                    <hr>
+                                    <div class="stat-card">
+                                        <i class="fas fa-money-bill fa-2x mb-2 text-danger"></i>
+                                        <div class="stat-value">{{ couts.0.cout_moyen_formatte }}</div>
+                                        <div class="stat-label">Coût max par km</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive" id="kpiDataTable">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Véhicule</th>
+                                <th>Catégorie</th>
+                                <th>Type moteur</th>
+                                {% if 'distances' in request.path %}
+                                    <th>Distance (km)</th>
+                                    <th>Objectif (km)</th>
+                                    <th>% Atteinte</th>
+                                    <th>Statut</th>
+                                {% elif 'consommation' in request.path %}
+                                    <th>Litres total</th>
+                                    <th>Consommation (L/100km)</th>
+                                    <th>Cible (L/100km)</th>
+                                    <th>Dépassement</th>
+                                    <th>Statut</th>
+                                {% elif 'disponibilite' in request.path %}
+                                    <th>Jours disponibles</th>
+                                    <th>Jours total</th>
+                                    <th>Disponibilité (%)</th>
+                                    <th>Cible (%)</th>
+                                    <th>Statut</th>
+                                {% elif 'utilisation' in request.path %}
+                                    <th>Jours utilisés</th>
+                                    <th>Jours disponibles</th>
+                                    <th>Taux d'utilisation (%)</th>
+                                    <th>Cible (%)</th>
+                                    <th>Statut</th>
+                                {% elif 'incidents' in request.path %}
+                                    <th>Nombre d'incidents</th>
+                                    <th>Criticité moyenne</th>
+                                    <th>Objectif</th>
+                                    <th>Statut</th>
+                                {% elif 'couts_fonctionnement' in request.path or 'couts_financiers' in request.path %}
+                                    <th>Coût total (GNF)</th>
+                                    <th>Distance (km)</th>
+                                    <th>Coût par km (GNF/km)</th>
+                                    <th>Seuil (GNF/km)</th>
+                                    <th>Statut</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if 'distances' in request.path %}
+                                {% for d in distances %}
+                                <tr>
+                                    <td>{{ d.marque }} {{ d.modele }} ({{ d.immatriculation }})</td>
+                                    <td>{{ d.categorie }}</td>
+                                    <td>{{ d.type_moteur }}</td>
+                                    <td>{{ d.distance_totale|floatformat:0 }}</td>
+                                    <td>{{ d.objectif }}</td>
+                                    <td>{{ d.pourcentage|floatformat:1 }}%</td>
+                                    <td>
+                                        {% if d.pourcentage >= 90 %}
+                                            <span class="badge bg-success">Optimal</span>
+                                        {% elif d.pourcentage >= 70 %}
+                                            <span class="badge bg-warning">Acceptable</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Sous-utilisé</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% elif 'consommation' in request.path %}
+                                {% for c in consommations %}
+                                <tr>
+                                    <td>{{ c.marque }} {{ c.modele }} ({{ c.immatriculation }})</td>
+                                    <td>{{ c.categorie }}</td>
+                                    <td>{{ c.type_moteur }}</td>
+                                    <td>{{ c.litres_total|floatformat:1 }}</td>
+                                    <td>{{ c.consommation_moyenne|floatformat:1 }}</td>
+                                    <td>{{ c.cible|floatformat:1 }}</td>
+                                    <td>{{ c.depassement|floatformat:1 }}</td>
+                                    <td>
+                                        {% if c.alerte %}
+                                            <span class="badge bg-danger">Alerte</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% elif 'disponibilite' in request.path %}
+                                {% for d in disponibilites %}
+                                <tr>
+                                    <td>{{ d.marque }} {{ d.modele }} ({{ d.immatriculation }})</td>
+                                    <td>{{ d.categorie }}</td>
+                                    <td>{{ d.type_moteur }}</td>
+                                    <td>{{ d.jours_disponibles }}</td>
+                                    <td>{{ d.jours_total }}</td>
+                                    <td>{{ d.disponibilite|floatformat:1 }}%</td>
+                                    <td>{{ d.cible|floatformat:1 }}%</td>
+                                    <td>
+                                        {% if d.disponibilite >= d.cible %}
+                                            <span class="badge bg-success">Optimal</span>
+                                        {% elif d.disponibilite >= d.cible_min %}
+                                            <span class="badge bg-warning">Acceptable</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Critique</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% elif 'utilisation' in request.path %}
+                                {% for u in utilisations %}
+                                <tr>
+                                    <td>{{ u.marque }} {{ u.modele }} ({{ u.immatriculation }})</td>
+                                    <td>{{ u.categorie }}</td>
+                                    <td>{{ u.type_moteur }}</td>
+                                    <td>{{ u.jours_utilises }}</td>
+                                    <td>{{ u.jours_disponibles }}</td>
+                                    <td>{{ u.taux_utilisation|floatformat:1 }}%</td>
+                                    <td>{{ u.cible|floatformat:1 }}%</td>
+                                    <td>
+                                        {% if u.taux_utilisation >= u.cible %}
+                                            <span class="badge bg-success">Optimal</span>
+                                        {% elif u.taux_utilisation >= u.cible_min %}
+                                            <span class="badge bg-warning">Acceptable</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Sous-utilisé</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% elif 'incidents' in request.path %}
+                                {% for i in incidents %}
+                                <tr>
+                                    <td>{{ i.marque }} {{ i.modele }} ({{ i.immatriculation }})</td>
+                                    <td>{{ i.categorie }}</td>
+                                    <td>{{ i.type_moteur }}</td>
+                                    <td>{{ i.nombre_incidents }}</td>
+                                    <td>{{ i.criticite_moyenne|floatformat:1 }}</td>
+                                    <td>{{ i.objectif }}</td>
+                                    <td>
+                                        {% if i.nombre_incidents <= i.objectif %}
+                                            <span class="badge bg-success">Conforme</span>
+                                        {% elif i.nombre_incidents <= i.objectif_max %}
+                                            <span class="badge bg-warning">Attention</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Critique</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% elif 'couts_fonctionnement' in request.path or 'couts_financiers' in request.path %}
+                                {% for c in couts %}
+                                <tr>
+                                    <td>{{ c.marque }} {{ c.modele }} ({{ c.immatriculation }})</td>
+                                    <td>{{ c.categorie }}</td>
+                                    <td>{{ c.type_moteur }}</td>
+                                    <td>{{ c.cout_total_formatte }}</td>
+                                    <td>{{ c.distance_totale|floatformat:0 }} km</td>
+                                    <td>{{ c.cout_moyen_formatte }}</td>
+                                    <td>{{ c.seuil_formatte }}</td>
+                                    <td>
+                                        {% if c.alerte == False %}
+                                            <span class="badge bg-success">Économique</span>
+                                        {% elif c.cout_moyen <= c.seuil_max|default:c.seuil %}
+                                            <span class="badge bg-warning">Acceptable</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Coûteux</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration du graphique en fonction du KPI
+    let chartType = 'bar';
+    let chartData = {
+        labels: [],
+        datasets: []
+    };
+    let chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false
+    };
+    
+    {% if 'distances' in request.path %}
+        // Configuration pour le KPI Distance
+        chartData.labels = [{% for d in distances %}'{{ d.marque }} {{ d.modele }} ({{ d.immatriculation }})'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        chartData.datasets = [{
+            label: 'Distance parcourue (km)',
+            data: [{% for d in distances %}{{ d.distance_totale }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Objectif (km)',
+            data: [{% for d in distances %}{{ d.objectif }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(255, 206, 86, 0.6)',
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1,
+            type: 'line'
+        }];
+    {% elif 'consommation' in request.path %}
+        // Configuration pour le KPI Consommation
+        chartData.labels = [{% for c in consommations %}'{{ c.marque }} {{ c.modele }} ({{ c.immatriculation }})'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        chartData.datasets = [{
+            label: 'Consommation (L/100km)',
+            data: [{% for c in consommations %}{{ c.consommation_moyenne }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Cible (L/100km)',
+            data: [{% for c in consommations %}{{ c.cible }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+            type: 'line'
+        }];
+    {% elif 'disponibilite' in request.path %}
+        // Configuration pour le KPI Disponibilité
+        chartData.labels = [{% for d in disponibilites %}'{{ d.marque }} {{ d.modele }} ({{ d.immatriculation }})'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        chartData.datasets = [{
+            label: 'Disponibilité (%)',
+            data: [{% for d in disponibilites %}{{ d.disponibilite }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Cible (%)',
+            data: [{% for d in disponibilites %}{{ d.cible }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+            borderColor: 'rgba(153, 102, 255, 1)',
+            borderWidth: 1,
+            type: 'line'
+        }];
+    {% elif 'utilisation' in request.path %}
+        // Configuration pour le KPI Utilisation
+        chartData.labels = [{% for u in utilisations %}'{{ u.marque }} {{ u.modele }} ({{ u.immatriculation }})'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        chartData.datasets = [{
+            label: 'Taux d\'utilisation (%)',
+            data: [{% for u in utilisations %}{{ u.taux_utilisation }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+            borderColor: 'rgba(153, 102, 255, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Cible (%)',
+            data: [{% for u in utilisations %}{{ u.cible }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(255, 159, 64, 0.6)',
+            borderColor: 'rgba(255, 159, 64, 1)',
+            borderWidth: 1,
+            type: 'line'
+        }];
+    {% elif 'incidents' in request.path %}
+        // Configuration pour le KPI Incidents
+        chartData.labels = [{% for i in incidents %}'{{ i.marque }} {{ i.modele }} ({{ i.immatriculation }})'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        chartData.datasets = [{
+            label: 'Nombre d\'incidents',
+            data: [{% for i in incidents %}{{ i.nombre_incidents }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Criticité moyenne',
+            data: [{% for i in incidents %}{{ i.criticite_moyenne }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(255, 159, 64, 0.6)',
+            borderColor: 'rgba(255, 159, 64, 1)',
+            borderWidth: 1,
+            type: 'line',
+            yAxisID: 'y1'
+        }];
+        chartOptions.scales = {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Nombre d\'incidents'
+                }
+            },
+            y1: {
+                beginAtZero: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Criticité (1-5)'
+                },
+                min: 0,
+                max: 5,
+                grid: {
+                    drawOnChartArea: false
+                }
+            }
+        };
+    {% elif 'couts_fonctionnement' in request.path %}
+        // Configuration pour le KPI Coûts de fonctionnement
+        chartData.labels = [{% for c in couts %}'{{ c.marque }} {{ c.modele }} ({{ c.immatriculation }})'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        chartData.datasets = [{
+            label: 'Coût par km (GNF/km)',
+            data: [{% for c in couts %}{{ c.cout_moyen }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Seuil (GNF/km)',
+            data: [{% for c in couts %}{{ c.seuil }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(255, 206, 86, 0.6)',
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1,
+            type: 'line'
+        }];
+    {% elif 'couts_financiers' in request.path %}
+        // Configuration pour le KPI Coûts financiers
+        chartData.labels = [{% for c in couts %}'{{ c.marque }} {{ c.modele }} ({{ c.immatriculation }})'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        chartData.datasets = [{
+            label: 'Coût par km (GNF/km)',
+            data: [{% for c in couts %}{{ c.cout_moyen }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Seuil (GNF/km)',
+            data: [{% for c in couts %}{{ c.seuil }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+            borderColor: 'rgba(153, 102, 255, 1)',
+            borderWidth: 1,
+            type: 'line'
+        }];
+    {% endif %}
+    
+    // Création du graphique
+    var ctx = document.getElementById('kpiChart').getContext('2d');
+    var kpiChart = new Chart(ctx, {
+        type: chartType,
+        data: chartData,
+        options: chartOptions
+    });
+    
+    // Fonction pour exporter en Excel
+    window.exportToExcel = function() {
+        const table = document.querySelector('#kpiDataTable table');
+        const wb = XLSX.utils.table_to_book(table, {sheet: "KPI Data"});
+        XLSX.writeFile(wb, '{{ titre }}.xlsx');
+    };
+    
+    // Fonction pour exporter en PDF
+    window.exportToPDF = function() {
+        const element = document.querySelector('#kpiDataTable');
+        const opt = {
+            margin: 1,
+            filename: '{{ titre }}.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+        
+        html2pdf().set(opt).from(element).save();
+    };
+});
+</script>
+{% endblock %}

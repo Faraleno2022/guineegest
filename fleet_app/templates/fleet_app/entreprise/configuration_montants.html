@@ -1,0 +1,334 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Configuration des Montants des Statuts{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="h3 mb-0">
+                        <i class="fas fa-cogs text-primary me-2"></i>
+                        Configuration des Montants des Statuts
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Configurez les montants pour chaque statut de présence
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'fleet_app:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-tachometer-alt me-2"></i>Retour au Tableau de Bord
+                    </a>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle me-2"></i>
+                        {% else %}
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Formulaire de configuration -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        Montants des Statuts de Présence
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="configuration-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Section Présences -->
+                            <div class="col-md-6">
+                                <h6 class="text-success mb-3">
+                                    <i class="fas fa-check-circle me-2"></i>Statuts de Présence
+                                </h6>
+                                
+                                <!-- P(Am) -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_am.id_for_label }}" class="form-label">
+                                        <span class="badge bg-success me-2">P(Am)</span>
+                                        {{ form.montant_am.label }}
+                                    </label>
+                                    {{ form.montant_am }}
+                                    {% if form.montant_am.help_text %}
+                                        <div class="form-text">{{ form.montant_am.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_am.errors %}
+                                        <div class="text-danger">{{ form.montant_am.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- P(Pm) -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_pm.id_for_label }}" class="form-label">
+                                        <span class="badge bg-success me-2">P(Pm)</span>
+                                        {{ form.montant_pm.label }}
+                                    </label>
+                                    {{ form.montant_pm }}
+                                    {% if form.montant_pm.help_text %}
+                                        <div class="form-text">{{ form.montant_pm.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_pm.errors %}
+                                        <div class="text-danger">{{ form.montant_pm.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- P(Am&Pm) -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_journee.id_for_label }}" class="form-label">
+                                        <span class="badge bg-primary me-2">P(Am&Pm)</span>
+                                        {{ form.montant_journee.label }}
+                                    </label>
+                                    {{ form.montant_journee }}
+                                    {% if form.montant_journee.help_text %}
+                                        <div class="form-text">{{ form.montant_journee.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_journee.errors %}
+                                        <div class="text-danger">{{ form.montant_journee.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Statuts du dimanche -->
+                                <h6 class="text-info mb-3 mt-4">
+                                    <i class="fas fa-calendar-day me-2"></i>Statuts du Dimanche
+                                </h6>
+
+                                <!-- P(dim_Am) -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_dim_am.id_for_label }}" class="form-label">
+                                        <span class="badge bg-info me-2">P(dim_Am)</span>
+                                        {{ form.montant_dim_am.label }}
+                                    </label>
+                                    {{ form.montant_dim_am }}
+                                    {% if form.montant_dim_am.help_text %}
+                                        <div class="form-text">{{ form.montant_dim_am.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_dim_am.errors %}
+                                        <div class="text-danger">{{ form.montant_dim_am.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- P(dim_Pm) -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_dim_pm.id_for_label }}" class="form-label">
+                                        <span class="badge bg-info me-2">P(dim_Pm)</span>
+                                        {{ form.montant_dim_pm.label }}
+                                    </label>
+                                    {{ form.montant_dim_pm }}
+                                    {% if form.montant_dim_pm.help_text %}
+                                        <div class="form-text">{{ form.montant_dim_pm.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_dim_pm.errors %}
+                                        <div class="text-danger">{{ form.montant_dim_pm.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- P(dim_Am_&_Pm) -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_dim_journee.id_for_label }}" class="form-label">
+                                        <span class="badge bg-info me-2">P(dim_Am_&_Pm)</span>
+                                        {{ form.montant_dim_journee.label }}
+                                    </label>
+                                    {{ form.montant_dim_journee }}
+                                    {% if form.montant_dim_journee.help_text %}
+                                        <div class="form-text">{{ form.montant_dim_journee.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_dim_journee.errors %}
+                                        <div class="text-danger">{{ form.montant_dim_journee.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Section Absences et autres -->
+                            <div class="col-md-6">
+                                <h6 class="text-warning mb-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Statuts d'Absence et Autres
+                                </h6>
+
+                                <!-- Absent -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_absent.id_for_label }}" class="form-label">
+                                        <span class="badge bg-danger me-2">A</span>
+                                        {{ form.montant_absent.label }}
+                                    </label>
+                                    {{ form.montant_absent }}
+                                    {% if form.montant_absent.help_text %}
+                                        <div class="form-text">{{ form.montant_absent.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_absent.errors %}
+                                        <div class="text-danger">{{ form.montant_absent.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Maladie -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_maladie.id_for_label }}" class="form-label">
+                                        <span class="badge bg-warning me-2">M</span>
+                                        {{ form.montant_maladie.label }}
+                                    </label>
+                                    {{ form.montant_maladie }}
+                                    {% if form.montant_maladie.help_text %}
+                                        <div class="form-text">{{ form.montant_maladie.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_maladie.errors %}
+                                        <div class="text-danger">{{ form.montant_maladie.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Maladie Payée -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_maladie_payee.id_for_label }}" class="form-label">
+                                        <span class="badge bg-info me-2">M(Payer)</span>
+                                        {{ form.montant_maladie_payee.label }}
+                                    </label>
+                                    {{ form.montant_maladie_payee }}
+                                    {% if form.montant_maladie_payee.help_text %}
+                                        <div class="form-text">{{ form.montant_maladie_payee.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_maladie_payee.errors %}
+                                        <div class="text-danger">{{ form.montant_maladie_payee.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Congé -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_conge.id_for_label }}" class="form-label">
+                                        <span class="badge bg-info me-2">C</span>
+                                        {{ form.montant_conge.label }}
+                                    </label>
+                                    {{ form.montant_conge }}
+                                    {% if form.montant_conge.help_text %}
+                                        <div class="form-text">{{ form.montant_conge.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_conge.errors %}
+                                        <div class="text-danger">{{ form.montant_conge.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Formation -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_formation.id_for_label }}" class="form-label">
+                                        <span class="badge bg-warning me-2">F</span>
+                                        {{ form.montant_formation.label }}
+                                    </label>
+                                    {{ form.montant_formation }}
+                                    {% if form.montant_formation.help_text %}
+                                        <div class="form-text">{{ form.montant_formation.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_formation.errors %}
+                                        <div class="text-danger">{{ form.montant_formation.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Repos -->
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_repos.id_for_label }}" class="form-label">
+                                        <span class="badge bg-secondary me-2">OFF</span>
+                                        {{ form.montant_repos.label }}
+                                    </label>
+                                    {{ form.montant_repos }}
+                                    {% if form.montant_repos.help_text %}
+                                        <div class="form-text">{{ form.montant_repos.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant_repos.errors %}
+                                        <div class="text-danger">{{ form.montant_repos.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'fleet_app:presence_journaliere_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>Annuler
+                                    </a>
+                                    <div>
+                                        <button type="reset" class="btn btn-outline-warning me-2">
+                                            <i class="fas fa-undo me-2"></i>Réinitialiser
+                                        </button>
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="fas fa-save me-2"></i>Sauvegarder la Configuration
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Informations supplémentaires -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Informations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Utilisation des montants</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Les montants configurés seront utilisés dans tous les calculs de présence</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Les calculs de paie utiliseront automatiquement ces montants</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Vous pouvez modifier ces montants à tout moment</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-warning">Recommandations</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-lightbulb text-warning me-2"></i>Laissez à 0 les statuts non rémunérés (Absent, Maladie, Repos)</li>
+                                <li><i class="fas fa-lightbulb text-warning me-2"></i>Les montants du dimanche sont généralement plus élevés</li>
+                                <li><i class="fas fa-lightbulb text-warning me-2"></i>Vérifiez vos calculs avant de sauvegarder</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confirmation avant réinitialisation
+    const resetButton = document.querySelector('button[type="reset"]');
+    if (resetButton) {
+        resetButton.addEventListener('click', function(e) {
+            if (!confirm('Êtes-vous sûr de vouloir réinitialiser tous les champs ?')) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Auto-save indication
+    const form = document.getElementById('configuration-form');
+    const inputs = form.querySelectorAll('input[type="number"]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            // Ajouter une indication visuelle que le formulaire a été modifié
+            this.style.borderColor = '#ffc107';
+        });
+    });
+});
+</script>
+{% endblock %}

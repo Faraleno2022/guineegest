@@ -1,0 +1,198 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Ajouter des Heures Supplémentaires{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Ajouter des Heures Supplémentaires
+                    </h4>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Affichage des messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_employe" class="form-label">
+                                        <i class="fas fa-user me-1"></i>Employé
+                                    </label>
+                                    <select name="employe" id="id_employe" class="form-control" required>
+                                        <option value="">Sélectionner un employé</option>
+                                        {% for employe in employes %}
+                                        <option value="{{ employe.id }}">{{ employe.matricule }} - {{ employe.prenom }} {{ employe.nom }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="form-text text-muted">Le poste et taux horaire seront récupérés automatiquement</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_date" class="form-label">Date</label>
+                                    <input type="date" name="date" id="id_date" class="form-control" value="{{ date_aujourd_hui }}" required>
+                                    <div class="form-text">jj/mm/aaaa</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_heure_debut" class="form-label">
+                                        <i class="fas fa-clock me-1"></i>Heure de début
+                                    </label>
+                                    <input type="time" name="heure_debut" id="id_heure_debut" class="form-control">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_heure_fin" class="form-label">
+                                        <i class="fas fa-clock me-1"></i>Heure de fin
+                                    </label>
+                                    <input type="time" name="heure_fin" id="id_heure_fin" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        
+
+                        
+                        <!-- Informations sur l'employé sélectionné -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card bg-light mb-3">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-info-circle me-1"></i>Informations de l'employé sélectionné :
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <strong>Poste :</strong> <span id="poste-employe">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>Durée calculée :</strong> <span id="duree-calculee">-</span> heures
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="id_autorise_par" class="form-label">Autorisé par</label>
+                                <input type="text" name="autorise_par" id="id_autorise_par" class="form-control" value="Système" placeholder="Nom de la personne qui autorise">
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'fleet_app:heure_supplementaire_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Retour
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Éléments du formulaire
+    const employeSelect = document.getElementById('id_employe');
+    const heureDebutInput = document.getElementById('id_heure_debut');
+    const heureFinInput = document.getElementById('id_heure_fin');
+    
+    // Éléments d'affichage des calculs
+    const dureeSpan = document.getElementById('duree-calculee');
+    const posteSpan = document.getElementById('poste-employe');
+    
+    function calculerDuree() {
+        const heureDebut = heureDebutInput.value;
+        const heureFin = heureFinInput.value;
+        
+        if (heureDebut && heureFin) {
+            // Calculer la durée en heures
+            const [heureD, minuteD] = heureDebut.split(':').map(Number);
+            const [heureF, minuteF] = heureFin.split(':').map(Number);
+            
+            const minutesDebut = heureD * 60 + minuteD;
+            let minutesFin = heureF * 60 + minuteF;
+            
+            // Si l'heure de fin est avant l'heure de début, considérer que c'est le jour suivant
+            if (minutesFin <= minutesDebut) {
+                minutesFin += 24 * 60; // Ajouter 24 heures
+            }
+            
+            const dureeMinutes = minutesFin - minutesDebut;
+            const dureeHeures = dureeMinutes / 60;
+            
+            dureeSpan.textContent = dureeHeures.toFixed(2);
+        } else {
+            dureeSpan.textContent = '-';
+        }
+    }
+    
+    function mettreAJourInfoEmploye() {
+        const employeId = employeSelect.value;
+        if (employeId) {
+            // Récupérer les infos de l'employé via AJAX
+            fetch(`{% url 'fleet_app:get_employe_info_ajax' %}?employe_id=${employeId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        posteSpan.textContent = data.fonction;
+                    } else {
+                        posteSpan.textContent = 'Erreur de récupération';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    posteSpan.textContent = 'Erreur de connexion';
+                });
+        } else {
+            posteSpan.textContent = '-';
+        }
+        calculerDuree();
+    }
+    
+    // Événements
+    if (employeSelect) {
+        employeSelect.addEventListener('change', mettreAJourInfoEmploye);
+    }
+    
+    if (heureDebutInput && heureFinInput) {
+        heureDebutInput.addEventListener('change', calculerDuree);
+        heureFinInput.addEventListener('change', calculerDuree);
+    }
+    
+    // Calcul initial
+    mettreAJourInfoEmploye();
+});
+</script>
+{% endblock %}

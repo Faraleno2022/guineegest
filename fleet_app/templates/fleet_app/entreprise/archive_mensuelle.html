@@ -1,0 +1,742 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Archive Mensuelle{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+
+<!-- Styles existants pour l'archive -->
+<style>
+    .archive-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #dee2e6;
+        transition: box-shadow 0.2s ease;
+    }
+    
+    .archive-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .current-month-card {
+        background: #f8f9fa;
+        color: #495057;
+        border: 2px solid #6c757d;
+    }
+    
+    .closed-month-card {
+        background: #f8f9fa;
+        color: #495057;
+        border: 1px solid #28a745;
+    }
+    
+    .stat-badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        margin: 0.2rem;
+        display: inline-block;
+        border: 1px solid #ced4da;
+    }
+    
+    .current-month-card .stat-badge {
+        background: #ffffff;
+        border: 1px solid #6c757d;
+    }
+    
+    .action-btn {
+        border-radius: 4px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        transition: box-shadow 0.2s ease;
+    }
+    
+    .btn-close-month {
+        background: #dc3545;
+        border: 1px solid #dc3545;
+        color: white;
+    }
+    
+    .btn-close-month:hover {
+        background: #c82333;
+        border: 1px solid #c82333;
+    }
+    
+    .btn-view-archive {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        border: none;
+        color: white;
+    }
+    
+    .btn-view-archive:hover {
+        background: linear-gradient(135deg, #138496 0%, #0f6674 100%);
+        transform: translateY(-2px);
+    }
+    
+    .status-badge {
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-en-cours {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .status-cloture {
+        background: #28a745;
+        color: white;
+    }
+    
+    .status-archive {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .warning-box {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Sélecteur de période global pour synchronisation -->
+    {% include 'fleet_app/components/period_selector.html' %}
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-archive me-2"></i>
+                    Archive Mensuelle
+                </h2>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" id="exportArchives">
+                        <i class="fas fa-file-excel"></i> Export Archives
+                    </button>
+                    <button class="btn btn-info" id="helpArchive">
+                        <i class="fas fa-question-circle"></i> Aide
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mois en cours -->
+    <div class="row">
+        <div class="col-12">
+            <div class="archive-card current-month-card">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h4 class="mb-2">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Mois en cours : {{ nom_mois_actuel }} {{ annee_actuelle }}
+                        </h4>
+                        <p class="mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Ce mois est actuellement ouvert pour la saisie des données.
+                        </p>
+                        <div class="d-flex flex-wrap">
+                            <span class="stat-badge">
+                                <i class="fas fa-users me-1"></i>
+                                {{ archive_actuelle.nb_employes_actifs }} employés actifs
+                            </span>
+                            <span class="stat-badge">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                {{ archive_actuelle.nb_jours_travailles }} jours de présence
+                            </span>
+                            <span class="stat-badge">
+                                <i class="fas fa-coins me-1"></i>
+                                Salaire brut (GNF): {{ archive_actuelle.total_salaire_brut|floatformat:0|intcomma }}
+                            </span>
+                            <span class="stat-badge">
+                                <i class="fas fa-hand-holding-usd me-1"></i>
+                                Net payé (GNF): {{ archive_actuelle.total_net_paye|floatformat:0|intcomma }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        {% if peut_cloturer %}
+                        <button class="btn btn-close-month action-btn" id="cloturerMoisBtn">
+                            <i class="fas fa-lock me-2"></i>
+                            Clôturer ce mois
+                        </button>
+                        <div class="mt-2">
+                            <small class="text-light">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Cette action archivera toutes les données et réinitialisera le système
+                            </small>
+                        </div>
+                        {% else %}
+                        <span class="status-badge status-cloture">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Mois déjà clôturé
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des archives -->
+    <div class="row">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="fas fa-history me-2"></i>
+                Historique des Archives
+            </h4>
+            
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h1 class="mb-0">
+                                <i class="fas fa-archive"></i> Archives Mensuelles
+                            </h1>
+                            <p class="mb-0 opacity-75">Gestion et consultation des données archivées</p>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#creerArchiveModal">
+                                <i class="fas fa-plus"></i> Créer Archive
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Archives
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_globales.total_archives|default:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-archive fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Employés Archivés
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_globales.total_employes|default:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Salaire Brut (GNF)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_globales.total_montant_brut|floatformat:0|intcomma|default:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total Salaire Net (GNF)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_globales.total_montant_net|floatformat:0|intcomma|default:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres de recherche -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-filter"></i> Filtres de Recherche
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Année</label>
+                            <select name="annee" class="form-select">
+                                <option value="">Toutes les années</option>
+                                {% for annee in annees_disponibles %}
+                                <option value="{{ annee }}" {% if filtres.annee == annee|stringformat:"s" %}selected{% endif %}>
+                                    {{ annee }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Mois</label>
+                            <select name="mois" class="form-select">
+                                <option value="">Tous les mois</option>
+                                {% for mois_num, mois_nom in mois_noms %}
+                                <option value="{{ mois_num }}" {% if filtres.mois == mois_num|stringformat:"s" %}selected{% endif %}>
+                                    {{ mois_nom }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Statut</label>
+                            <select name="statut" class="form-select">
+                                <option value="">Tous les statuts</option>
+                                {% for statut_key, statut_label in statuts_choix %}
+                                <option value="{{ statut_key }}" {% if filtres.statut == statut_key %}selected{% endif %}>
+                                    {{ statut_label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Filtrer
+                            </button>
+                            <a href="{% url 'fleet_app:archive_mensuelle_full' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-eraser"></i> Effacer
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des archives -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-table"></i> Liste des Archives
+                    </h6>
+                    <div class="btn-group">
+                        <button class="btn btn-success btn-sm" onclick="exporterToutesArchives()">
+                            <i class="fas fa-file-excel"></i> Export Excel
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="exporterPDF()">
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Période</th>
+                                    <th>Employés</th>
+                                    <th>Salaire Brut (GNF)</th>
+                                    <th>Salaire Net (GNF)</th>
+                                    <th>Statut</th>
+                                    <th>Date Création</th>
+                                    <th>Date Clôture</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for archive in archives %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ archive.get_periode_label }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ archive.nombre_employes }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>{{ archive.total_salaire_brut|floatformat:0|intcomma }}</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-success">{{ archive.total_salaire_net|floatformat:0|intcomma }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if archive.statut == 'En cours' %}warning{% elif archive.statut == 'Clôturé' %}success{% else %}secondary{% endif %}">
+                                            {{ archive.statut }}
+                                        </span>
+                                    </td>
+                                    <td>{{ archive.date_creation|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        {% if archive.date_cloture %}
+                                            {{ archive.date_cloture|date:"d/m/Y H:i" }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-info btn-sm" 
+                                                    onclick="voirArchive({{ archive.id }})" 
+                                                    title="Voir les détails">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            {% if archive.peut_etre_cloturee %}
+                                            <button type="button" class="btn btn-warning btn-sm" 
+                                                    onclick="cloturerArchive({{ archive.id }})" 
+                                                    title="Clôturer l'archive">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-success btn-sm" 
+                                                    onclick="exporterArchive({{ archive.id }})" 
+                                                    title="Exporter l'archive">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            {% if archive.peut_etre_restauree %}
+                                            <button type="button" class="btn btn-secondary btn-sm" 
+                                                    onclick="restaurerArchive({{ archive.id }})" 
+                                                    title="Restaurer les données">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                                            <p>Aucune archive trouvée avec les critères sélectionnés</p>
+                                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#creerArchiveModal">
+                                                <i class="fas fa-plus"></i> Créer votre première archive
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if archives.has_other_pages %}
+                    <nav aria-label="Navigation des archives">
+                        <ul class="pagination justify-content-center">
+                            {% if archives.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ archives.previous_page_number }}{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ archives.number }} sur {{ archives.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if archives.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ archives.next_page_number }}{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                        <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ archives.paginator.num_pages }}{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de création d'archive -->
+<div class="modal fade" id="creerArchiveModal" tabindex="-1" aria-labelledby="creerArchiveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="creerArchiveModalLabel">
+                    <i class="fas fa-plus"></i> Créer une Nouvelle Archive
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="creer_archive">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="mois" class="form-label">Mois</label>
+                            <select name="mois" id="mois" class="form-select" required>
+                                <option value="">Sélectionner un mois</option>
+                                {% for mois_num, mois_nom in mois_noms %}
+                                <option value="{{ mois_num }}" {% if mois_num == mois_actuel %}selected{% endif %}>
+                                    {{ mois_nom }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="annee" class="form-label">Année</label>
+                            <select name="annee" id="annee" class="form-select" required>
+                                <option value="">Sélectionner une année</option>
+                                <option value="2023" {% if 2023 == annee_actuelle %}selected{% endif %}>2023</option>
+                                <option value="2024" {% if 2024 == annee_actuelle %}selected{% endif %}>2024</option>
+                                <option value="2025" {% if 2025 == annee_actuelle %}selected{% endif %}>2025</option>
+                                <option value="2026" {% if 2026 == annee_actuelle %}selected{% endif %}>2026</option>
+                                <option value="2027" {% if 2027 == annee_actuelle %}selected{% endif %}>2027</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Cette action va :</h6>
+                        <ul class="mt-2 mb-0">
+                            <li><strong>Archiver</strong> toutes les données de présence du mois</li>
+                            <li><strong>Archiver</strong> toutes les données de paies du mois</li>
+                            <li><strong>Archiver</strong> toutes les données d'heures supplémentaires du mois</li>
+                            <li><strong>Supprimer</strong> ces données des modules actifs</li>
+                            <li><strong>Réinitialiser</strong> le système pour un nouveau mois</li>
+                        </ul>
+                        <p class="mb-0 mt-2"><strong>Les données de référence (employés, configurations, paramètres) seront conservées.</strong></p>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label for="commentairesArchive" class="form-label">
+                            <i class="fas fa-comment me-1"></i>
+                            Commentaires (optionnel)
+                        </label>
+                        <textarea class="form-control" id="commentairesArchive" name="commentaires" rows="3" 
+                                  placeholder="Ajoutez des commentaires sur cette archive..."></textarea>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmArchiveCheck" required>
+                            <label class="form-check-label" for="confirmArchiveCheck">
+                                <strong>Je comprends que cette action est irréversible et je souhaite continuer</strong>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-danger" id="confirmerArchiveBtn" disabled>
+                        <i class="fas fa-archive me-1"></i>
+                        Confirmer l'archivage
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Gestion de l'activation du bouton d'archivage
+    $('#confirmArchiveCheck').on('change', function() {
+        const isChecked = this.checked;
+        const moisSelected = $('#mois').val();
+        const anneeSelected = $('#annee').val();
+        
+        // Activer le bouton seulement si la checkbox est cochée ET que mois/année sont sélectionnés
+        const canSubmit = isChecked && moisSelected && anneeSelected;
+        $('#confirmerArchiveBtn').prop('disabled', !canSubmit);
+        
+        if (canSubmit) {
+            $('#confirmerArchiveBtn').removeClass('btn-secondary').addClass('btn-danger');
+        } else {
+            $('#confirmerArchiveBtn').removeClass('btn-danger').addClass('btn-secondary');
+        }
+    });
+    
+    // Vérifier aussi quand les champs mois/année changent
+    $('#mois, #annee').on('change', function() {
+        $('#confirmArchiveCheck').trigger('change');
+    });
+    
+    // Gestion de la soumission du formulaire d'archivage
+    $('#confirmerArchiveBtn').on('click', function(e) {
+        const btn = $(this);
+        const mois = $('#mois').val();
+        const annee = $('#annee').val();
+        
+        if (!mois || !annee) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un mois et une année.');
+            return false;
+        }
+        
+        if (!$('#confirmArchiveCheck').is(':checked')) {
+            e.preventDefault();
+            alert('Veuillez confirmer que vous comprenez que cette action est irréversible.');
+            return false;
+        }
+        
+        // Afficher l'état de traitement
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Archivage en cours...');
+        
+        // Le formulaire sera soumis normalement
+        return true;
+    });
+    
+    // Réinitialiser le modal quand il se ferme
+    $('#creerArchiveModal').on('hidden.bs.modal', function() {
+        $('#confirmArchiveCheck').prop('checked', false);
+        $('#confirmerArchiveBtn').prop('disabled', true).removeClass('btn-danger').addClass('btn-secondary');
+        $('#confirmerArchiveBtn').html('<i class="fas fa-archive me-1"></i> Confirmer l\'archivage');
+        $('#commentairesArchive').val('');
+    });
+    
+    // Script de synchronisation inter-modules
+    const syncScript = document.createElement('script');
+    syncScript.src = "{% static 'fleet_app/js/synchronisation_modules.js' %}";
+    document.head.appendChild(syncScript);
+    
+    syncScript.onload = function() {
+        // Initialiser la synchronisation pour le module archivage-mensuel
+        const syncSystem = SynchronisationModules.getInstance();
+        
+        // Écouter les événements de synchronisation
+        window.addEventListener('moduleDataReload', function(e) {
+            if (e.detail.module === 'archivage-mensuel') {
+                console.log('🔄 Rechargement des données archivage mensuel pour', e.detail.month + '/' + e.detail.year);
+                // Recharger les données du tableau
+                reloadArchivageMensuelData(e.detail.month, e.detail.year);
+            }
+        });
+        
+        // Fonction pour recharger les données
+        function reloadArchivageMensuelData(month, year) {
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('mois', month);
+            currentUrl.searchParams.set('annee', year);
+            
+            // Recharger la page avec les nouveaux paramètres
+            window.location.href = currentUrl.toString();
+        }
+    };
+    
+        // Fonction pour obtenir le token CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        fetch('{% url "fleet_app:cloturer_mois" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                mois: {{ mois_actuel }},
+                annee: {{ annee_actuelle }},
+                commentaires: commentaires
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                window.location.reload();
+            } else {
+                alert('❌ Erreur: ' + data.message);
+                btn.prop('disabled', false).html('<i class="fas fa-lock me-1"></i> Confirmer la clôture');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('❌ Erreur de communication avec le serveur');
+            btn.prop('disabled', false).html('<i class="fas fa-lock me-1"></i> Confirmer la clôture');
+        });
+    });
+    
+    // Export des archives
+    $('#exportArchives').on('click', function() {
+        alert('Fonctionnalité d\'export en cours de développement');
+    });
+    
+    // Aide
+    $('#helpArchive').on('click', function() {
+        alert('Système d\'archivage mensuelle:\n\n' +
+              '1. Chaque mois, saisissez vos données normalement\n' +
+              '2. En fin de mois, cliquez sur "Clôturer ce mois"\n' +
+              '3. Toutes les données sont archivées et le système est réinitialisé\n' +
+              '4. Consultez les archives précédentes à tout moment\n\n' +
+              'Les employés sont conservés lors de la clôture.');
+    });
+});
+</script>
+{% endblock %}

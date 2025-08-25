@@ -1,0 +1,87 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Liste des Chauffeurs{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Liste des Chauffeurs</h1>
+        <a href="{% url 'fleet_app:chauffeur_add' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-plus fa-sm text-white-50"></i> Ajouter un chauffeur
+        </a>
+    </div>
+
+    {% include 'fleet_app/components/search_box.html' with table='chauffeurs' placeholder='Rechercher un chauffeur par nom, prénom, numéro de permis...' target_div='search-results-chauffeurs' %}
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Chauffeurs enregistrés</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>N° Permis</th>
+                            <th>Date d'embauche</th>
+                            <th>Téléphone</th>
+                            <th>Email</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for chauffeur in chauffeurs %}
+                        <tr>
+                            <td>{{ chauffeur.nom }}</td>
+                            <td>{{ chauffeur.prenom }}</td>
+                            <td>{{ chauffeur.numero_permis }}</td>
+                            <td>{{ chauffeur.date_embauche }}</td>
+                            <td>{{ chauffeur.telephone }}</td>
+                            <td>{{ chauffeur.email }}</td>
+                            <td>
+                                {% if chauffeur.statut == 'Actif' %}
+                                <span class="badge badge-success">{{ chauffeur.statut }}</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ chauffeur.statut }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'fleet_app:chauffeur_detail' chauffeur.id_chauffeur %}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'fleet_app:chauffeur_edit' chauffeur.id_chauffeur %}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'fleet_app:chauffeur_delete' chauffeur.id_chauffeur %}" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">Aucun chauffeur enregistré</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#dataTable').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/French.json"
+            }
+        });
+    });
+</script>
+{% endblock %}

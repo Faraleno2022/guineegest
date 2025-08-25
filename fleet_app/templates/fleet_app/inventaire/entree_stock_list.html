@@ -1,0 +1,203 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Entrées en Stock{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Entrées en Stock</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item active">Inventaire - Entrées en Stock</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-arrow-circle-down me-1"></i>
+                Entrées en stock
+            </div>
+            <div>
+                <a href="{% url 'fleet_app:entree_stock_create' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Ajouter une entrée
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Formulaire de recherche -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-search"></i> Recherche
+                        </div>
+                        <div class="card-body">
+                            <form method="get" class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="id_critere" class="form-label">Critère</label>
+                                    {{ form_recherche.critere }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="id_terme" class="form-label">Terme de recherche</label>
+                                    {{ form_recherche.terme }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="id_date_debut" class="form-label">Date début</label>
+                                    {{ form_recherche.date_debut }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="id_date_fin" class="form-label">Date fin</label>
+                                    {{ form_recherche.date_fin }}
+                                </div>
+                                <div class="col-md-12 mt-3 d-flex">
+                                    <button type="submit" class="btn btn-primary me-2">
+                                        <i class="fas fa-search"></i> Rechercher
+                                    </button>
+                                    <a href="{% url 'fleet_app:entree_stock_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-redo"></i> Réinitialiser
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tableau des entrées en stock -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID Entrée</th>
+                            <th>Date</th>
+                            <th>Produit</th>
+                            <th>Quantité</th>
+                            <th>Prix unitaire (GNF)</th>
+                            <th>Fournisseur</th>
+                            <th>Référence facture</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entree in entrees %}
+                        <tr>
+                            <td>{{ entree.id_entree }}</td>
+                            <td>{{ entree.date|date:"d/m/Y" }}</td>
+                            <td>
+                                <a href="{% url 'fleet_app:produit_detail' entree.produit.id_produit %}">
+                                    {{ entree.produit.id_produit }} - {{ entree.produit.nom }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ entree.quantite }}</td>
+                            <td class="text-end">{{ entree.prix_unitaire|floatformat:0 }}</td>
+                            <td>{{ entree.fournisseur }}</td>
+                            <td>{{ entree.reference_facture }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'fleet_app:entree_stock_update' entree.id_entree %}" class="btn btn-warning btn-sm" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'fleet_app:entree_stock_delete' entree.id_entree %}" class="btn btn-danger btn-sm delete-btn" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">Aucune entrée en stock trouvée.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.critere %}&critere={{ request.GET.critere }}{% endif %}{% if request.GET.terme %}&terme={{ request.GET.terme }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Appliquer les classes Bootstrap aux champs du formulaire de recherche
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('id_critere').classList.add('form-select');
+        document.getElementById('id_terme').classList.add('form-control');
+        document.getElementById('id_date_debut').classList.add('form-control');
+        document.getElementById('id_date_fin').classList.add('form-control');
+        
+        // Ajouter la confirmation pour les boutons de suppression
+        document.querySelectorAll('.delete-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée en stock ? Cette action est irréversible et pourrait affecter le stock actuel des produits.')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

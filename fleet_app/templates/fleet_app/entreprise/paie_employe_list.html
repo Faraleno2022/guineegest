@@ -1,0 +1,635 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load fleet_filters %}
+{% load humanize %}
+
+{% block title %}Paies des Employés{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Sélecteur de période global pour synchronisation -->
+    {% include 'fleet_app/components/period_selector.html' %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Paies des Employés</h5>
+            <div>
+                <a href="{% url 'fleet_app:paie_employe_export' %}" class="btn btn-success btn-sm">
+                    <i class="fas fa-file-excel me-1"></i>Exporter CSV
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Filtres dynamiques en temps réel -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-gradient-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-search"></i> Recherche dynamique en temps réel
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="moisFilter" class="form-label fw-bold">
+                                        <i class="fas fa-calendar-alt text-primary"></i> Mois
+                                    </label>
+                                    <select class="form-select" id="moisFilter">
+                                        <option value="">Tous les mois</option>
+                                        <option value="1">Janvier</option>
+                                        <option value="2">Février</option>
+                                        <option value="3">Mars</option>
+                                        <option value="4">Avril</option>
+                                        <option value="5">Mai</option>
+                                        <option value="6">Juin</option>
+                                        <option value="7">Juillet</option>
+                                        <option value="8">Août</option>
+                                        <option value="9">Septembre</option>
+                                        <option value="10">Octobre</option>
+                                        <option value="11">Novembre</option>
+                                        <option value="12">Décembre</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="anneeFilter" class="form-label fw-bold">
+                                        <i class="fas fa-calendar text-primary"></i> Année
+                                    </label>
+                                    <select class="form-select" id="anneeFilter">
+                                        <option value="">Toutes les années</option>
+                                        <option value="2023">2023</option>
+                                        <option value="2024">2024</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2026">2026</option>
+                                        <option value="2027">2027</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="employeSearch" class="form-label fw-bold">
+                                        <i class="fas fa-user text-primary"></i> Employé
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="employeSearch" 
+                                               placeholder="Rechercher par matricule, nom, prénom..." 
+                                               autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-grid">
+                                        <button type="button" class="btn btn-outline-secondary" id="clearFilters">
+                                            <i class="fas fa-eraser"></i> Effacer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Compteurs et statut -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex gap-3">
+                                            <span class="badge bg-success fs-6" id="resultCount">
+                                                <i class="fas fa-table"></i> {{ paies|length }} ligne(s)
+                                            </span>
+                                            <span class="badge bg-info fs-6" id="filterStatus">
+                                                <i class="fas fa-filter"></i> Aucun filtre actif
+                                            </span>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-success btn-sm" id="exportExcel">
+                                                <i class="fas fa-file-excel"></i> Excel
+                                            </button>
+                                            <a href="{% url 'fleet_app:paie_employe_export' %}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-download"></i> CSV
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau des paies avec logique RECHERCHEV -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-nowrap">Matricule</th>
+                            <th class="text-nowrap">Profession</th>
+                            <th class="text-nowrap">Prénom</th>
+                            <th class="text-nowrap">Nom</th>
+                            <th class="text-nowrap">Salaire de Base (GNF)</th>
+                            
+                            <!-- Colonnes de présence depuis management/presences/ -->
+                            <th class="text-nowrap">Total Jours</th>
+                            <th class="text-nowrap">Jours de présence</th>
+                            <th class="text-nowrap">Absent</th>
+                            <th class="text-nowrap">J Repos</th>
+                            <th class="text-nowrap">Maladies</th>
+                            <th class="text-nowrap">M.Payer</th>
+                            <th class="text-nowrap">Férié</th>
+                            <th class="text-nowrap">Sundays</th>
+                            
+                            <!-- Colonnes heures supplémentaires -->
+                            <th class="text-nowrap">H Supp</th>
+                            <th class="text-nowrap">Mt Supp (GNF)</th>
+                            
+                            <!-- Primes et indemnités -->
+                            <th class="text-nowrap">Prime Discipline (GNF)</th>
+                            <th class="text-nowrap">Cherté Vie (GNF)</th>
+                            <th class="text-nowrap">Transport (GNF)</th>
+                            <th class="text-nowrap">Logement (GNF)</th>
+                            
+                            <!-- Calculs de paie -->
+                            <th class="text-nowrap">Salaire Brut (GNF)</th>
+                            <th class="text-nowrap">CNSS 5% (GNF)</th>
+                            <th class="text-nowrap">RTS (GNF)</th>
+                            <th class="text-nowrap">Avance (GNF)</th>
+                            <th class="text-nowrap">Sanction (GNF)</th>
+                            <th class="text-nowrap">Net à Payer (GNF)</th>
+                            <th class="text-nowrap">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        {% for paie_enrichie in paies_enrichies %}
+                        {% with paie=paie_enrichie.paie stats=paie_enrichie.stats_calculees coherence=paie_enrichie.coherence %}
+                        <tr>
+                            <td class="text-nowrap">{{ paie.employe.matricule }}</td>
+                            <td class="text-nowrap">{{ paie.employe.fonction }}</td>
+                            <td class="text-nowrap">{{ paie.employe.prenom }}</td>
+                            <td class="text-nowrap">{{ paie.employe.nom }}</td>
+                            <td class="text-nowrap">{{ paie.employe.salaire_journalier|default:0|floatformat:0|intcomma }}</td>
+                            
+                            <!-- Total Jours - Nombre total de jours du mois -->
+                            <td class="text-nowrap">
+                                {{ paie.jours_mois|default:31 }}
+                            </td>
+                            
+                            <!-- Jours de présence - Calcul automatique: P(Am_&_Pm) + P(Pm) + P(Am) -->
+                            <td class="text-nowrap {% if not coherence.jours_presence %}bg-warning{% endif %}">
+                                <strong>{{ stats.jours_presence }}</strong>
+                                {% if not coherence.jours_presence %}
+                                <br><small class="text-muted">({{ paie.jours_presence }} stocké)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Absent - Calcul automatique: nombre de A -->
+                            <td class="text-nowrap {% if not coherence.absences %}bg-warning{% endif %}">
+                                <strong>{{ stats.absent }}</strong>
+                                {% if not coherence.absences %}
+                                <br><small class="text-muted">({{ paie.absences }} stocké)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- J Repos - Calcul automatique: nombre de OFF -->
+                            <td class="text-nowrap {% if not coherence.jours_repos %}bg-warning{% endif %}">
+                                <strong>{{ stats.j_repos }}</strong>
+                                {% if not coherence.jours_repos %}
+                                <br><small class="text-muted">({{ paie.jours_repos }} stocké)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Maladies - Calcul automatique: nombre de M -->
+                            <td class="text-nowrap">
+                                <strong>{{ stats.maladies }}</strong>
+                            </td>
+                            
+                            <!-- M.Payer - Calcul automatique: nombre de M(Payer) -->
+                            <td class="text-nowrap">
+                                <strong>{{ stats.m_payer }}</strong>
+                            </td>
+                            
+                            <!-- Férié - Jours fériés (pas encore implémenté) -->
+                            <td class="text-nowrap">
+                                <span class="text-muted">0</span>
+                            </td>
+                            
+                            <!-- Sundays - Calcul automatique: P(dim_Am) + P(dim_Pm) + P(dim_Am_&_Pm) -->
+                            <td class="text-nowrap {% if not coherence.dimanches %}bg-warning{% endif %}">
+                                <strong>{{ stats.sundays }}</strong>
+                                {% if not coherence.dimanches %}
+                                <br><small class="text-muted">({{ paie.dimanches }} stocké)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- H Supp - Heures supplémentaires (calculé automatiquement depuis heures-supplementaires/) -->
+                            <td class="text-nowrap {% if not coherence.heures_supp %}bg-warning{% endif %}">
+                                <strong>{{ stats.heures_supplementaires|floatformat:2 }}</strong>
+                                {% if not coherence.heures_supp %}
+                                <br><small class="text-muted">({{ paie.heures_supplementaires|default:0|floatformat:2 }} stocké)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Mt Supp - Montant heures supplémentaires (calculé automatiquement depuis heures-supplementaires/) -->
+                            <td class="text-nowrap {% if not coherence.montant_supp %}bg-warning{% endif %}">
+                                <strong>{{ stats.montant_heures_supplementaires|floatformat:0|intcomma }}</strong>
+                                {% if not coherence.montant_supp %}
+                                <br><small class="text-muted">({{ paie.montant_heures_supplementaires|default:0|floatformat:0|intcomma }} stocké)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Primes et indemnités -->
+                            <td class="text-nowrap">{{ paie.prime_discipline|default:0|floatformat:0|intcomma }}</td>
+                            <td class="text-nowrap">{{ paie.cherete_vie|default:0|floatformat:0|intcomma }}</td>
+                            <td class="text-nowrap">{{ paie.indemnite_transport|default:0|floatformat:0|intcomma }}</td>
+                            <td class="text-nowrap">{{ paie.indemnite_logement|default:0|floatformat:0|intcomma }}</td>
+                            
+                            <!-- Calculs de paie -->
+                            <td class="text-nowrap"><strong>{{ paie.salaire_brut|default:0|floatformat:0|intcomma }}</strong></td>
+                            <td class="text-nowrap">{{ paie.cnss|default:0|floatformat:0|intcomma }}</td>
+                            <td class="text-nowrap">{{ paie.rts|default:0|floatformat:0|intcomma }}</td>
+                            <td class="text-nowrap">{{ paie.avance_sur_salaire|default:0|floatformat:0|intcomma }}</td>
+                            <td class="text-nowrap">{{ paie.sanction_vol_carburant|default:0|floatformat:0|intcomma }}</td>
+                            <td class="text-nowrap"><strong class="text-success">{{ paie.salaire_net_a_payer|default:0|floatformat:0|intcomma }}</strong></td>
+                            
+                            <!-- Actions -->
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'fleet_app:paie_employe_edit' paie.pk %}" class="btn btn-warning" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'fleet_app:paie_employe_delete' paie.pk %}" class="btn btn-danger" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="26" class="text-center">Aucune paie enregistrée</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if paies.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if paies.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ paies.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                    {% endif %}
+
+                    {% for i in paies.paginator.page_range %}
+                    {% if paies.number == i %}
+                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if paies.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ paies.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Informations de debug (à supprimer en production) -->
+{% if debug %}
+<div class="mt-3">
+    <div class="card">
+        <div class="card-header">
+            <h6>Debug - Données RECHERCHEV</h6>
+        </div>
+        <div class="card-body">
+            <p><strong>Employés trouvés:</strong> {{ employes.count }}</p>
+            <p><strong>Paies créées:</strong> {{ paies|length }}</p>
+            <p><strong>Données présence par employé:</strong> {{ donnees_presence_par_employe|length }}</p>
+            <p><strong>Données heures supp par employé:</strong> {{ heures_supp_par_employe|length }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// RECHERCHE DYNAMIQUE EN TEMPS RÉEL POUR TABLEAU DES PAIES
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 RECHERCHE DYNAMIQUE - Initialisation du tableau des paies');
+    
+    // Éléments DOM avec les bons IDs
+    const moisFilter = document.getElementById('moisFilter');
+    const anneeFilter = document.getElementById('anneeFilter');
+    const employeSearch = document.getElementById('employeSearch');
+    const clearFilters = document.getElementById('clearFilters');
+    const resultCount = document.getElementById('resultCount');
+    const filterStatus = document.getElementById('filterStatus');
+    const tableBody = document.getElementById('table-body');
+    const exportExcel = document.getElementById('exportExcel');
+    
+    if (!moisFilter || !anneeFilter || !employeSearch || !tableBody) {
+        console.error('❌ Éléments de recherche non trouvés');
+        return;
+    }
+    
+    console.log('✅ Éléments de recherche trouvés, activation du filtrage temps réel');
+    
+    // Fonction de filtrage en temps réel
+    function applyRealTimeFilter() {
+        const moisSelected = moisFilter.value;
+        const anneeSelected = anneeFilter.value;
+        const employeSearchTerm = employeSearch.value.toLowerCase().trim();
+        
+        const rows = tableBody.querySelectorAll('tr');
+        let visibleRows = 0;
+        let activeFilters = [];
+        
+        console.log('🔍 Filtrage temps réel:', {
+            mois: moisSelected || 'Tous',
+            annee: anneeSelected || 'Toutes',
+            employe: employeSearchTerm || 'Tous'
+        });
+        
+        // Construire le statut des filtres
+        if (moisSelected) activeFilters.push(`Mois: ${getMonthName(moisSelected)}`);
+        if (anneeSelected) activeFilters.push(`Année: ${anneeSelected}`);
+        if (employeSearchTerm) activeFilters.push(`Employé: "${employeSearchTerm}"`);
+        
+        rows.forEach(row => {
+            let shouldShow = true;
+            const cells = row.querySelectorAll('td');
+            
+            if (cells.length === 0) return; // Skip empty rows
+            
+            // Extraire les données de la ligne
+            const matricule = (cells[0]?.textContent || '').toLowerCase();
+            const profession = (cells[1]?.textContent || '').toLowerCase();
+            const prenom = (cells[2]?.textContent || '').toLowerCase();
+            const nom = (cells[3]?.textContent || '').toLowerCase();
+            const rowText = row.textContent.toLowerCase();
+            
+            // Filtrage par mois (recherche dans le contenu de la ligne)
+            if (moisSelected && shouldShow) {
+                const monthName = getMonthName(moisSelected).toLowerCase();
+                const monthNumber = moisSelected.padStart(2, '0');
+                if (!rowText.includes(monthName) && !rowText.includes(`/${monthNumber}/`) && !rowText.includes(`-${monthNumber}-`)) {
+                    shouldShow = false;
+                }
+            }
+            
+            // Filtrage par année
+            if (anneeSelected && shouldShow) {
+                if (!rowText.includes(anneeSelected)) {
+                    shouldShow = false;
+                }
+            }
+            
+            // Filtrage par employé (matricule, nom, prénom)
+            if (employeSearchTerm && shouldShow) {
+                if (!matricule.includes(employeSearchTerm) && 
+                    !nom.includes(employeSearchTerm) && 
+                    !prenom.includes(employeSearchTerm) &&
+                    !profession.includes(employeSearchTerm)) {
+                    shouldShow = false;
+                }
+            }
+            
+            // Appliquer la visibilité
+            if (shouldShow) {
+                row.style.display = '';
+                row.classList.add('search-match');
+                visibleRows++;
+            } else {
+                row.style.display = 'none';
+                row.classList.remove('search-match');
+            }
+        });
+        
+        // Mettre à jour les compteurs
+        updateCounters(visibleRows, activeFilters);
+        
+        console.log(`✅ Filtrage terminé: ${visibleRows} ligne(s) visible(s)`);
+    }
+    
+    // Fonction pour obtenir le nom du mois
+    function getMonthName(monthNumber) {
+        const months = {
+            '1': 'Janvier', '2': 'Février', '3': 'Mars', '4': 'Avril',
+            '5': 'Mai', '6': 'Juin', '7': 'Juillet', '8': 'Août',
+            '9': 'Septembre', '10': 'Octobre', '11': 'Novembre', '12': 'Décembre'
+        };
+        return months[monthNumber] || monthNumber;
+    }
+    
+    // Mettre à jour les compteurs et statut
+    function updateCounters(visibleCount, activeFilters) {
+        if (resultCount) {
+            resultCount.innerHTML = `<i class="fas fa-table"></i> ${visibleCount} ligne(s)`;
+        }
+        
+        if (filterStatus) {
+            if (activeFilters.length > 0) {
+                filterStatus.innerHTML = `<i class="fas fa-filter"></i> ${activeFilters.join(' | ')}`;
+                filterStatus.className = 'badge bg-warning fs-6';
+            } else {
+                filterStatus.innerHTML = '<i class="fas fa-filter"></i> Aucun filtre actif';
+                filterStatus.className = 'badge bg-info fs-6';
+            }
+        }
+    }
+    
+    // Fonction pour effacer tous les filtres
+    function clearAllFilters() {
+        console.log('🧹 Effacement de tous les filtres');
+        moisFilter.value = '';
+        anneeFilter.value = '';
+        employeSearch.value = '';
+        applyRealTimeFilter();
+    }
+    
+    // Export Excel
+    function exportToExcel() {
+        console.log('📊 Export Excel en cours...');
+        
+        try {
+            const visibleRows = Array.from(tableBody.querySelectorAll('tr')).filter(row => 
+                row.style.display !== 'none'
+            );
+            
+            if (visibleRows.length === 0) {
+                alert('❌ Aucune donnée à exporter');
+                return;
+            }
+            
+            // Préparer les données
+            const data = [];
+            const headers = [
+                'Matricule', 'Profession', 'Prénom', 'Nom', 'Salaire de Base',
+                'Total Jours', 'Jours de présence', 'Absent', 'J Repos', 'Maladies',
+                'M.Payer', 'Férié', 'Sundays', 'H Supp', 'Mt Supp', 'Prime Discipline',
+                'Cherté Vie', 'Transport', 'Logement', 'Salaire Brut', 'CNSS (5%)',
+                'RTS', 'Avance', 'Sanction', 'Net à Payer'
+            ];
+            data.push(headers);
+            
+            visibleRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const rowData = [];
+                for (let i = 0; i < cells.length - 1; i++) { // -1 pour exclure la colonne Actions
+                    rowData.push(cells[i]?.textContent?.trim() || '');
+                }
+                data.push(rowData);
+            });
+            
+            // Créer le fichier Excel
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Auto-ajuster la largeur des colonnes
+            const colWidths = headers.map(() => ({ wch: 15 }));
+            ws['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Paies Employés');
+            
+            // Télécharger le fichier
+            const fileName = `paies_employes_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            console.log('✅ Export Excel réussi:', fileName);
+            
+            // Notification de succès
+            showNotification('✅ Export Excel réussi !', 'success');
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'export Excel:', error);
+            alert('❌ Erreur lors de l\'export Excel. Vérifiez la console.');
+        }
+    }
+    
+    // Fonction de notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+    
+    // Event listeners pour la recherche temps réel
+    moisFilter.addEventListener('change', applyRealTimeFilter);
+    anneeFilter.addEventListener('change', applyRealTimeFilter);
+    employeSearch.addEventListener('input', applyRealTimeFilter); // 'input' pour temps réel
+    clearFilters.addEventListener('click', clearAllFilters);
+    exportExcel.addEventListener('click', exportToExcel);
+    
+    // Initialisation
+    applyRealTimeFilter();
+    
+    console.log('🎉 Recherche dynamique temps réel activée !');
+});
+
+// Script de synchronisation inter-modules
+const syncScript = document.createElement('script');
+syncScript.src = "{% static 'fleet_app/js/synchronisation_modules.js' %}";
+document.head.appendChild(syncScript);
+
+syncScript.onload = function() {
+    // Initialiser la synchronisation pour le module paies
+    const syncSystem = SynchronisationModules.getInstance();
+    
+    // Écouter les événements de synchronisation
+    window.addEventListener('moduleDataReload', function(e) {
+        if (e.detail.module === 'paies') {
+            console.log('🔄 Rechargement des données paies pour', e.detail.month + '/' + e.detail.year);
+            // Recharger les données du tableau
+            reloadPaiesData(e.detail.month, e.detail.year);
+        }
+    });
+    
+    // Fonction pour recharger les données
+    function reloadPaiesData(month, year) {
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('mois', month);
+        currentUrl.searchParams.set('annee', year);
+        
+        // Recharger la page avec les nouveaux paramètres
+        window.location.href = currentUrl.toString();
+    }
+};
+</script>
+
+<style>
+/* Styles pour la recherche dynamique */
+.search-match {
+    background-color: rgba(40, 167, 69, 0.1) !important;
+    border-left: 3px solid #28a745 !important;
+    transition: all 0.3s ease;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Animation pour les badges */
+.badge {
+    transition: all 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .d-flex.gap-3 {
+        flex-direction: column;
+        gap: 1rem !important;
+    }
+    
+    .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% endblock %}

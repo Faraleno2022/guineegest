@@ -1,0 +1,71 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}{{ title }} | Gestion de Parc Automobile{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Confirmation de suppression</h5>
+                </div>
+                <div class="card-body">
+                    <p class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Êtes-vous sûr de vouloir supprimer cette distance parcourue du 
+                        <strong>{{ distance.date_debut|date:"d/m/Y" }}</strong> au
+                        <strong>{{ distance.date_fin|date:"d/m/Y" }}</strong> 
+                        pour le véhicule 
+                        <strong>{{ distance.vehicule.marque }} {{ distance.vehicule.modele }} ({{ distance.vehicule.immatriculation }})</strong> ?
+                    </p>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Détails de la distance parcourue</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Véhicule:</th>
+                                    <td>{{ distance.vehicule.marque }} {{ distance.vehicule.modele }} ({{ distance.vehicule.immatriculation }})</td>
+                                </tr>
+                                <tr>
+                                    <th>Période:</th>
+                                    <td>Du {{ distance.date_debut|date:"d/m/Y" }} au {{ distance.date_fin|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Kilométrage de début:</th>
+                                    <td>{{ distance.km_debut }} km</td>
+                                </tr>
+                                <tr>
+                                    <th>Kilométrage de fin:</th>
+                                    <td>{{ distance.km_fin }} km</td>
+                                </tr>
+                                <tr>
+                                    <th>Distance parcourue:</th>
+                                    <td>{{ distance.distance_parcourue }} km</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'fleet_app:kpi_distance' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

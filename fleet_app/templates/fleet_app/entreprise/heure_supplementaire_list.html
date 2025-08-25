@@ -1,0 +1,318 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Heures Supplémentaires{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'fleet_app/css/synchronisation.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Sélecteur de période global pour synchronisation -->
+    {% include 'fleet_app/components/period_selector.html' %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Heures Supplémentaires</h5>
+            <div>
+                <a href="{% url 'fleet_app:heure_supplementaire_add' %}" class="btn btn-primary btn-sm me-2">
+                    <i class="fas fa-plus me-1"></i>Ajouter des heures supplémentaires
+                </a>
+                <a href="{% url 'fleet_app:heure_supplementaire_export' %}" class="btn btn-success btn-sm">
+                    <i class="fas fa-file-excel me-1"></i>Exporter CSV
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Zone de filtrage simple -->
+            <div class="mb-4">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="filter-matricule">Filtrer par Matricule:</label>
+                            <input type="text" class="form-control" id="filter-matricule" placeholder="Entrez un matricule...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="filter-nom">Filtrer par Nom:</label>
+                            <input type="text" class="form-control" id="filter-nom" placeholder="Entrez un nom...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="filter-fonction">Filtrer par Fonction:</label>
+                            <input type="text" class="form-control" id="filter-fonction" placeholder="Entrez une fonction...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button type="button" class="btn btn-secondary form-control" id="clear-filters">
+                                <i class="fas fa-times"></i> Effacer les filtres
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau des heures supplémentaires -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Matricule</th>
+                            <th>Prénom</th>
+                            <th>Nom</th>
+                            <th>Fonction</th>
+                            <th>Date</th>
+                            <th>Début</th>
+                            <th>Fin</th>
+                            <th>Durée (h)</th>
+                            <th>Taux Horaire (GNF)</th>
+                            <th>Total (GNF)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for heure in heures_sup %}
+                        <tr>
+                            <td>{{ heure.employe.matricule }}</td>
+                            <td>{{ heure.employe.prenom }}</td>
+                            <td>{{ heure.employe.nom }}</td>
+                            <td>{{ heure.employe.fonction|default:'-' }}</td>
+                            <td>{{ heure.date|date:"d/m/Y" }}</td>
+                            <td>{{ heure.heure_debut|default:'-' }}</td>
+                            <td>{{ heure.heure_fin|default:'-' }}</td>
+                            
+                            <!-- Durée calculée -->
+                            <td>
+                                {% if heure.duree_calculee %}
+                                {{ heure.duree_calculee|floatformat:2 }}
+                                {% else %}
+                                {{ heure.duree|floatformat:2 }}
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Taux horaire avec possibilité de modification -->
+                            <td>
+                                <form method="post" action="{% url 'fleet_app:heure_supplementaire_list' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="definir_montant">
+                                    <input type="hidden" name="heure_id" value="{{ heure.id }}">
+                                    <div class="input-group input-group-sm" style="max-width: 120px;">
+                                        <input type="number" 
+                                               name="montant_manuel" 
+                                               class="form-control form-control-sm" 
+                                               value="{% if heure.get_montant_pour_saisie %}{{ heure.get_montant_pour_saisie|floatformat:0 }}{% endif %}" 
+                                               placeholder="{{ heure.get_montant_supp|floatformat:0 }}" 
+                                               step="1" 
+                                               min="0">
+                                        <button type="submit" class="btn btn-sm btn-primary" title="Modifier">
+                                            <i class="fas fa-save"></i>
+                                        </button>
+                                    </div>
+                                    {% if not heure.taux_horaire or heure.taux_horaire == 0 %}
+                                        <small class="text-muted d-block">Taux global</small>
+                                    {% else %}
+                                        <small class="text-success d-block">Personnalisé</small>
+                                    {% endif %}
+                                </form>
+                            </td>
+                            
+                            <!-- Total calculé -->
+                            <td class="text-nowrap">
+                                <strong class="text-primary">
+                                    {{ heure.get_total_calcule|floatformat:0|intcomma }}
+                                </strong>
+                            </td>
+                            
+                            <!-- Actions -->
+                            <td>
+                                <a href="{% url 'fleet_app:heure_supplementaire_edit' heure.id %}" class="btn btn-warning btn-sm" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="post" action="{% url 'fleet_app:heure_supplementaire_list' %}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet enregistrement?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="heure_id" value="{{ heure.id }}">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center">Aucune heure supplémentaire enregistrée</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if heures_sup.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if heures_sup.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ heures_sup.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                    {% endif %}
+
+                    {% for i in heures_sup.paginator.page_range %}
+                    {% if heures_sup.number == i %}
+                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if heures_sup.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ heures_sup.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour modification rapide -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Modifier Heure Supplémentaire</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="heure_id" id="edit-heure-id">
+                    
+                    <div class="form-group">
+                        <label for="edit-date">Date:</label>
+                        <input type="date" class="form-control" name="date" id="edit-date" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit-heure-debut">Heure début:</label>
+                                <input type="time" class="form-control" name="heure_debut" id="edit-heure-debut">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit-heure-fin">Heure fin:</label>
+                                <input type="time" class="form-control" name="heure_fin" id="edit-heure-fin">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-duree">Durée (heures):</label>
+                        <input type="number" class="form-control" name="duree" id="edit-duree" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-taux-horaire">Taux horaire (GNF):</label>
+                        <input type="number" class="form-control" name="taux_horaire" id="edit-taux-horaire" step="1" min="0">
+                        <small class="form-text text-muted">Laisser vide pour utiliser le taux global configuré</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Filtrage dynamique
+    $('#filter-matricule, #filter-nom, #filter-fonction').on('keyup', function() {
+        var matricule = $('#filter-matricule').val().toLowerCase();
+        var nom = $('#filter-nom').val().toLowerCase();
+        var fonction = $('#filter-fonction').val().toLowerCase();
+        
+        $('#dataTable tbody tr').each(function() {
+            var row = $(this);
+            var rowMatricule = row.find('td:eq(0)').text().toLowerCase();
+            var rowPrenom = row.find('td:eq(1)').text().toLowerCase();
+            var rowNom = row.find('td:eq(2)').text().toLowerCase();
+            var rowFonction = row.find('td:eq(3)').text().toLowerCase();
+            
+            var showRow = true;
+            
+            if (matricule && !rowMatricule.includes(matricule)) {
+                showRow = false;
+            }
+            if (nom && !(rowPrenom.includes(nom) || rowNom.includes(nom))) {
+                showRow = false;
+            }
+            if (fonction && !rowFonction.includes(fonction)) {
+                showRow = false;
+            }
+            
+            if (showRow) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
+    });
+    
+    // Effacer les filtres
+    $('#clear-filters').on('click', function() {
+        $('#filter-matricule, #filter-nom, #filter-fonction').val('');
+        $('#dataTable tbody tr').show();
+    });
+    
+    // Modal d'édition
+    $('.edit-heure').on('click', function() {
+        var id = $(this).data('id');
+        var date = $(this).data('date');
+        var duree = $(this).data('nombre-heures');
+        var tauxHoraire = $(this).data('taux-horaire');
+        var heureDebut = $(this).data('heure-debut');
+        var heureFin = $(this).data('heure-fin');
+        
+        $('#edit-heure-id').val(id);
+        $('#edit-date').val(date);
+        $('#edit-duree').val(duree);
+        $('#edit-taux-horaire').val(tauxHoraire);
+        $('#edit-heure-debut').val(heureDebut);
+        $('#edit-heure-fin').val(heureFin);
+        
+        $('#editModal').modal('show');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ titre }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:dashboard' %}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fleet_app:commande_list' %}">Commandes</a></li>
+        <li class="breadcrumb-item active">Supprimer {{ commande.numero }}</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            Confirmation de suppression
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">Attention !</h5>
+                <p>Vous êtes sur le point de supprimer définitivement la commande <strong>{{ commande.numero }}</strong>.</p>
+                <p>Cette action supprimera également toutes les lignes de commande associées.</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Informations de la commande</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%">Numéro</th>
+                            <td>{{ commande.numero }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date de création</th>
+                            <td>{{ commande.date_creation|date:"d/m/Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Fournisseur</th>
+                            <td>{{ commande.fournisseur }}</td>
+                        </tr>
+                        <tr>
+                            <th>Statut</th>
+                            <td>
+                                {% if commande.statut == 'Brouillon' %}
+                                    <span class="badge bg-secondary">{{ commande.statut }}</span>
+                                {% elif commande.statut == 'En attente' %}
+                                    <span class="badge bg-warning">{{ commande.statut }}</span>
+                                {% elif commande.statut == 'Confirmée' %}
+                                    <span class="badge bg-primary">{{ commande.statut }}</span>
+                                {% elif commande.statut == 'Livrée' %}
+                                    <span class="badge bg-success">{{ commande.statut }}</span>
+                                {% elif commande.statut == 'Annulée' %}
+                                    <span class="badge bg-danger">{{ commande.statut }}</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ commande.statut }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Montants</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%">Montant total</th>
+                            <td>{{ commande.montant_total|floatformat:0 }} GNF</td>
+                        </tr>
+                        <tr>
+                            <th>Remise ({{ commande.remise }}%)</th>
+                            <td>{{ commande.montant_remise|floatformat:0 }} GNF</td>
+                        </tr>
+                        <tr>
+                            <th>Montant final</th>
+                            <td><strong>{{ commande.montant_final|floatformat:0 }} GNF</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="alert alert-danger">
+                <p><strong>Cette action est irréversible.</strong> Toutes les données associées à cette commande seront définitivement supprimées.</p>
+                <p>Êtes-vous absolument sûr de vouloir supprimer cette commande ?</p>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'fleet_app:commande_detail' pk=commande.numero %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Annuler
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Confirmer la suppression
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
