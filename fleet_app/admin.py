@@ -2,6 +2,18 @@ from django.contrib import admin
 from .models import *
 from .models_alertes import Alerte
 from .models_accounts import Profil, Entreprise, PersonnePhysique
+from .models_entreprise import (
+    Employe,
+    PaieEmploye,
+    PresenceJournaliere,
+    SalaireMensuel,
+    HeureSupplementaire,
+    ConfigurationMontantStatut,
+    ConfigurationMontantEmploye,
+    ConfigurationSalaire,
+    ConfigurationChargesSociales,
+    ConfigurationHeureSupplementaire,
+)
 
 # Enregistrement des modèles dans l'administration Django
 
@@ -106,3 +118,108 @@ class PersonnePhysiqueAdmin(admin.ModelAdmin):
     list_display = ('nom_prenom', 'date_naissance')
     search_fields = ('nom_prenom',)
     date_hierarchy = 'date_naissance'
+
+# ==========================
+# Administration Entreprise
+# ==========================
+
+class UserOwnedAdminMixin:
+    """Restreint l'accès aux objets de l'utilisateur et renseigne le champ user à l'enregistrement."""
+    user_field_name = 'user'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Si le modèle a un champ user, filtrer par request.user
+        if hasattr(self.model, self.user_field_name):
+            return qs.filter(**{self.user_field_name: request.user})
+        return qs
+
+    def save_model(self, request, obj, form, change):
+        # Renseigner automatiquement le user s'il existe sur le modèle
+        if hasattr(obj, self.user_field_name) and getattr(obj, self.user_field_name) is None:
+            setattr(obj, self.user_field_name, request.user)
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(Employe)
+class EmployeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = (
+        'matricule', 'prenom', 'nom', 'fonction', 'salaire_base',
+        'montant_heure_supp_jour_ouvrable', 'montant_heure_supp_dimanche_ferie',
+    )
+    list_filter = ('fonction',)
+    search_fields = ('matricule', 'prenom', 'nom', 'fonction')
+
+
+@admin.register(PaieEmploye)
+class PaieEmployeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = (
+        'employe', 'mois', 'annee', 'salaire_brut', 'salaire_net_a_payer',
+        'heures_supplementaires', 'montant_heures_supplementaires',
+    )
+    list_filter = ('annee', 'mois')
+    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
+    date_hierarchy = None
+
+
+@admin.register(HeureSupplementaire)
+class HeureSupplementaireAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('employe', 'date', 'type_jour', 'duree', 'taux_horaire', 'total_a_payer')
+    list_filter = ('type_jour',)
+    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
+    date_hierarchy = 'date'
+
+
+@admin.register(ConfigurationMontantStatut)
+class ConfigurationMontantStatutAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('statut', 'montant')
+    list_filter = ('statut',)
+    search_fields = ('statut',)
+
+
+@admin.register(ConfigurationMontantEmploye)
+class ConfigurationMontantEmployeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('employe', 'montant')
+    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
+
+
+@admin.register(ConfigurationSalaire)
+class ConfigurationSalaireAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('employe', 'salaire_base')
+    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
+
+
+@admin.register(ConfigurationChargesSociales)
+class ConfigurationChargesSocialesAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('nom', 'taux', 'actif')
+    list_filter = ('actif',)
+    search_fields = ('nom',)
+
+
+@admin.register(ConfigurationHeureSupplementaire)
+class ConfigurationHeureSupplementaireAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    fieldsets = (
+        ('Base', {'fields': ('salaire_mensuel_base', 'heures_normales_mois')}),
+        ('Jour ouvrable', {'fields': ('taux_jour_ouvrable', 'montant_jour_ouvrable')}),
+        ('Dimanche / Férié', {'fields': ('taux_dimanche_ferie', 'montant_dimanche_ferie')}),
+    )
+    list_display = (
+        'salaire_mensuel_base', 'heures_normales_mois',
+        'taux_jour_ouvrable', 'montant_jour_ouvrable',
+        'taux_dimanche_ferie', 'montant_dimanche_ferie',
+    )
+
+
+@admin.register(PresenceJournaliere)
+class PresenceJournaliereAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('employe', 'date', 'present', 'statut')
+    list_filter = ('present', 'statut')
+    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
+    date_hierarchy = 'date'
+
+
+@admin.register(SalaireMensuel)
+class SalaireMensuelAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('employe', 'mois', 'annee', 'net_a_payer', 'brut')
+    list_filter = ('annee', 'mois')
+    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
