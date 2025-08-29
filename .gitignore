@@ -27,7 +27,7 @@ Thumbs.db
 db.sqlite3
 django_fleet.db
 parc_auto.db
-media/
+media/*
 staticfiles/
 static_root/
 
@@ -53,3 +53,9 @@ documents/
 *.pdf
 *.xlsx
 *.xls
+
+# --- Allow tracking specific media subfolders ---
+# Keep media ignored by default, but allow media/images to be committed
+!media/.gitkeep
+!media/images/
+!media/images/**
