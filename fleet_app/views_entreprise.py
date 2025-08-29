@@ -1,5 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -197,22 +199,108 @@ def configuration_montant_employe_form(request):
     # Retourner une page temporaire ou rediriger vers une autre vue
     return render(request, 'fleet_app/entreprise/configuration_temp.html', context)
 
+@login_required
+@require_POST
 def configuration_montant_employe_ajax(request):
-    """Vue AJAX pour la configuration des montants employés"""
+    """Vue AJAX pour la configuration des montants employés
+    Contrat d'entrée (POST):
+      - employe_id: int (obligatoire)
+      - type_montant: str parmi
+          ['salaire_base','salaire_journalier','avance','hs_ouvrable','hs_dimanche_ferie','taux_horaire_specifique']
+      - valeur: Decimal (>= 0, <= 99_999_999.99)
+      - date_effet: str (YYYY-MM-DD) optionnel (accepté mais non encore historisé)
+    Retour JSON:
+      {success, message, updated_field, previous_value, new_value, employe: {id, matricule, nom, prenom}, date_effet}
+    """
     from django.http import JsonResponse
-    from django.contrib.auth.decorators import login_required
+    from django.utils.dateparse import parse_date
     
-    # Vue temporaire pour éviter l'AttributeError
-    # TODO: Implémenter la logique complète AJAX de configuration des montants employés
-    if request.method == 'POST':
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+    
+    # Authentification requise
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentification requise'}, status=401)
+    
+    employe_id = request.POST.get('employe_id')
+    type_montant = request.POST.get('type_montant')
+    valeur_raw = request.POST.get('valeur')
+    date_effet_raw = request.POST.get('date_effet')
+    
+    # Champs obligatoires
+    if not employe_id or not type_montant or valeur_raw is None:
         return JsonResponse({
-            'success': True,
-            'message': 'Configuration AJAX des montants employés - En développement'
-        })
+            'success': False,
+            'message': "Champs requis manquants: 'employe_id', 'type_montant', 'valeur'"
+        }, status=400)
+    
+    # Mapping des champs autorisés -> attribut Employe
+    field_map = {
+        'salaire_base': 'salaire_base',
+        'salaire_journalier': 'salaire_journalier',
+        'avance': 'avances',
+        'hs_ouvrable': 'montant_heure_supp_jour_ouvrable',
+        'hs_dimanche_ferie': 'montant_heure_supp_dimanche_ferie',
+        'taux_horaire_specifique': 'taux_horaire_specifique',
+    }
+    
+    if type_montant not in field_map:
+        return JsonResponse({'success': False, 'message': 'type_montant invalide'}, status=400)
+    
+    # Parse employe_id
+    try:
+        employe_id_int = int(employe_id)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'message': "employe_id invalide"}, status=400)
+    
+    # Vérifier l'existence et l'appartenance de l'employé
+    try:
+        employe = get_object_or_404(Employe, id=employe_id_int, user=request.user)
+    except Exception:
+        return JsonResponse({'success': False, 'message': "Employé introuvable"}, status=404)
+    
+    # Validation de la valeur
+    try:
+        valeur_dec = Decimal(str(valeur_raw))
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'success': False, 'message': 'Format de valeur invalide'}, status=400)
+    if valeur_dec < 0:
+        return JsonResponse({'success': False, 'message': 'La valeur doit être positive'}, status=400)
+    # borne haute générique selon max_digits=10, decimal_places=2
+    max_dec = Decimal('99999999.99')
+    if valeur_dec > max_dec:
+        return JsonResponse({'success': False, 'message': f'La valeur dépasse la limite {max_dec}'}, status=400)
+    
+    # date_effet optionnelle (acceptée mais pas encore historisée)
+    date_effet = None
+    if date_effet_raw:
+        date_effet = parse_date(date_effet_raw)
+        if date_effet is None:
+            return JsonResponse({'success': False, 'message': 'date_effet invalide (YYYY-MM-DD)'}, status=400)
+    
+    # Mise à jour de l'attribut ciblé
+    attr = field_map[type_montant]
+    previous_value = getattr(employe, attr, None)
+    setattr(employe, attr, valeur_dec)
+    
+    try:
+        employe.save()
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Erreur lors de la sauvegarde: {str(e)}'}, status=500)
     
     return JsonResponse({
-        'success': False,
-        'message': 'Méthode non autorisée'
+        'success': True,
+        'message': 'Montant mis à jour avec succès',
+        'updated_field': attr,
+        'previous_value': f"{previous_value}" if previous_value is not None else None,
+        'new_value': f"{valeur_dec}",
+        'employe': {
+            'id': employe.id,
+            'matricule': employe.matricule,
+            'prenom': employe.prenom,
+            'nom': employe.nom,
+        },
+        'date_effet': date_effet.isoformat() if date_effet else None,
     })
 
 def configuration_montant_statut(request):

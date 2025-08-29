@@ -509,21 +509,20 @@ def paie_employe_edit(request, pk):
             'montant_ferie': config_employe.montant_ferie
         }
     except:
-        # Utiliser la configuration globale si pas de config individuelle
-        from fleet_app.models_entreprise import ConfigurationMontantStatut
-        config_global = ConfigurationMontantStatut.get_or_create_for_user(request.user)
+        # Aucune configuration individuelle trouvée: utiliser des valeurs par défaut sûres
+        # Ces valeurs peuvent être ajustées dans une future configuration globale par utilisateur
         montants = {
-            'montant_am': config_global.montant_am,
-            'montant_pm': config_global.montant_pm,
-            'montant_journee': config_global.montant_journee,
-            'montant_dimanche': config_global.montant_dim_journee,
-            'montant_absent': config_global.montant_absent,
-            'montant_maladie': config_global.montant_maladie,
-            'montant_maladie_payee': config_global.montant_maladie_payee,
-            'montant_repos': config_global.montant_repos,
-            'montant_conge': config_global.montant_conge,
-            'montant_formation': config_global.montant_formation,
-            'montant_ferie': config_global.montant_ferie
+            'montant_am': Decimal('50000'),
+            'montant_pm': Decimal('50000'),
+            'montant_journee': Decimal('100000'),
+            'montant_dimanche': Decimal('150000'),
+            'montant_absent': Decimal('0'),
+            'montant_maladie': Decimal('0'),
+            'montant_maladie_payee': Decimal('100000'),
+            'montant_repos': Decimal('0'),
+            'montant_conge': Decimal('100000'),
+            'montant_formation': Decimal('100000'),
+            'montant_ferie': Decimal('150000'),
         }
     
     if request.method == 'POST':
