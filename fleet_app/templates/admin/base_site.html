@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+
+{#
+  Ajoute un bouton "Créer un utilisateur" dans la barre d'admin.
+  Visible uniquement pour les superusers (peut être restreint à un nom d'utilisateur spécifique si souhaité).
+#}
+
+{% block nav-global %}
+  {{ block.super }}
+  {% if request.user.is_authenticated and request.user.username == 'LENO' %}
+    <a href="{% url 'admin:auth_user_add' %}" class="button" style="margin-left: 1rem;">
+      Créer un utilisateur
+    </a>
+  {% endif %}
+{% endblock %}
