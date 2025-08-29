@@ -37,10 +37,24 @@ def home(request):
     
     from django.conf import settings
     
+    # Lister les images du dossier media/images pour l'accueil
+    media_images = []
+    try:
+        images_dir = settings.MEDIA_ROOT / 'images'
+        if images_dir.exists():
+            files = [p for p in images_dir.iterdir() if p.is_file() and p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp', '.gif')]
+            files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            files = files[:20]
+            media_images = [f"{settings.MEDIA_URL}images/{p.name}" for p in files]
+    except Exception:
+        # On ignore silencieusement en cas de problème d'accès au système de fichiers
+        media_images = []
+    
     context = {
         'titre': 'Accueil',
         'description': 'Bienvenue dans le système de gestion du parc automobile',
-        'MEDIA_URL': settings.MEDIA_URL
+        'MEDIA_URL': settings.MEDIA_URL,
+        'media_images': media_images,
     }
     return render(request, 'fleet_app/home.html', context)
 
