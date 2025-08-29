@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'django_bootstrap5',
     'widget_tweaks',
+    'sslserver',
 ]
 
 MIDDLEWARE = [
