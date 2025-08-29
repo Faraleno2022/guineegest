@@ -32,7 +32,13 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
 # Comma-separated list in env, e.g.: "127.0.0.1,localhost"
 _hosts = os.getenv('DJANGO_ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()] or []
+# Provide safe defaults for local dev and PythonAnywhere deployment
+_default_hosts = [
+    'localhost',
+    '127.0.0.1',
+    'gestionnairedeparc.pythonanywhere.com',
+]
+ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()] or _default_hosts
 
 
 # Application definition

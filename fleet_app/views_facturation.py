@@ -17,7 +17,12 @@ from .forms_inventaire import FactureForm, LigneFactureForm, RechercheFactureFor
 import datetime
 import csv
 import io
-from xhtml2pdf import pisa
+# Rendre xhtml2pdf (pisa) optionnel
+try:
+    from xhtml2pdf import pisa
+    PISA_AVAILABLE = True
+except ImportError:
+    PISA_AVAILABLE = False
 
 # Rendre xlwt optionnel
 try:
@@ -336,6 +341,11 @@ def export_facture_pdf(request, pk):
     facture = get_object_or_404(Facture, numero=pk)
     lignes = facture.lignes.all()
     
+    # Vérifier la disponibilité de xhtml2pdf (pisa)
+    if not PISA_AVAILABLE:
+        messages.error(request, "La génération de PDF n'est pas disponible (xhtml2pdf non installé).")
+        return redirect('facture_detail', facture.numero)
+
     try:
         # Préparer le contexte pour le template
         context = {

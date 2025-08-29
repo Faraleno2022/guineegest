@@ -8,3 +8,7 @@ tkcalendar==1.6.1
 matplotlib==3.7.1
 pandas==2.0.1
 pillow==9.5.0
+# PDF generation dependencies for views_facturation (pisa)
+# Pin to known compatible pair to avoid ShowBoundaryValue import error
+xhtml2pdf==0.2.10
+reportlab==3.5.67

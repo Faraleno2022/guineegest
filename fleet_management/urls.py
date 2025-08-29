@@ -19,12 +19,15 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.views.generic.base import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('fleet_app.urls')),
     path('login/', auth_views.LoginView.as_view(template_name='fleet_app/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='fleet_app/logout.html'), name='logout'),
+    # Favicon to reduce 404 noise
+    path('favicon.ico', RedirectView.as_view(url=f"{settings.STATIC_URL}favicon.ico", permanent=False)),
 ]
 
 # Ajout des URLs pour les fichiers média en mode développement
