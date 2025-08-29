@@ -30,15 +30,12 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'insecure-dev-key-change-me')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
-# Comma-separated list in env, e.g.: "127.0.0.1,localhost"
-_hosts = os.getenv('DJANGO_ALLOWED_HOSTS', '')
-# Provide safe defaults for local dev and PythonAnywhere deployment
-_default_hosts = [
-    'localhost',
-    '127.0.0.1',
-    'gestionnairedeparc.pythonanywhere.com',
+# Hosts autorisés (prod + local) — configuration statique
+ALLOWED_HOSTS = [
+    "gestionnairedeparc.pythonanywhere.com",  # site en ligne
+    "127.0.0.1",                              # accès local
+    "localhost",                              # accès local
 ]
-ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()] or _default_hosts
 
 
 # Application definition
