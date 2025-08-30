@@ -550,7 +550,6 @@
                             <tr class="total-row"><td><strong>SALAIRE BRUT</strong></td><td class="amount"><strong>{{ salaire_brut|floatformat:0 }} GNF</strong></td></tr>
                             <tr><td>CNSS (5%)</td><td class="amount">{{ cnss_employe|floatformat:0 }} GNF</td></tr>
                             {% if employe.avances > 0 %}<tr><td>Avances</td><td class="amount">{{ employe.avances|floatformat:0 }} GNF</td></tr>{% endif %}
-                            {% if employe.sanctions > 0 %}<tr><td>Sanctions</td><td class="amount">{{ employe.sanctions|floatformat:0 }} GNF</td></tr>{% endif %}
                             <tr style="background: #dc3545; color: white;"><td><strong>TOTAL DÉDUCTIONS</strong></td><td class="amount"><strong>{{ total_deductions|floatformat:0 }} GNF</strong></td></tr>
                         </tbody>
                     </table>

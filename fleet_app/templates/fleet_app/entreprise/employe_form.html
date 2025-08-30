@@ -298,6 +298,107 @@
                     </div>
                 </div>
                 
+                <!-- SECTION 3: CHARGES SOCIALES GUINÉENNES -->
+                <div class="col-12">
+                    <div class="charges-sociales-card">
+                        <h6 class="mb-3">
+                            <i class="fas fa-calculator me-2"></i>Charges Sociales Guinéennes
+                        </h6>
+                        <p class="mb-3">Configurez les charges sociales à appliquer pour cet employé selon la réglementation guinéenne.</p>
+                        
+                        <div class="row">
+                            <!-- CNSS -->
+                            <div class="col-lg-4 mb-3">
+                                <div class="form-check mb-2">
+                                    {{ form.appliquer_cnss }}
+                                    <label class="form-check-label" for="{{ form.appliquer_cnss.id_for_label }}">
+                                        <strong>Appliquer CNSS</strong>
+                                    </label>
+                                </div>
+                                <small class="form-text">Caisse Nationale de Sécurité Sociale (5% salarié + 18% employeur)</small>
+                                
+                                <div class="bareme-info">
+                                    <strong>Barème CNSS Standard :</strong><br>
+                                    • Salarié : 5% du salaire brut<br>
+                                    • Employeur : 18% du salaire brut<br>
+                                    <small>Exemple : Salaire 2M GNF → CNSS salarié = 100K, CNSS employeur = 360K</small>
+                                </div>
+                                
+                                <div class="taux-custom">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label class="form-label text-dark">Taux salarié (%)</label>
+                                            {{ form.taux_cnss_salarie_custom }}
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label text-dark">Taux employeur (%)</label>
+                                            {{ form.taux_cnss_employeur_custom }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- RTS -->
+                            <div class="col-lg-4 mb-3">
+                                <div class="form-check mb-2">
+                                    {{ form.appliquer_rts }}
+                                    <label class="form-check-label" for="{{ form.appliquer_rts.id_for_label }}">
+                                        <strong>Appliquer RTS</strong>
+                                    </label>
+                                </div>
+                                <small class="form-text">Retenue sur Traitement et Salaire (barème progressif)</small>
+                                
+                                <div class="bareme-info">
+                                    <strong>Barème RTS Progressif :</strong><br>
+                                    • 0 à 1M GNF : 0%<br>
+                                    • 1M à 1.5M GNF : 10%<br>
+                                    • 1.5M à 2M GNF : 15%<br>
+                                    • 2M à 4M GNF : 20%<br>
+                                    • 4M à 6M GNF : 25%<br>
+                                    • Plus de 6M GNF : 35%<br>
+                                    <small>Calculé après déduction CNSS salarié</small>
+                                </div>
+                            </div>
+                            
+                            <!-- VF -->
+                            <div class="col-lg-4 mb-3">
+                                <div class="form-check mb-2">
+                                    {{ form.appliquer_vf }}
+                                    <label class="form-check-label" for="{{ form.appliquer_vf.id_for_label }}">
+                                        <strong>Appliquer VF</strong>
+                                    </label>
+                                </div>
+                                <small class="form-text">Versement Forfaitaire (7-10% du chiffre d'affaires)</small>
+                                
+                                <div class="bareme-info">
+                                    <strong>Taux VF :</strong><br>
+                                    • Entre 7% et 10% du chiffre d'affaires<br>
+                                    • Pour petites entreprises ou travailleurs indépendants
+                                </div>
+                                
+                                <div class="taux-custom">
+                                    <label class="form-label text-dark">Taux VF personnalisé (%)</label>
+                                    {{ form.taux_vf_custom }}
+                                    <small class="text-dark">Entre 7% et 10%</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Configuration automatique du salaire -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    {{ form.calcul_salaire_auto }}
+                                    <label class="form-check-label" for="{{ form.calcul_salaire_auto.id_for_label }}">
+                                        <strong>Calculer automatiquement le salaire de base depuis les présences</strong>
+                                    </label>
+                                </div>
+                                <small class="form-text">Si activé, le salaire sera calculé à partir des pointages (P(Am), P(Pm), P(Am&Pm))</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="col-12 mt-4">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-1"></i>Enregistrer

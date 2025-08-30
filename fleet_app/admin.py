@@ -1,4 +1,8 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
+from django.contrib.admin.sites import NotRegistered
+
 from .models import *
 from .models_alertes import Alerte
 from .models_accounts import Profil, Entreprise, PersonnePhysique
@@ -144,7 +148,7 @@ class UserOwnedAdminMixin:
 @admin.register(Employe)
 class EmployeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = (
-        'matricule', 'prenom', 'nom', 'fonction', 'salaire_base',
+        'matricule', 'prenom', 'nom', 'fonction', 'salaire_journalier',
         'montant_heure_supp_jour_ouvrable', 'montant_heure_supp_dimanche_ferie',
     )
     list_filter = ('fonction',)
@@ -183,10 +187,11 @@ class ConfigurationMontantEmployeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
 
 
-@admin.register(ConfigurationSalaire)
-class ConfigurationSalaireAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
-    list_display = ('employe', 'salaire_base')
-    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
+# ConfigurationSalaire admin temporarily disabled - table doesn't exist in database
+# @admin.register(ConfigurationSalaire)
+# class ConfigurationSalaireAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+#     list_display = ('employe', 'salaire_base')
+#     search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
 
 
 @admin.register(ConfigurationChargesSociales)
@@ -223,3 +228,46 @@ class SalaireMensuelAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('employe', 'mois', 'annee', 'net_a_payer', 'brut')
     list_filter = ('annee', 'mois')
     search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
+
+# ==========================
+# Personnalisation User Admin
+# ==========================
+
+class CustomUserAdmin(BaseUserAdmin):
+    # Liste et filtres
+    list_display = (
+        'username', 'email', 'first_name', 'last_name', 'is_active',
+        'is_staff', 'is_superuser', 'date_joined'
+    )
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
+    search_fields = ('username', 'first_name', 'last_name', 'email')
+    ordering = ('username',)
+
+    # Mise en forme de la page d'ajout
+    add_fieldsets = (
+        ('Identifiants', {
+            'classes': ('wide',),
+            'fields': ('username', 'password1', 'password2')
+        }),
+        ('Informations personnelles', {
+            'fields': ('first_name', 'last_name', 'email')
+        }),
+        ('Permissions', {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups')
+        }),
+    )
+
+    # Mise en forme de la page d'édition
+    fieldsets = (
+        ('Identifiants', {'fields': ('username', 'password')}),
+        ('Informations personnelles', {'fields': ('first_name', 'last_name', 'email')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Dates importantes', {'fields': ('last_login', 'date_joined'), 'classes': ('collapse',)}),
+    )
+
+# Remplacer l'admin User par défaut
+try:
+    admin.site.unregister(User)
+except NotRegistered:
+    pass
+admin.site.register(User, CustomUserAdmin)

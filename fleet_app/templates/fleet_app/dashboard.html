@@ -2,6 +2,41 @@
 {% load fleet_filters %}
 
 {% block title %}Tableau de bord - Gestion de Parc Automobile{% endblock %}
+{% block extra_css %}
+<style>
+  /* Compact KPI nav buttons and pills only on the dashboard */
+  #kpi-section .nav-tabs .nav-link {
+      font-size: 0.85rem;
+      padding: 0.3rem 0.5rem;
+      margin-right: 0.25rem;
+  }
+  #kpi-section .nav-tabs {
+      gap: 0.25rem;
+      flex-wrap: wrap;
+  }
+  #kpi-section .nav-tabs .nav-link i {
+      margin-right: 0.25rem;
+      font-size: 0.9em;
+  }
+  #kpi-section .nav-pills .nav-link {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.5rem;
+      margin-right: 0.25rem;
+  }
+  /* Slightly reduce table cell padding within KPI section for denser layout */
+  #kpi-section .table th,
+  #kpi-section .table td {
+      padding: 0.4rem 0.5rem;
+  }
+  @media (max-width: 992px) {
+      #kpi-section .nav-tabs .nav-link,
+      #kpi-section .nav-pills .nav-link {
+          font-size: 0.8rem;
+          padding: 0.25rem 0.4rem;
+      }
+  }
+  </style>
+{% endblock %}
 
 {% block page_title %}Tableau de bord{% endblock %}
 

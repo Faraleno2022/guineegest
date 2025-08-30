@@ -462,44 +462,51 @@ class ConfigurationSalaireForm(forms.Form):
             
             # Si un employé est sélectionné, créer les champs dynamiques
             if employe_id:
+                # S'assurer que l'ID est un entier valide
                 try:
-                    employe = Employe.objects.get(id=employe_id, user=user)
-                    self.fields['employe'].initial = employe
-                    
-                    # Créer un champ pour chaque statut de présence
-                    for statut_code, statut_label in PresenceJournaliere.STATUT_CHOICES:
-                        field_name = f'montant_{statut_code.replace("(", "_").replace(")", "_").replace("&", "et")}'
+                    employe_id_int = int(employe_id)
+                except (TypeError, ValueError):
+                    employe_id_int = None
+                
+                if employe_id_int:
+                    try:
+                        employe = Employe.objects.get(id=employe_id_int, user=user)
+                        self.fields['employe'].initial = employe
                         
-                        # Récupérer la configuration existante
-                        montant_initial = 0
-                        try:
-                            config = ConfigurationSalaire.objects.get(
-                                employe=employe, 
-                                statut_presence=statut_code,
-                                actif=True
+                        # Créer un champ pour chaque statut de présence
+                        for statut_code, statut_label in PresenceJournaliere.STATUT_CHOICES:
+                            field_name = f'montant_{statut_code.replace("(", "_").replace(")", "_").replace("&", "et")}'
+                            
+                            # Récupérer la configuration existante
+                            montant_initial = 0
+                            try:
+                                config = ConfigurationSalaire.objects.get(
+                                    employe=employe, 
+                                    statut_presence=statut_code,
+                                    actif=True
+                                )
+                                montant_initial = config.montant_journalier
+                            except ConfigurationSalaire.DoesNotExist:
+                                pass
+                            
+                            self.fields[field_name] = forms.DecimalField(
+                                max_digits=10,
+                                decimal_places=2,
+                                min_value=0,
+                                required=False,
+                                initial=montant_initial,
+                                label=statut_label,
+                                help_text=f'Code: {statut_code}',
+                                widget=forms.NumberInput(attrs={
+                                    'class': 'form-control form-control-lg',
+                                    'placeholder': '0.00',
+                                    'step': '0.01',
+                                    'data-statut': statut_code
+                                })
                             )
-                            montant_initial = config.montant_journalier
-                        except ConfigurationSalaire.DoesNotExist:
-                            pass
                         
-                        self.fields[field_name] = forms.DecimalField(
-                            max_digits=10,
-                            decimal_places=2,
-                            min_value=0,
-                            required=False,
-                            initial=montant_initial,
-                            label=statut_label,
-                            help_text=f'Code: {statut_code}',
-                            widget=forms.NumberInput(attrs={
-                                'class': 'form-control form-control-lg',
-                                'placeholder': '0.00',
-                                'step': '0.01',
-                                'data-statut': statut_code
-                            })
-                        )
-                        
-                except Employe.DoesNotExist:
-                    pass
+                    except Employe.DoesNotExist:
+                        pass
     
     def save(self, user):
         """

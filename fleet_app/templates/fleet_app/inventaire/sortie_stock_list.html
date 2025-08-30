@@ -84,7 +84,7 @@
                             <td>{{ sortie.id_sortie }}</td>
                             <td>{{ sortie.date|date:"d/m/Y" }}</td>
                             <td>
-                                <a href="{% url 'fleet_app:produit_detail' sortie.produit.id_produit %}">
+                                <a href="{% url 'fleet_app:produit_detail' sortie.produit.pk %}">
                                     {{ sortie.produit.id_produit }} - {{ sortie.produit.nom }}
                                 </a>
                             </td>

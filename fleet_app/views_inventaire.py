@@ -270,6 +270,7 @@ def entree_stock_list(request):
     
     context = {
         'entrees': page_obj,
+        'page_obj': page_obj,
         'form_recherche': form_recherche,
         'titre': 'Entrées en Stock',
     }
@@ -457,6 +458,7 @@ def sortie_stock_list(request):
     
     context = {
         'sorties': page_obj,
+        'page_obj': page_obj,
         'form_recherche': form_recherche,
         'titre': 'Sorties de Stock',
     }
@@ -682,6 +684,7 @@ def mouvement_stock_list(request):
     
     context = {
         'mouvements': page_obj,
+        'page_obj': page_obj,
         'form_recherche': form_recherche,
         'titre': 'Mouvements de Stock',
     }

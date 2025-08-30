@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from .security import user_owns_data, user_owns_related_data
 from django.db.models import Count, Sum
+from django.core.paginator import Paginator
 import csv
 from .models_entreprise import (
     Employe, PresenceJournaliere, PaieEmploye, HeureSupplementaire, ParametrePaie
@@ -17,11 +18,15 @@ def employe_list(request):
     """
     Vue pour afficher la liste des employés
     """
-    employes = Employe.objects.all().order_by('nom', 'prenom')
+    queryset = Employe.objects.all().order_by('nom', 'prenom')
+    paginator = Paginator(queryset, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     context = {
-        'employes': employes,
-        'total_employes': employes.count(),
+        'employes': page_obj,
+        'page_obj': page_obj,
+        'total_employes': queryset.count(),
     }
     
     return render(request, 'fleet_app/entreprise/employe_list.html', context)

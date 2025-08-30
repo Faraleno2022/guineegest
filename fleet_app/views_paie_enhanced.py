@@ -86,7 +86,8 @@ def paie_employe_list_enhanced(request):
             date__year=annee
         )
         total_heures_sup = sum(hs.duree for hs in heures_sup)
-        total_montant_sup = sum(hs.calculer_montant_supplementaire_simple() for hs in heures_sup)
+        # Utiliser le champ existant total_a_payer (déjà utilisé ailleurs) au lieu d'une méthode inexistante
+        total_montant_sup = sum(getattr(hs, 'total_a_payer', 0) for hs in heures_sup)
         
         paie_enrichie = {
             'paie': paie,

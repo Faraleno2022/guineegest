@@ -284,6 +284,10 @@
                 
                 <form method="post">
                     {% csrf_token %}
+                    {# Conserver l'employé sélectionné lors de la soumission #}
+                    {% if employe_selectionne_id %}
+                    <input type="hidden" name="employe" value="{{ employe_selectionne_id }}">
+                    {% endif %}
                     <div class="statut-grid">
                         {% for field in form %}
                             {% if field.name != 'employe' %}

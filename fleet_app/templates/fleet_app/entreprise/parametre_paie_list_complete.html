@@ -60,21 +60,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Total Sanctions</div>
-                                    <div class="h5 mb-0 font-weight-bold">{{ stats.total_sanctions|floatformat:0 }} GNF</div>
-                                </div>
-                                <div class="col-auto">
-                                    <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
                 <div class="col-md-3">
                     <div class="card bg-warning text-white">
                         <div class="card-body">
@@ -137,7 +123,6 @@
                             <th class="text-center">Fonction</th>
                             <th class="text-center">Salaire Base (GNF)</th>
                             <th class="text-center">Avances (GNF)</th>
-                            <th class="text-center">Sanctions (GNF)</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -150,13 +135,7 @@
                             <td class="text-center">{{ employe.fonction|default:'-' }}</td>
                             <td class="text-center">{{ employe.salaire_journalier|floatformat:0|default:'0' }}</td>
                             <td class="text-center">{{ employe.avances|floatformat:0|default:'0' }}</td>
-                            <td class="text-center">
-                                {% if employe.sanctions %}
-                                    <span class="badge bg-danger">{{ employe.sanctions|floatformat:0 }}</span>
-                                {% else %}
-                                    <span class="text-muted">0</span>
-                                {% endif %}
-                            </td>
+                            
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-primary" 
                                         data-bs-toggle="modal" 
@@ -255,13 +234,7 @@
                                        value="{{ employe.avances|default:'' }}" step="0.01" min="0">
                             </div>
                         </div>
-                        <div class="col-md-12">
-                            <div class="mb-3">
-                                <label class="form-label">Sanctions (GNF)</label>
-                                <input type="number" class="form-control" name="sanctions" 
-                                       value="{{ employe.sanctions|default:'' }}" step="0.01" min="0">
-                            </div>
-                        </div>
+                        
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -294,10 +267,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Confirmation pour l'application globale
     document.getElementById('modalParametresGlobaux').addEventListener('submit', function(e) {
-        const taux = document.getElementById('taux_global').value;
-        const montant = document.getElementById('montant_global').value;
+        const salaire = document.getElementById('salaire_global').value;
+        const avances = document.getElementById('avances_global').value;
         
-        if (!taux && !montant) {
+        if (!salaire && !avances) {
             e.preventDefault();
             alert('Veuillez saisir au moins un paramètre global.');
             return;

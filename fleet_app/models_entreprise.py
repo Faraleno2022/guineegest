@@ -12,7 +12,6 @@ class Employe(models.Model):
     prenom = models.CharField(max_length=100, verbose_name="Prénom")
     nom = models.CharField(max_length=100, verbose_name="Nom")
     fonction = models.CharField(max_length=100, verbose_name="Fonction")
-    salaire_base = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Salaire de base")
     
     # Champs additionnels requis par les formulaires
     telephone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Téléphone")
@@ -116,10 +115,24 @@ class PaieEmploye(models.Model):
 
 class PresenceJournaliere(models.Model):
     """Présence journalière des employés"""
+    # Liste normalisée des statuts utilisables dans tout le projet
+    STATUT_CHOICES = [
+        ('P(Am)', 'Présent matin'),
+        ('P(Pm)', 'Présent après‑midi'),
+        ('P(Am_&_Pm)', 'Présent matin & après‑midi'),
+        ('P(dim_Am)', 'Présent dimanche matin'),
+        ('P(dim_Pm)', 'Présent dimanche après‑midi'),
+        ('P(dim_Am_&_Pm)', 'Présent dimanche matin & après‑midi'),
+        ('A', 'Absent'),
+        ('M', 'Malade'),
+        ('M(Payer)', 'Malade (payé)'),
+        ('OFF', 'Repos'),
+    ]
+
     employe = models.ForeignKey(Employe, on_delete=models.CASCADE, verbose_name="Employé")
     date = models.DateField(verbose_name="Date")
     present = models.BooleanField(default=True, verbose_name="Présent")
-    statut = models.CharField(max_length=50, blank=True, null=True, verbose_name="Statut")
+    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, blank=True, null=True, verbose_name="Statut", default='P(Am_&_Pm)')
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     
     class Meta:
@@ -428,13 +441,16 @@ class ConfigurationMontantEmploye(models.Model):
         db_table = 'ConfigurationMontantEmploye'
 
 class ConfigurationSalaire(models.Model):
-    """Configuration des salaires"""
+    """Configuration des montants journaliers par statut de présence"""
     employe = models.ForeignKey(Employe, on_delete=models.CASCADE, verbose_name="Employé")
-    salaire_base = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Salaire de base")
+    statut_presence = models.CharField(max_length=50, verbose_name="Statut de présence", default='P(Am_&_Pm)')
+    montant_journalier = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Montant journalier (GNF)")
+    actif = models.BooleanField(default=True, verbose_name="Actif")
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     
     class Meta:
         db_table = 'ConfigurationSalaire'
+        unique_together = ['employe', 'statut_presence']
 
 class ConfigurationChargesSociales(models.Model):
     """Configuration des charges sociales"""

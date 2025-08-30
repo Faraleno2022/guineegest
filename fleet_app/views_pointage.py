@@ -10,6 +10,7 @@ import calendar
 from datetime import date, datetime
 import json
 from .forms import PointageJournalierForm, PointageRapideForm
+from decimal import Decimal
 
 
 @login_required
@@ -335,47 +336,56 @@ def configuration_salaire(request):
     """
     Vue pour configurer les montants de salaire par statut de présence de manière dynamique
     """
-    from .forms import ConfigurationSalaireForm
-    from .models_entreprise import Employe, ConfigurationSalaire, PresenceJournaliere
-    
-    employe_id = request.GET.get('employe')
-    
-    if request.method == 'POST':
-        form = ConfigurationSalaireForm(request.POST, user=request.user, employe_id=employe_id)
-        if form.is_valid():
-            try:
-                configurations_mises_a_jour = form.save(request.user)
-                messages.success(
-                    request, 
-                    f'✅ {configurations_mises_a_jour} configurations de salaire mises à jour avec succès.'
-                )
-                return redirect('fleet_app:configuration_salaire')
-            except Exception as e:
-                messages.error(request, f'❌ Erreur lors de la sauvegarde: {str(e)}')
-    else:
-        form = ConfigurationSalaireForm(user=request.user, employe_id=employe_id)
-    
-    # Récupérer tous les employés avec leurs configurations
-    employes = Employe.objects.filter(user=request.user, statut='Actif').order_by('nom', 'prenom')
-    configurations_resume = []
-    
-    for employe in employes:
-        configs = ConfigurationSalaire.objects.filter(employe=employe, actif=True)
-        total_configs = configs.count()
-        total_montant = sum(config.montant_journalier for config in configs)
+    try:
+        from .forms import ConfigurationSalaireForm
+        from .models_entreprise import Employe, ConfigurationSalaire, PresenceJournaliere
         
-        configurations_resume.append({
-            'employe': employe,
-            'nb_configurations': total_configs,
-            'montant_total': total_montant,
-            'configurations': {config.statut_presence: config.montant_journalier for config in configs}
-        })
+        # Récupérer l'employé sélectionné depuis GET (navigation) ou POST (soumission)
+        employe_id = request.GET.get('employe') or (request.POST.get('employe') if request.method == 'POST' else None)
+        
+        if request.method == 'POST':
+            form = ConfigurationSalaireForm(request.POST, user=request.user, employe_id=employe_id)
+            if form.is_valid():
+                try:
+                    configurations_mises_a_jour = form.save(request.user)
+                    messages.success(
+                        request, 
+                        f'✅ {configurations_mises_a_jour} configurations de salaire mises à jour avec succès.'
+                    )
+                    return redirect('fleet_app:configuration_salaire')
+                except Exception as e:
+                    messages.error(request, f'❌ Erreur lors de la sauvegarde: {str(e)}')
+        else:
+            form = ConfigurationSalaireForm(user=request.user, employe_id=employe_id)
+        
+        # Récupérer tous les employés avec leurs configurations
+        employes = Employe.objects.filter(user=request.user, statut='Actif').order_by('nom', 'prenom')
+        configurations_resume = []
+        
+        for employe in employes:
+            configs = ConfigurationSalaire.objects.filter(employe=employe, actif=True)
+            total_configs = configs.count()
+            total_montant = sum((config.montant_journalier for config in configs), Decimal('0'))
+        
+            configurations_resume.append({
+                'employe': employe,
+                'nb_configurations': total_configs,
+                'montant_total': total_montant,
+                'configurations': {config.statut_presence: config.montant_journalier for config in configs}
+            })
+        
+        context = {
+            'form': form,
+            'configurations_resume': configurations_resume,
+            'statut_choices': PresenceJournaliere.STATUT_CHOICES,
+            'employe_selectionne_id': (int(employe_id) if (isinstance(employe_id, (int, str)) and str(employe_id).isdigit()) else None),
+        }
+        
+        return render(request, 'fleet_app/pointage/configuration_salaire.html', context)
     
-    context = {
-        'form': form,
-        'configurations_resume': configurations_resume,
-        'statut_choices': PresenceJournaliere.STATUT_CHOICES,
-        'employe_selectionne_id': int(employe_id) if employe_id else None,
-    }
-    
-    return render(request, 'fleet_app/pointage/configuration_salaire.html', context)
+    except Exception as e:
+        from django.http import HttpResponse
+        import traceback
+        # Retourner l'erreur complète pour debug
+        error_details = f"Erreur 500 dans configuration_salaire:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        return HttpResponse(f"<pre>{error_details}</pre>", status=500)

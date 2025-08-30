@@ -84,7 +84,7 @@
                             <td>{{ entree.id_entree }}</td>
                             <td>{{ entree.date|date:"d/m/Y" }}</td>
                             <td>
-                                <a href="{% url 'fleet_app:produit_detail' entree.produit.id_produit %}">
+                                <a href="{% url 'fleet_app:produit_detail' entree.produit.pk %}">
                                     {{ entree.produit.id_produit }} - {{ entree.produit.nom }}
                                 </a>
                             </td>
