@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'django_bootstrap5',
     'widget_tweaks',
-    'sslserver',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +70,15 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'fleet_management.wsgi.application'
+
+# Add development-only apps
+if DEBUG:
+    try:
+        import sslserver  # noqa: F401
+        INSTALLED_APPS.append('sslserver')
+    except Exception:
+        # sslserver is optional and used only for local HTTPS dev
+        pass
 
 # Database (PostgreSQL via env vars, fallback to SQLite)
 _db_engine = os.getenv('DJANGO_DB_ENGINE', 'django.db.backends.sqlite3')
