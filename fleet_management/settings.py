@@ -72,11 +72,22 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fleet_management.wsgi.application'
 
-# Database
+# Database (PostgreSQL via env vars, fallback to SQLite)
+_db_engine = os.getenv('DJANGO_DB_ENGINE', 'django.db.backends.sqlite3')
+_db_name = os.getenv('DJANGO_DB_NAME', str(BASE_DIR / 'django_fleet.db'))
+_db_user = os.getenv('DJANGO_DB_USER', '')
+_db_password = os.getenv('DJANGO_DB_PASSWORD', '')
+_db_host = os.getenv('DJANGO_DB_HOST', '')
+_db_port = os.getenv('DJANGO_DB_PORT', '')
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'django_fleet.db',
+        'ENGINE': _db_engine,
+        'NAME': _db_name,
+        'USER': _db_user,
+        'PASSWORD': _db_password,
+        'HOST': _db_host,
+        'PORT': _db_port,
     }
 }
 

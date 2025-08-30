@@ -12,3 +12,5 @@ pillow==9.5.0
 # Pin to known compatible pair to avoid ShowBoundaryValue import error
 xhtml2pdf==0.2.10
 reportlab==3.5.67
+# PostgreSQL driver
+psycopg2-binary==2.9.9
