@@ -1,0 +1,291 @@
+/**
+ * Styles pour le système de synchronisation inter-modules
+ */
+
+/* Sélecteur de période global */
+#global-period-selector {
+    border-left: 4px solid #007bff;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+#global-period-selector:hover {
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+#global-period-selector .card-body {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+/* Statut de synchronisation */
+#sync-status {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+#sync-status .fa-spin {
+    animation: fa-spin 1s infinite linear;
+}
+
+/* Boutons de navigation */
+.btn-group .btn {
+    transition: all 0.2s ease;
+}
+
+.btn-group .btn:hover {
+    transform: scale(1.05);
+}
+
+/* Dropdown des modules */
+.dropdown-item.active {
+    background-color: #007bff;
+    color: white;
+    font-weight: 600;
+}
+
+.dropdown-item:hover {
+    background-color: #0056b3;
+    color: white;
+    transform: translateX(2px);
+    transition: all 0.2s ease;
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Badge du module actuel */
+.badge.bg-light {
+    border: 1px solid #dee2e6;
+    font-weight: 500;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    #global-period-selector .row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    #global-period-selector .col-auto {
+        flex: 0 0 auto;
+        min-width: fit-content;
+    }
+}
+
+@media (max-width: 768px) {
+    #global-period-selector .row {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    #global-period-selector .col-auto {
+        width: 100%;
+        text-align: center;
+    }
+    
+    #global-period-selector select,
+    #global-period-selector button {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+    
+    #global-period-selector .btn-group {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    #sync-status {
+        text-align: center;
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    #global-period-selector {
+        margin: 0 -15px 1rem -15px;
+        border-radius: 0;
+        border-left: none;
+        border-top: 4px solid #007bff;
+    }
+    
+    #global-period-selector .card-body {
+        padding: 1rem;
+    }
+}
+
+/* Animation de chargement */
+.sync-loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.sync-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 123, 255, 0.2), transparent);
+    animation: loading-sweep 1.5s infinite;
+}
+
+@keyframes loading-sweep {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Indicateurs visuels de synchronisation */
+.sync-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.sync-indicator.synced {
+    background-color: #28a745;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3);
+}
+
+.sync-indicator.syncing {
+    background-color: #ffc107;
+    animation: pulse 1s infinite;
+}
+
+.sync-indicator.error {
+    background-color: #dc3545;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.3);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Amélioration des sélecteurs */
+#period-month,
+#period-year {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+#period-month:focus,
+#period-year:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Bouton de synchronisation */
+#apply-period {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#apply-period:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+#apply-period:active {
+    transform: translateY(0);
+}
+
+/* Styles pour les tables synchronisées */
+.table-synchronized {
+    position: relative;
+}
+
+.table-synchronized::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #007bff, #28a745, #007bff);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.table-synchronized.syncing::before {
+    opacity: 1;
+    animation: progress-bar 2s infinite;
+}
+
+@keyframes progress-bar {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Notification de synchronisation */
+.sync-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 300px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.sync-notification.show {
+    transform: translateX(0);
+}
+
+.sync-notification .notification-content {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sync-notification .notification-icon {
+    font-size: 1.2rem;
+}
+
+.sync-notification.success .notification-icon {
+    color: #28a745;
+}
+
+.sync-notification.warning .notification-icon {
+    color: #ffc107;
+}
+
+.sync-notification.error .notification-icon {
+    color: #dc3545;
+}

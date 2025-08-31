@@ -1,16 +1,19 @@
-django==5.2.3
-django-crispy-forms==2.3
-crispy-bootstrap5==2024.2
-django-bootstrap5==24.3
+asgiref==3.9.1
+crispy-bootstrap5==2025.6
+Django==5.2.5
+django-bootstrap5==25.2
+django-crispy-forms==2.4
+django-sslserver==0.22
 django-widget-tweaks==1.5.0
-python-dotenv==1.0.1
-tkcalendar==1.6.1
-matplotlib==3.7.1
-pandas==2.0.1
-pillow==9.5.0
-# PDF generation dependencies for views_facturation (pisa)
-# Pin to known compatible pair to avoid ShowBoundaryValue import error
-xhtml2pdf==0.2.10
-reportlab==3.5.67
-# PostgreSQL driver
-psycopg2-binary==2.9.9
+numpy==2.3.2
+pandas==2.3.2
+pillow==11.3.0
+psycopg2-binary==2.9.10
+python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
+pytz==2025.2
+setuptools==80.9.0
+six==1.17.0
+sqlparse==0.5.3
+tzdata==2025.2
+wheel==0.45.1
