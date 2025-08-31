@@ -412,3 +412,19 @@ class ArchiveMensuelle(models.Model):
         unique_together = ['user', 'mois', 'annee']
         ordering = ['-annee', '-mois']
 
+
+class GalleryImage(models.Model):
+    """
+    Images de galerie simples uploadées via l'admin et affichées sur une page publique.
+    Les fichiers sont stockés sous MEDIA_ROOT/gallery/.
+    """
+    title = models.CharField(max_length=200, blank=True, verbose_name="Titre")
+    image = models.ImageField(upload_to='gallery/', verbose_name="Image")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
+
+    def __str__(self):
+        return self.title or f"Image #{self.pk}"
+
+    class Meta:
+        verbose_name = "Image de la galerie"
+        verbose_name_plural = "Images de la galerie"

@@ -23,6 +23,8 @@ app_name = 'fleet_app'
 urlpatterns = [
     # Page d'accueil
     path('', views.home, name='home'),
+    # Galerie publique
+    path('galerie/', views.gallery, name='gallery'),
     # Tableau de bord
     path('dashboard/', views.dashboard, name='dashboard'),
     

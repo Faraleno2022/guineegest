@@ -284,5 +284,27 @@
     </div>
     {% endif %}
 
+    {% if gallery_images %}
+    <div class="row mt-5 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="mb-0">Dernières images de la galerie</h2>
+                        <a href="{% url 'fleet_app:gallery' %}" class="btn btn-outline-primary">Voir la galerie</a>
+                    </div>
+                    <div class="row g-3">
+                        {% for img in gallery_images %}
+                        <div class="col-6 col-md-3">
+                            <img src="{{ img.image.url }}" alt="{{ img.title|default:'Image' }}" class="img-fluid rounded shadow-sm" style="object-fit: cover; height: 180px; width: 100%;">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}

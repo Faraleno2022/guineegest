@@ -15,7 +15,7 @@ from django.utils import timezone
 from .views_accounts import check_profile_completion
 
 # Import des modèles
-from .models import Vehicule, DistanceParcourue, ConsommationCarburant, DisponibiliteVehicule, CoutFonctionnement, CoutFinancier, IncidentSecurite, UtilisationActif, UtilisationVehicule, Chauffeur, FeuilleDeRoute
+from .models import Vehicule, DistanceParcourue, ConsommationCarburant, DisponibiliteVehicule, CoutFonctionnement, CoutFinancier, IncidentSecurite, UtilisationActif, UtilisationVehicule, Chauffeur, FeuilleDeRoute, GalleryImage
 from .models_alertes import Alerte
 
 # Import des formulaires
@@ -50,13 +50,30 @@ def home(request):
         # On ignore silencieusement en cas de problème d'accès au système de fichiers
         media_images = []
     
+    # Dernières images de la galerie (upload via admin)
+    try:
+        latest_gallery = list(GalleryImage.objects.all().order_by('-created_at')[:12])
+    except Exception:
+        latest_gallery = []
+
     context = {
         'titre': 'Accueil',
         'description': 'Bienvenue dans le système de gestion du parc automobile',
         'MEDIA_URL': settings.MEDIA_URL,
         'media_images': media_images,
+        'gallery_images': latest_gallery,
     }
     return render(request, 'fleet_app/home.html', context)
+
+# Galerie d'images simple
+def gallery(request):
+    """Page galerie publique: affiche les images uploadées via l'admin."""
+    images = GalleryImage.objects.all().order_by('-created_at')
+    context = {
+        'titre': 'Galerie',
+        'images': images,
+    }
+    return render(request, 'fleet_app/gallery.html', context)
 
 # Fonction utilitaire pour la pagination et la recherche
 def paginate_and_search(request, queryset, search_fields=None, per_page=10):

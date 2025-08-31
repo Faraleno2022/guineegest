@@ -1,0 +1,32 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Galerie - Guinée-Ges{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Galerie d'images</h2>
+    <a href="{% url 'fleet_app:home' %}" class="btn btn-outline-secondary">
+      <i class="fas fa-home"></i> Accueil
+    </a>
+  </div>
+
+  {% if images %}
+  <div class="row g-3">
+    {% for img in images %}
+    <div class="col-6 col-md-3">
+      <div class="card h-100 shadow-sm border-0">
+        <img src="{{ img.image.url }}" class="card-img-top" alt="{{ img.title|default:'Image' }}" style="object-fit: cover; height: 180px;">
+        <div class="card-body p-2">
+          <div class="small text-truncate" title="{{ img.title }}">{{ img.title|default:'(Sans titre)' }}</div>
+          <div class="text-muted small">{{ img.created_at|date:'d/m/Y H:i' }}</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info">Aucune image dans la galerie pour le moment. Ajoutez-en via l'admin.</div>
+  {% endif %}
+</div>
+{% endblock %}

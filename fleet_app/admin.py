@@ -230,6 +230,15 @@ class SalaireMensuelAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
 
 # ==========================
+# Galerie d'images simple
+# ==========================
+@admin.register(GalleryImage)
+class GalleryImageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'created_at')
+    readonly_fields = ('created_at',)
+    search_fields = ('title',)
+
+# ==========================
 # Personnalisation User Admin
 # ==========================
 
