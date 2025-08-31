@@ -2,28 +2,31 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# =====================================
+# Chemins de base
+# =====================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env if present
+# Charger les variables d'environnement depuis .env si présent
 load_dotenv(BASE_DIR / '.env')
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# =====================================
+# Clé secrète et Debug
+# =====================================
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'insecure-dev-key-change-me')
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 
-# Allowed hosts
-_hosts = os.getenv('DJANGO_ALLOWED_HOSTS', '')
-_default_hosts = [
-    'localhost',
-    '127.0.0.1',
-    'gestionnairedeparc.pythonanywhere.com',
-]
-ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()] or _default_hosts
+# =====================================
+# ALLOWED_HOSTS
+# =====================================
+ALLOWED_HOSTS = os.getenv(
+    'DJANGO_ALLOWED_HOSTS', 
+    'gestionnairedeparc.pythonanywhere.com,localhost,127.0.0.1'
+).split(',')
 
-# Application definition
+# =====================================
+# Applications installées
+# =====================================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -37,8 +40,12 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'django_bootstrap5',
     'widget_tweaks',
+    'sslserver',
 ]
 
+# =====================================
+# Middleware
+# =====================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -51,6 +58,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'fleet_management.urls'
 
+# =====================================
+# Templates
+# =====================================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -71,35 +81,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fleet_management.wsgi.application'
 
-# Add development-only apps
-if DEBUG:
-    try:
-        import sslserver  # noqa: F401
-        INSTALLED_APPS.append('sslserver')
-    except Exception:
-        # sslserver is optional and used only for local HTTPS dev
-        pass
-
-# Database (PostgreSQL via env vars, fallback to SQLite)
-_db_engine = os.getenv('DJANGO_DB_ENGINE', 'django.db.backends.sqlite3')
-_db_name = os.getenv('DJANGO_DB_NAME', str(BASE_DIR / 'django_fleet.db'))
-_db_user = os.getenv('DJANGO_DB_USER', '')
-_db_password = os.getenv('DJANGO_DB_PASSWORD', '')
-_db_host = os.getenv('DJANGO_DB_HOST', '')
-_db_port = os.getenv('DJANGO_DB_PORT', '')
-
+# =====================================
+# Base de données
+# =====================================
 DATABASES = {
     'default': {
-        'ENGINE': _db_engine,
-        'NAME': _db_name,
-        'USER': _db_user,
-        'PASSWORD': _db_password,
-        'HOST': _db_host,
-        'PORT': _db_port,
+        'ENGINE': os.getenv('DJANGO_DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.getenv('DJANGO_DB_NAME', str(BASE_DIR / 'django_fleet.db')),
+        'USER': os.getenv('DJANGO_DB_USER', ''),
+        'PASSWORD': os.getenv('DJANGO_DB_PASSWORD', ''),
+        'HOST': os.getenv('DJANGO_DB_HOST', ''),
+        'PORT': os.getenv('DJANGO_DB_PORT', ''),
     }
 }
 
-# Password validation
+# =====================================
+# Validation des mots de passe
+# =====================================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -107,32 +105,50 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
+# =====================================
+# Internationalisation
+# =====================================
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Conakry'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+# =====================================
+# Fichiers statiques et médias
+# =====================================
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = BASE_DIR / 'static'
 
-# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
+# =====================================
+# Clé primaire par défaut
+# =====================================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Authentication settings
+# =====================================
+# Authentification
+# =====================================
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
-# Crispy Forms settings
+# =====================================
+# Crispy Forms
+# =====================================
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 CRISPY_BOOTSTRAP5_TEMPLATE_PACK = 'bootstrap5'
+
+# =====================================
+# Sécurité HTTPS
+# =====================================
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+else:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
