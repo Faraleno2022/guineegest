@@ -234,9 +234,6 @@
                 <a href="{% url 'fleet_app:pointage_rapide' %}" class="btn btn-info">
                     <i class="fas fa-users"></i> Pointage rapide
                 </a>
-                <a href="{% url 'fleet_app:configuration_salaire' %}" class="btn btn-warning">
-                    <i class="fas fa-coins"></i> Configuration Salaires
-                </a>
                 <a href="{% url 'fleet_app:historique_pointage' %}" class="btn btn-secondary">
                     <i class="fas fa-history"></i> Historique
                 </a>
@@ -454,7 +451,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Mettre à jour la cellule
                     currentCell.textContent = statut;
                     currentCell.className = `pointage-cell statut-${statut.slice(0,1)}${statut.slice(2)}`;
-                    
+
+                    // Mettre à jour les compteurs de la ligne sans rechargement
+                    if (data.counts) {
+                        const row = currentCell.closest('tr');
+                        const map = {
+                            'P_Am': '.count-cell.statut-P-Am',
+                            'P_Pm': '.count-cell.statut-P-Pm',
+                            'P_Am_Pm': '.count-cell.statut-P-Am-Pm',
+                            'P_dim_Am': '.count-cell.statut-P-dim-Am',
+                            'P_dim_Pm': '.count-cell.statut-P-dim-Pm',
+                            'P_dim_Am_Pm': '.count-cell.statut-P-dim-Am-Pm',
+                            'A': '.count-cell.statut-A',
+                            'M': '.count-cell.statut-M',
+                            'M_Payer': '.count-cell.statut-M-Payer',
+                            'OFF': '.count-cell.statut-OFF'
+                        };
+                        Object.entries(map).forEach(([key, selector]) => {
+                            const el = row.querySelector(selector);
+                            if (el && typeof data.counts[key] !== 'undefined') {
+                                el.textContent = data.counts[key];
+                            }
+                        });
+                        const totalEl = row.querySelector('.count-cell.total-cell');
+                        if (totalEl && typeof data.counts.total !== 'undefined') {
+                            totalEl.textContent = data.counts.total;
+                        }
+                    }
+
                     showToast(data.message, 'success');
                 } else {
                     showToast(data.message, 'error');

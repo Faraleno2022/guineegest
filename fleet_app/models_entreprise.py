@@ -16,7 +16,15 @@ class Employe(models.Model):
     # Champs additionnels requis par les formulaires
     telephone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Téléphone")
     date_embauche = models.DateField(blank=True, null=True, verbose_name="Date d'embauche")
-    statut = models.CharField(max_length=50, blank=True, null=True, verbose_name="Statut")
+    
+    STATUT_CHOICES = [
+        ('Actif', 'Actif'),
+        ('Inactif', 'Inactif'),
+        ('Suspendu', 'Suspendu'),
+        ('Congé', 'En congé'),
+        ('Formation', 'En formation'),
+    ]
+    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='Actif', verbose_name="Statut")
     salaire_journalier = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Salaire journalier")
     avances = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Avances")
     
@@ -394,6 +402,13 @@ class HeureSupplementaire(models.Model):
         if self.taux_horaire and self.taux_horaire > 0:
             return float(self.taux_horaire)
         return None
+    
+    def get_total_calcule(self):
+        """Retourne le total calculé dynamiquement: duree * taux effectif"""
+        try:
+            return round(float(self.duree or 0) * float(self.get_montant_supp() or 0), 2)
+        except Exception:
+            return 0
     
     def save(self, *args, **kwargs):
         """Calcul automatique de la durée et du total lors de la sauvegarde"""

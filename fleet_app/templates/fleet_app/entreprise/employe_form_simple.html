@@ -1,0 +1,133 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Ajouter un Employé{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Nouvel Employé</h5>
+          <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-light btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+          </a>
+        </div>
+        <div class="card-body">
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+
+            {% if form.errors %}
+            <div class="alert alert-danger">
+              <strong>Le formulaire contient des erreurs&nbsp;:</strong>
+              <ul class="mb-0">
+                {% for field, errors in form.errors.items %}
+                  <li><strong>{{ field|capfirst }}</strong>:
+                    {% for error in errors %}
+                      <span>{{ error }}</span>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+              {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="form-label" for="id_matricule">Matricule *</label>
+              {{ form.matricule }}
+              <div class="form-text">Identifiant unique de l’employé (visible sur les listes et bulletins).</div>
+              {{ form.matricule.errors }}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_prenom">Prénom *</label>
+                {{ form.prenom }}
+                {{ form.prenom.errors }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_nom">Nom *</label>
+                {{ form.nom }}
+                {{ form.nom.errors }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="id_fonction">Fonction *</label>
+              {{ form.fonction }}
+              <div class="form-text">Rôle de l’employé dans l’entreprise.</div>
+              {{ form.fonction.errors }}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_statut">Statut *</label>
+                {{ form.statut }}
+                <div class="form-text">Exemples: Actif, Suspendu, Sorti.</div>
+                {{ form.statut.errors }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_salaire_journalier">Salaire de base (GNF)</label>
+                {{ form.salaire_journalier }}
+                <div class="form-text">Montant brut par jour travaillé. Laissez vide si vous activez le calcul automatique.</div>
+                {{ form.salaire_journalier.errors }}
+              </div>
+            </div>
+
+            <div class="form-check mb-3">
+              {{ form.calcul_salaire_auto }}
+              <label class="form-check-label" for="calculSalaireAuto">Calculer automatiquement le salaire</label>
+              <div class="form-text">Si coché, le salaire de base est calculé à partir des présences (P(Am), P(Pm), P(Am&Pm)).</div>
+              {{ form.calcul_salaire_auto.errors }}
+            </div>
+
+            
+
+            <!-- Champs optionnels simples -->
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_telephone">Téléphone</label>
+                {{ form.telephone }}
+                <div class="form-text">Numéro de contact du collaborateur.</div>
+                {{ form.telephone.errors }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_date_embauche">Date d'embauche</label>
+                {{ form.date_embauche }}
+                <div class="form-text">Format recommandé: AAAA-MM-JJ (ex: 2025-09-01).</div>
+                {{ form.date_embauche.errors }}
+              </div>
+            </div>
+
+            
+
+            <div class="d-flex justify-content-end gap-2">
+              <a href="{% url 'fleet_app:employe_list' %}" class="btn btn-secondary">
+                <i class="fas fa-times me-1"></i>Annuler
+              </a>
+              <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

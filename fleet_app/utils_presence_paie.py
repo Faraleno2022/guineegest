@@ -61,6 +61,12 @@ def calculer_statistiques_presence(employe, mois, annee):
         # J Repos = nombre de OFF
         'j_repos': presences.filter(statut='OFF').count(),
         
+        # Fériés = nombre de jours fériés (gérer plusieurs codes possibles)
+        # Certains modules utilisent 'Férié', d'autres 'F' ou 'Ferie'
+        'feries': presences.filter(
+            Q(statut='Férié') | Q(statut='F') | Q(statut='Ferie')
+        ).count(),
+        
         # Total des jours du mois (pour référence)
         'total_jours_mois': get_jours_dans_mois(mois, annee),
         

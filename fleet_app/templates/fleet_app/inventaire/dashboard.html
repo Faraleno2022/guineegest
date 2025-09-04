@@ -1,0 +1,198 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ titre }}</h2>
+    <div>
+      <a href="{% url 'fleet_app:stock_actuel' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-boxes"></i> Stock actuel</a>
+      <a href="{% url 'fleet_app:mouvement_stock_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-exchange-alt"></i> Mouvements</a>
+      <a href="{% url 'fleet_app:commande_list' %}" class="btn btn-outline-info btn-sm"><i class="fas fa-shopping-cart"></i> Commandes</a>
+      <a href="{% url 'fleet_app:facture_list' %}" class="btn btn-outline-success btn-sm"><i class="fas fa-file-invoice-dollar"></i> Factures</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Produits</div>
+              <div class="fs-4 fw-bold">{{ total_produits }}</div>
+            </div>
+            <i class="fas fa-tags fa-2x text-primary"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Stock disponible total</div>
+              <div class="fs-4 fw-bold">{{ stock_disponible_total }}</div>
+            </div>
+            <i class="fas fa-boxes fa-2x text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Alertes seuil minimum</div>
+              <div class="fs-4 fw-bold">
+                {{ nb_alerte }}
+                {% if nb_alerte > 0 %}
+                  <span class="badge bg-warning ms-2">A surveiller</span>
+                {% endif %}
+              </div>
+            </div>
+            <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Ruptures</div>
+              <div class="fs-4 fw-bold">{{ nb_rupture }}</div>
+            </div>
+            <i class="fas fa-ban fa-2x text-danger"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Ventes récentes -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white fw-bold"><i class="fas fa-shopping-bag me-2"></i>Ventes récentes (7j)</div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Date</th>
+                  <th>Produit</th>
+                  <th class="text-end">Quantité</th>
+                  <th>Destinataire</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in ventes_recentes %}
+                  <tr>
+                    <td>{{ s.date|date:'d/m/Y' }}</td>
+                    <td><a href="{% url 'fleet_app:produit_detail' s.produit.id_produit %}">{{ s.produit.nom }}</a></td>
+                    <td class="text-end text-danger">-{{ s.quantite }}</td>
+                    <td>{{ s.destinataire }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="4" class="text-center text-muted py-3">Aucune vente récente</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entrées récentes -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white fw-bold"><i class="fas fa-truck-loading me-2"></i>Entrées récentes (7j)</div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Date</th>
+                  <th>Produit</th>
+                  <th class="text-end">Quantité</th>
+                  <th>Fournisseur</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for e in entrees_recentes %}
+                  <tr>
+                    <td>{{ e.date|date:'d/m/Y' }}</td>
+                    <td><a href="{% url 'fleet_app:produit_detail' e.produit.id_produit %}">{{ e.produit.nom }}</a></td>
+                    <td class="text-end text-success">+{{ e.quantite }}</td>
+                    <td>{{ e.fournisseur }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="4" class="text-center text-muted py-3">Aucune entrée récente</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <!-- Top ventes -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white fw-bold"><i class="fas fa-chart-line me-2"></i>Top produits vendus (30j)</div>
+        <ul class="list-group list-group-flush">
+          {% for t in top_ventes %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ t.produit__nom }} <span class="text-muted">({{ t.produit__id_produit }})</span></span>
+              <span class="badge bg-primary rounded-pill">{{ t.qte_totale }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">Aucune donnée</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Alertes seuil -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white fw-bold"><i class="fas fa-bell me-2"></i>Produits en alerte</div>
+        <ul class="list-group list-group-flush">
+          {% for p in produits_alerte %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{% url 'fleet_app:produit_detail' p.id_produit %}">{{ p.nom }}</a>
+              <span class="badge bg-warning text-dark">Seuil: {{ p.seuil_minimum }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">Aucun produit en alerte</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Ruptures -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white fw-bold"><i class="fas fa-times-circle me-2"></i>Ruptures</div>
+        <ul class="list-group list-group-flush">
+          {% for p in produits_rupture %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{% url 'fleet_app:produit_detail' p.id_produit %}">{{ p.nom }}</a>
+              <span class="badge bg-danger">0</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">Aucun produit en rupture</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

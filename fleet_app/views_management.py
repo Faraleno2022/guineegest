@@ -25,7 +25,7 @@ from .models_entreprise import (
 from .forms import EmployeForm
 
 @login_required
-def temp_redirect_view(request):
+def temp_redirect_view(request, *args, **kwargs):
     """
     Vue temporaire de redirection pour les URLs en transition
     """

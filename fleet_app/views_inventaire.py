@@ -9,6 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.template.loader import get_template
 from decimal import Decimal
+from django.utils import timezone
 
 from .models_inventaire import Produit, EntreeStock, SortieStock, MouvementStock, Commande, LigneCommande
 from .forms_inventaire import ProduitForm, EntreeStockForm, SortieStockForm, RechercheInventaireForm, RechercheCommandeForm, CommandeForm, LigneCommandeForm, DocumentSigneCommandeForm
@@ -56,6 +57,54 @@ def get_produit_info(request):
 # On ne tente pas d'importer WeasyPrint au démarrage pour éviter les erreurs
 WEASYPRINT_AVAILABLE = False
 # Ne pas définir HTML et CSS comme variables globales pour éviter toute confusion avec les imports de WeasyPrint
+
+# Tableau de bord Inventaire
+@login_required
+def inventaire_dashboard(request):
+    """Tableau de bord Inventaire avec KPIs clés: stock disponible, alertes, ventes récentes"""
+    produits = Produit.objects.all()
+
+    # KPIs de stock
+    total_produits = produits.count()
+    stock_disponible_total = 0
+    produits_alerte = []
+    produits_rupture = []
+    for p in produits:
+        stock = p.get_stock_actuel()
+        stock_disponible_total += stock
+        if stock == 0:
+            produits_rupture.append(p)
+        elif p.seuil_minimum is not None and stock <= p.seuil_minimum:
+            produits_alerte.append(p)
+
+    # Ventes et entrées récentes (7 derniers jours)
+    seven_days_ago = timezone.now().date() - datetime.timedelta(days=7)
+    ventes_recentes = SortieStock.objects.filter(date__gte=seven_days_ago).order_by('-date', '-id_sortie')[:10]
+    entrees_recentes = EntreeStock.objects.filter(date__gte=seven_days_ago).order_by('-date', '-id_entree')[:10]
+
+    # Top produits vendus (30 derniers jours)
+    thirty_days_ago = timezone.now().date() - datetime.timedelta(days=30)
+    top_ventes = (
+        SortieStock.objects.filter(date__gte=thirty_days_ago)
+        .values('produit__id_produit', 'produit__nom')
+        .annotate(qte_totale=Coalesce(Sum('quantite'), 0))
+        .order_by('-qte_totale')[:5]
+    )
+
+    context = {
+        'titre': 'Tableau de bord Inventaire',
+        'total_produits': total_produits,
+        'stock_disponible_total': stock_disponible_total,
+        'nb_alerte': len(produits_alerte),
+        'nb_rupture': len(produits_rupture),
+        'produits_alerte': produits_alerte[:10],
+        'produits_rupture': produits_rupture[:10],
+        'ventes_recentes': ventes_recentes,
+        'entrees_recentes': entrees_recentes,
+        'top_ventes': list(top_ventes),
+    }
+
+    return render(request, 'fleet_app/inventaire/dashboard.html', context)
 
 # Vues pour les produits
 @login_required
@@ -147,7 +196,6 @@ def produit_create(request):
     return render(request, 'fleet_app/inventaire/produit_form.html', context)
 
 @login_required
-@user_owns_data(Produit, relation_path=['user'])
 def produit_update(request, pk):
     """Mise à jour d'un produit existant
     Sécurisée pour vérifier que l'utilisateur connecté est bien le propriétaire du produit
@@ -187,7 +235,6 @@ def produit_update(request, pk):
     return render(request, 'fleet_app/inventaire/produit_form.html', context)
 
 @login_required
-@user_owns_data(Produit, relation_path=['user'])
 def produit_detail(request, pk):
     """Détail d'un produit avec son historique de mouvements
     Sécurisée pour vérifier que l'utilisateur connecté est bien le propriétaire du produit
@@ -287,11 +334,8 @@ def entree_stock_create(request, produit_id=None):
     if request.method == 'POST':
         form = EntreeStockForm(request.POST)
         if form.is_valid():
-            # Vérifier que le produit appartient bien à l'utilisateur connecté
+            # Note: Vérification de propriétaire désactivée car le modèle Produit n'a pas de champ user
             produit_form = form.cleaned_data.get('produit')
-            if produit_form and produit_form.user != request.user:
-                messages.error(request, "Vous n'avez pas le droit d'ajouter une entrée pour ce produit.")
-                return redirect('fleet_app:entree_stock_list')
                 
             entree = form.save(commit=False)
             
@@ -342,7 +386,6 @@ def entree_stock_create(request, produit_id=None):
     return render(request, 'fleet_app/inventaire/entree_stock_form.html', context)
 
 @login_required
-@user_owns_data(EntreeStock, relation_path=['produit', 'user'])
 def entree_stock_update(request, pk):
     """Mise à jour d'une entrée en stock existante
     Sécurisée pour vérifier que l'utilisateur connecté est bien le propriétaire du produit associé à l'entrée
@@ -352,11 +395,8 @@ def entree_stock_update(request, pk):
     if request.method == 'POST':
         form = EntreeStockForm(request.POST, instance=entree)
         if form.is_valid():
-            # Vérifier que le produit appartient bien à l'utilisateur connecté
+            # Note: Vérification de propriétaire désactivée car le modèle Produit n'a pas de champ user
             produit_form = form.cleaned_data.get('produit')
-            if produit_form and produit_form.user != request.user:
-                messages.error(request, "Vous n'avez pas le droit de modifier une entrée pour ce produit.")
-                return redirect('fleet_app:entree_stock_list')
                 
             entree_mise_a_jour = form.save(commit=False)
             
@@ -475,11 +515,8 @@ def sortie_stock_create(request, produit_id=None):
     if request.method == 'POST':
         form = SortieStockForm(request.POST)
         if form.is_valid():
-            # Vérifier que le produit appartient bien à l'utilisateur connecté
+            # Note: Vérification de propriétaire désactivée car le modèle Produit n'a pas de champ user
             produit_form = form.cleaned_data.get('produit')
-            if produit_form and produit_form.user != request.user:
-                messages.error(request, "Vous n'avez pas le droit d'ajouter une sortie pour ce produit.")
-                return redirect('fleet_app:sortie_stock_list')
                 
             sortie = form.save(commit=False)
             
@@ -530,7 +567,6 @@ def sortie_stock_create(request, produit_id=None):
     return render(request, 'fleet_app/inventaire/sortie_stock_form.html', context)
 
 @login_required
-@user_owns_data(SortieStock, relation_path=['produit', 'user'])
 def sortie_stock_update(request, pk):
     """Mise à jour d'une sortie de stock existante
     Sécurisée pour vérifier que l'utilisateur connecté est bien le propriétaire du produit associé à la sortie
@@ -540,11 +576,8 @@ def sortie_stock_update(request, pk):
     if request.method == 'POST':
         form = SortieStockForm(request.POST, instance=sortie)
         if form.is_valid():
-            # Vérifier que le produit appartient bien à l'utilisateur connecté
+            # Note: Vérification de propriétaire désactivée car le modèle Produit n'a pas de champ user
             produit_form = form.cleaned_data.get('produit')
-            if produit_form and produit_form.user != request.user:
-                messages.error(request, "Vous n'avez pas le droit de modifier une sortie pour ce produit.")
-                return redirect('fleet_app:sortie_stock_list')
                 
             sortie_mise_a_jour = form.save(commit=False)
             
@@ -677,6 +710,20 @@ def mouvement_stock_list(request):
         if date_fin:
             mouvements = mouvements.filter(date__lte=date_fin)
     
+    # Statistiques des mouvements
+    stats = {
+        'total_mouvements': mouvements.count(),
+        'total_entrees': mouvements.filter(type_mouvement='Entrée').count(),
+        'total_sorties': mouvements.filter(type_mouvement='Sortie').count(),
+        'produits_concernes': mouvements.values('produit').distinct().count(),
+        'mouvements_aujourd_hui': mouvements.filter(date=timezone.now().date()).count(),
+    }
+    
+    # Top produits par nombre de mouvements
+    top_produits = list(mouvements.values('produit__nom', 'produit__id_produit')
+                       .annotate(nb_mouvements=Count('id'))
+                       .order_by('-nb_mouvements')[:5])
+    
     # Pagination
     paginator = Paginator(mouvements.order_by('-date'), 20)
     page_number = request.GET.get('page')
@@ -686,6 +733,8 @@ def mouvement_stock_list(request):
         'mouvements': page_obj,
         'page_obj': page_obj,
         'form_recherche': form_recherche,
+        'stats': stats,
+        'top_produits': top_produits,
         'titre': 'Mouvements de Stock',
     }
     

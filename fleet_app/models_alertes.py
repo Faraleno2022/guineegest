@@ -31,6 +31,14 @@ class Alerte(models.Model):
     def __str__(self):
         return f"{self.titre} - {self.get_niveau_display()} - {self.get_statut_display()}"
     
+    @property
+    def type_alerte(self):
+        """
+        Compatibilité avec les templates existants qui utilisent 'type_alerte'.
+        On renvoie le titre comme type d'alerte lisible.
+        """
+        return self.titre
+    
     def save(self, *args, **kwargs):
         # Si l'alerte est marquée comme résolue et qu'aucune date de résolution n'est définie
         if self.statut == 'Résolue' and not self.date_resolution:

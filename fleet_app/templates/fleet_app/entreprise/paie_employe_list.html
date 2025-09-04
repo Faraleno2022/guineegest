@@ -88,6 +88,12 @@
                                         </button>
                                     </div>
                                 </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-grid">
+                                        <!-- Bouton 'Forcer synchronisation' supprimé: synchro automatique activée -->
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Compteurs et statut -->
@@ -171,7 +177,7 @@
                             
                             <!-- Total Jours - Nombre total de jours du mois -->
                             <td class="text-nowrap">
-                                {{ paie.jours_mois|default:31 }}
+                                {{ stats.total_jours_mois }}
                             </td>
                             
                             <!-- Jours de présence - Calcul automatique: P(Am_&_Pm) + P(Pm) + P(Am) -->
@@ -210,7 +216,7 @@
                             
                             <!-- Férié - Jours fériés (pas encore implémenté) -->
                             <td class="text-nowrap">
-                                <span class="text-muted">0</span>
+                                <strong>{{ stats.feries }}</strong>
                             </td>
                             
                             <!-- Sundays - Calcul automatique: P(dim_Am) + P(dim_Pm) + P(dim_Am_&_Pm) -->

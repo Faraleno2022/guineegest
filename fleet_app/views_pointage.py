@@ -177,11 +177,70 @@ def pointage_ajax(request):
             )
             
             action = 'créé' if created else 'mis à jour'
+
+            # Calculer les compteurs mis à jour pour l'employé sur le mois de la date pointée
+            mois = date_obj.month
+            annee = date_obj.year
+            presences_mois = PresenceJournaliere.objects.filter(
+                employe=employe,
+                date__year=annee,
+                date__month=mois
+            )
+
+            count_P_Am = 0
+            count_P_Pm = 0
+            count_P_Am_Pm = 0
+            count_P_dim_Am = 0
+            count_P_dim_Pm = 0
+            count_P_dim_Am_Pm = 0
+            count_A = 0
+            count_M = 0
+            count_M_Payer = 0
+            count_OFF = 0
+            count_total = 0
+
+            for p in presences_mois:
+                statut_val = p.statut
+                count_total += 1
+                if statut_val == 'P(Am)':
+                    count_P_Am += 1
+                elif statut_val == 'P(Pm)':
+                    count_P_Pm += 1
+                elif statut_val == 'P(Am_&_Pm)':
+                    count_P_Am_Pm += 1
+                elif statut_val == 'P(dim_Am)':
+                    count_P_dim_Am += 1
+                elif statut_val == 'P(dim_Pm)':
+                    count_P_dim_Pm += 1
+                elif statut_val == 'P(dim_Am_&_Pm)':
+                    count_P_dim_Am_Pm += 1
+                elif statut_val == 'A':
+                    count_A += 1
+                elif statut_val == 'M':
+                    count_M += 1
+                elif statut_val == 'M(Payer)':
+                    count_M_Payer += 1
+                elif statut_val == 'OFF':
+                    count_OFF += 1
+
             return JsonResponse({
                 'success': True,
                 'message': f'Pointage {action} pour {employe.nom} {employe.prenom}',
                 'statut': statut,
-                'statut_display': dict(PresenceJournaliere.STATUT_CHOICES)[statut]
+                'statut_display': dict(PresenceJournaliere.STATUT_CHOICES)[statut],
+                'counts': {
+                    'P_Am': count_P_Am,
+                    'P_Pm': count_P_Pm,
+                    'P_Am_Pm': count_P_Am_Pm,
+                    'P_dim_Am': count_P_dim_Am,
+                    'P_dim_Pm': count_P_dim_Pm,
+                    'P_dim_Am_Pm': count_P_dim_Am_Pm,
+                    'A': count_A,
+                    'M': count_M,
+                    'M_Payer': count_M_Payer,
+                    'OFF': count_OFF,
+                    'total': count_total,
+                }
             })
             
         except Exception as e:

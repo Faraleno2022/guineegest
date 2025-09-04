@@ -1,7 +1,7 @@
 {% extends 'fleet_app/base.html' %}
 {% load static %}
 
-{% block title %}Ajouter des Heures Supplémentaires{% endblock %}
+{% block title %}{% if heure %}Modifier Heure Supplémentaire{% else %}Ajouter des Heures Supplémentaires{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -11,7 +11,7 @@
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0">
                         <i class="fas fa-clock me-2"></i>
-                        Ajouter des Heures Supplémentaires
+                        {% if heure %}Modifier Heure Supplémentaire{% else %}Ajouter des Heures Supplémentaires{% endif %}
                     </h4>
                 </div>
                 <div class="card-body">
@@ -38,7 +38,7 @@
                                     <select name="employe" id="id_employe" class="form-control" required>
                                         <option value="">Sélectionner un employé</option>
                                         {% for employe in employes %}
-                                        <option value="{{ employe.id }}">{{ employe.matricule }} - {{ employe.prenom }} {{ employe.nom }}</option>
+                                        <option value="{{ employe.id }}" {% if heure and heure.employe.id == employe.id %}selected{% endif %}>{{ employe.matricule }} - {{ employe.prenom }} {{ employe.nom }}</option>
                                         {% endfor %}
                                     </select>
                                     <small class="form-text text-muted">Le poste et taux horaire seront récupérés automatiquement</small>
@@ -48,7 +48,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="id_date" class="form-label">Date</label>
-                                    <input type="date" name="date" id="id_date" class="form-control" value="{{ date_aujourd_hui }}" required>
+                                    <input type="date" name="date" id="id_date" class="form-control" value="{% if heure and heure.date %}{{ heure.date|date:'Y-m-d' }}{% else %}{{ date_aujourd_hui }}{% endif %}" required>
                                     <div class="form-text">jj/mm/aaaa</div>
                                 </div>
                             </div>
@@ -60,7 +60,7 @@
                                     <label for="id_heure_debut" class="form-label">
                                         <i class="fas fa-clock me-1"></i>Heure de début
                                     </label>
-                                    <input type="time" name="heure_debut" id="id_heure_debut" class="form-control">
+                                    <input type="time" name="heure_debut" id="id_heure_debut" class="form-control" value="{% if heure and heure.heure_debut %}{{ heure.heure_debut|time:'H:i' }}{% endif %}">
                                 </div>
                             </div>
                             
@@ -69,7 +69,7 @@
                                     <label for="id_heure_fin" class="form-label">
                                         <i class="fas fa-clock me-1"></i>Heure de fin
                                     </label>
-                                    <input type="time" name="heure_fin" id="id_heure_fin" class="form-control">
+                                    <input type="time" name="heure_fin" id="id_heure_fin" class="form-control" value="{% if heure and heure.heure_fin %}{{ heure.heure_fin|time:'H:i' }}{% endif %}">
                                 </div>
                             </div>
                         </div>
@@ -102,7 +102,7 @@
                         <div class="row mb-3">
                             <div class="col-12">
                                 <label for="id_autorise_par" class="form-label">Autorisé par</label>
-                                <input type="text" name="autorise_par" id="id_autorise_par" class="form-control" value="Système" placeholder="Nom de la personne qui autorise">
+                                <input type="text" name="autorise_par" id="id_autorise_par" class="form-control" value="{% if heure and heure.autorise_par %}{{ heure.autorise_par }}{% else %}Système{% endif %}" placeholder="Nom de la personne qui autorise">
                             </div>
                         </div>
                         
@@ -111,7 +111,7 @@
                                 <i class="fas fa-arrow-left me-1"></i>Retour
                             </a>
                             <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save me-1"></i>Enregistrer
+                                <i class="fas fa-save me-1"></i>{% if heure %}Mettre à jour{% else %}Enregistrer{% endif %}
                             </button>
                         </div>
                     </form>

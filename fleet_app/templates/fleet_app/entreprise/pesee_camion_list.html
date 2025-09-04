@@ -12,38 +12,130 @@
                 <i class="fas fa-plus me-1"></i>Nouvelle pesée
             </a>
         </div>
+
+        <div id="resultsContainer">
+        <!-- Statistiques -->
+        {% if stats %}
+        <div class="card-body pt-0">
+            <div class="row g-3 align-items-stretch">
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="text-muted mb-2">Synthèse</h6>
+                        <div class="d-flex flex-column gap-2">
+                            <span class="badge bg-primary">Total pesées: {{ stats.total_pesees }}</span>
+                            <span class="badge bg-success">Quantité totale: {{ stats.total_quantite|floatformat:0 }} kg</span>
+                            <span class="badge bg-info text-dark">Quantité moyenne: {{ stats.moyenne_quantite|floatformat:0 }} kg</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="text-muted mb-2">Top plaques</h6>
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Plaque</th>
+                                    <th class="text-end">Quantité</th>
+                                    <th class="text-end">N</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for it in stats.top_plaques %}
+                                <tr>
+                                    <td>{{ it.plate }}</td>
+                                    <td class="text-end">{{ it.total|floatformat:0 }}</td>
+                                    <td class="text-end">{{ it.n }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted">Aucune donnée</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="text-muted mb-2">Top zones de chargement</h6>
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Zone</th>
+                                    <th class="text-end">Quantité</th>
+                                    <th class="text-end">N</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for it in stats.top_zones %}
+                                <tr>
+                                    <td>{{ it.loading_zone }}</td>
+                                    <td class="text-end">{{ it.total|floatformat:0 }}</td>
+                                    <td class="text-end">{{ it.n }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted">Aucune donnée</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card-body">
-            <!-- Filtres -->
+            <!-- Recherche dynamique multi-critères -->
             <div class="row mb-3">
                 <div class="col-md-12">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-3">
-                            <label for="date_debut" class="form-label">Date début</label>
-                            <input type="date" class="form-control" id="date_debut" name="date_debut" value="{{ request.GET.date_debut }}">
+                    <form method="get" class="row g-3 align-items-end" id="searchForm">
+                        <div class="col-md-12">
+                            <label for="q" class="form-label">Recherche</label>
+                            <input type="text" class="form-control" id="q" name="q" value="{{ request.GET.q }}" placeholder="Ex: 2025-08-01..2025-08-31 plate:ABC123 zone:Mine-1">
+                            <small class="text-muted">Syntaxe: date_debut:YYYY-MM-DD, date_fin:YYYY-MM-DD, ou plage YYYY-MM-DD..YYYY-MM-DD, plate:XXXX, zone:XXXX. Mots libres acceptés. La recherche est automatique.</small>
                         </div>
-                        <div class="col-md-3">
-                            <label for="date_fin" class="form-label">Date fin</label>
-                            <input type="date" class="form-control" id="date_fin" name="date_fin" value="{{ request.GET.date_fin }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="plate" class="form-label">Plaque</label>
-                            <input type="text" class="form-control" id="plate" name="plate" value="{{ request.GET.plate }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="loading_zone" class="form-label">Zone de chargement</label>
-                            <input type="text" class="form-control" id="loading_zone" name="loading_zone" value="{{ request.GET.loading_zone }}">
-                        </div>
-                        <div class="col-md-12 mt-3">
-                            <button type="submit" class="btn btn-secondary">
-                                <i class="fas fa-filter me-1"></i>Filtrer
-                            </button>
-                            <a href="{% url 'fleet_app:pesee_camion_list' %}" class="btn btn-outline-secondary">
+                        <div class="col-12">
+                            <a href="{% url 'fleet_app:pesee_camion_list' %}" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-times me-1"></i>Réinitialiser
                             </a>
                         </div>
                     </form>
                 </div>
             </div>
+            <script>
+            (function(){
+                const input = document.getElementById('q');
+                const form = document.getElementById('searchForm');
+                const container = document.getElementById('resultsContainer');
+                if (!input || !form || !container) return;
+                let timer = null;
+                function fetchAndRender(url){
+                    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                        .then(r => r.text())
+                        .then(html => { container.innerHTML = html; })
+                        .catch(console.error);
+                }
+                function buildUrl(){
+                    const params = new URLSearchParams(new FormData(form));
+                    params.set('partial', '1');
+                    return `${window.location.pathname}?${params.toString()}`;
+                }
+                function trigger(){ fetchAndRender(buildUrl()); }
+                input.addEventListener('input', function(){
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(trigger, 400);
+                });
+                input.addEventListener('change', trigger);
+
+                // Intercepter la pagination en AJAX
+                container.addEventListener('click', function(e){
+                    const a = e.target.closest('a.page-link');
+                    if (!a) return;
+                    e.preventDefault();
+                    const url = new URL(a.href, window.location.origin);
+                    url.searchParams.set('partial', '1');
+                    fetchAndRender(url.toString());
+                });
+            })();
+            </script>
 
             <!-- Tableau des pesées -->
             <div class="table-responsive">
@@ -77,7 +169,7 @@
                                     <a href="{% url 'fleet_app:pesee_camion_detail' pesee.pk %}" class="btn btn-info" title="Détails">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{% url 'fleet_app:pesee_camion_edit' pesee.pk %}" class="btn btn-warning" title="Modifier">
+                                    <a href="{% url 'fleet_app:pesee_camion_update' pesee.pk %}" class="btn btn-warning" title="Modifier">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <a href="{% url 'fleet_app:pesee_camion_delete' pesee.pk %}" class="btn btn-danger" title="Supprimer">

@@ -31,7 +31,9 @@ def paie_employe_list(request):
         employe_id = request.GET.get('employe_id')
         annee = int(request.GET.get('annee', datetime.now().year))
         mois = int(request.GET.get('mois', datetime.now().month))
-        auto_sync = request.GET.get('auto_sync', 'true') == 'true'  # Synchronisation automatique par défaut
+        # Synchronisation automatique activée en permanence; force_sync ignoré
+        auto_sync = True
+        force_sync = False
         
         # Si auto_sync est activé, synchroniser automatiquement les données manquantes
         if auto_sync:
@@ -94,6 +96,21 @@ def paie_employe_list(request):
                 # Calculer les totaux
                 total_heures_supp = sum(float(h.duree) for h in heures_supp_mois)
                 total_montant_supp = sum(float(h.total_a_payer) for h in heures_supp_mois)
+
+                # Synchroniser les champs stockés avec les valeurs calculées (auto_sync activé)
+                if auto_sync:
+                    try:
+                        paie.jours_mois = stats_calculees.get('total_jours_mois')
+                    except Exception:
+                        pass
+                    paie.jours_presence = stats_calculees.get('jours_presence', 0)
+                    paie.absences = stats_calculees.get('absent', 0)
+                    paie.jours_repos = stats_calculees.get('j_repos', 0)
+                    paie.dimanches = stats_calculees.get('sundays', 0)
+                    paie.heures_supplementaires = total_heures_supp
+                    paie.montant_heures_supplementaires = total_montant_supp
+                    # Sauvegarder
+                    paie.save()
                 
                 # Vérifier la cohérence avec les données stockées
                 coherence = {
@@ -108,6 +125,75 @@ def paie_employe_list(request):
                 # Ajouter les données d'heures supplémentaires aux stats
                 stats_calculees['heures_supplementaires'] = total_heures_supp
                 stats_calculees['montant_heures_supplementaires'] = total_montant_supp
+                
+                # ===== Calculs financiers (CNSS 5%, RTS, Net) =====
+                try:
+                    # Salaire brut = salaire_base + primes/indemnités + montant HS
+                    salaire_base = paie.salaire_base or (paie.employe.salaire_journalier or 0)
+                    primes_indemnites = (
+                        (paie.prime_discipline or 0) +
+                        (paie.cherete_vie or 0) +
+                        (paie.indemnite_transport or 0) +
+                        (paie.indemnite_logement or 0)
+                    )
+                    salaire_brut = Decimal(str(salaire_base)) + Decimal(str(primes_indemnites)) + Decimal(str(total_montant_supp or 0))
+
+                    # CNSS: par défaut 5% activé; clés de configuration si présentes
+                    try:
+                        param_appliquer = ParametrePaie.objects.get(cle='CNSS_ACTIVER', user=request.user)
+                        appliquer_cnss = str(param_appliquer.valeur).strip() in ['1', 'true', 'True', 'on']
+                    except ParametrePaie.DoesNotExist:
+                        appliquer_cnss = True
+
+                    try:
+                        param_taux = ParametrePaie.objects.get(cle='CNSS_TAUX', user=request.user)
+                        taux_cnss = Decimal(str(param_taux.valeur))
+                    except ParametrePaie.DoesNotExist:
+                        taux_cnss = Decimal('5.0')
+
+                    cnss_employe = (salaire_brut * taux_cnss / Decimal('100')) if appliquer_cnss else Decimal('0.00')
+
+                    # RTS: type FIXE avec taux, sinon barème progressif par défaut
+                    try:
+                        param_rts_type = ParametrePaie.objects.get(cle='RTS_TYPE', user=request.user)
+                        rts_type = (param_rts_type.valeur or 'PROGRESSIF').upper()
+                    except ParametrePaie.DoesNotExist:
+                        rts_type = 'PROGRESSIF'
+
+                    try:
+                        param_rts_taux = ParametrePaie.objects.get(cle='RTS_TAUX_FIXE', user=request.user)
+                        rts_taux_fixe = Decimal(str(param_rts_taux.valeur))
+                    except ParametrePaie.DoesNotExist:
+                        rts_taux_fixe = Decimal('10.0')
+
+                    salaire_net_imposable = salaire_brut - cnss_employe
+                    if rts_type == 'FIXE':
+                        rts_employe = (salaire_net_imposable * rts_taux_fixe) / Decimal('100')
+                    else:
+                        # Barème progressif simple
+                        if salaire_net_imposable <= Decimal('1000000'):
+                            rts_employe = Decimal('0.00')
+                        elif salaire_net_imposable <= Decimal('3000000'):
+                            rts_employe = (salaire_net_imposable - Decimal('1000000')) * Decimal('0.05')
+                        else:
+                            rts_tranche_2 = Decimal('2000000') * Decimal('0.05')
+                            rts_tranche_3 = (salaire_net_imposable - Decimal('3000000')) * Decimal('0.15')
+                            rts_employe = rts_tranche_2 + rts_tranche_3
+
+                    avance = Decimal(str(paie.avance_sur_salaire or paie.employe.avances or 0))
+                    sanctions = Decimal(str(paie.sanction_vol_carburant or 0))
+                    net_a_payer = salaire_brut - (cnss_employe + rts_employe + avance + sanctions)
+
+                    # Persister si auto_sync ou force_sync
+                    if auto_sync or force_sync:
+                        paie.salaire_brut = salaire_brut
+                        paie.cnss = cnss_employe
+                        paie.rts = rts_employe
+                        paie.salaire_net_a_payer = net_a_payer
+                        paie.save()
+                except Exception:
+                    # En cas d'erreur, ne pas bloquer l'affichage
+                    pass
                 
                 paies_enrichies.append({
                     'paie': paie,
@@ -142,6 +228,8 @@ def paie_employe_list(request):
                     'heures_supp_details': []
                 })
         
+        # Synchronisation automatique: pas de message spécifique force_sync
+
         context = {
             'paies_enrichies': paies_enrichies,
             'employes': employes,
@@ -149,6 +237,7 @@ def paie_employe_list(request):
             'annee': annee,
             'mois': mois,
             'auto_sync': auto_sync,
+            'force_sync': force_sync,
             'mois_noms': {
                 1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
                 5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
@@ -755,12 +844,12 @@ def heure_supplementaire_list(request):
                 )
                 montant_manuel = float(request.POST.get('montant_manuel', 0))
                 
-                # Mettre à jour le montant
-                heure_sup.total_a_payer = montant_manuel
-                heure_sup.save()
+                # Interpréter comme taux horaire personnalisé et recalculer
+                heure_sup.taux_horaire = montant_manuel if montant_manuel > 0 else None
+                heure_sup.save()  # recalcul automatique via model.save()
                 
-                messages.success(request, f'Montant mis à jour avec succès: {montant_manuel} GNF')
-                print(f"DEBUG: Montant mis à jour pour heure_sup {heure_id}: {montant_manuel} GNF")
+                messages.success(request, f'Taux horaire personnalisé appliqué: {montant_manuel} GNF')
+                print(f"DEBUG: Taux horaire personnalisé mis à jour pour heure_sup {heure_id}: {montant_manuel} GNF")
                 
             except HeureSupplementaire.DoesNotExist:
                 messages.error(request, 'Heure supplémentaire non trouvée')
@@ -790,12 +879,31 @@ def heure_supplementaire_list(request):
             try:
                 montant_global = float(request.POST.get('montant_global', 0))
                 if montant_global > 0:
-                    # Appliquer le montant à toutes les heures supplémentaires de l'utilisateur
+                    # Construire le queryset selon les filtres de période fournis
                     heures_sup_all = HeureSupplementaire.objects.filter(employe__user=request.user)
-                    count = heures_sup_all.update(total_a_payer=montant_global)
-                    
-                    messages.success(request, f'Montant global de {montant_global} GNF appliqué à {count} heures supplémentaires')
-                    print(f"DEBUG: Montant global {montant_global} appliqué à {count} heures supplémentaires")
+                    employe_id_post = request.POST.get('employe_id')
+                    mois_post = request.POST.get('mois')
+                    annee_post = request.POST.get('annee')
+                    date_debut_post = request.POST.get('date_debut')
+                    date_fin_post = request.POST.get('date_fin')
+
+                    if employe_id_post:
+                        heures_sup_all = heures_sup_all.filter(employe_id=employe_id_post)
+                    if mois_post and annee_post:
+                        heures_sup_all = heures_sup_all.filter(date__month=int(mois_post), date__year=int(annee_post))
+                    else:
+                        if date_debut_post:
+                            heures_sup_all = heures_sup_all.filter(date__gte=date_debut_post)
+                        if date_fin_post:
+                            heures_sup_all = heures_sup_all.filter(date__lte=date_fin_post)
+
+                    count = 0
+                    for hs in heures_sup_all:
+                        hs.taux_horaire = montant_global
+                        hs.save()
+                        count += 1
+                    messages.success(request, f'Taux horaire global de {montant_global} GNF appliqué à {count} heures supplémentaires')
+                    print(f"DEBUG: Taux horaire global {montant_global} appliqué à {count} heures supplémentaires")
                 else:
                     messages.error(request, 'Le montant global doit être supérieur à 0')
                     
@@ -806,12 +914,31 @@ def heure_supplementaire_list(request):
         
         elif action == 'reinitialiser_montant_global':
             try:
-                # Réinitialiser tous les montants à 0
+                # Réinitialiser le taux personnalisé (retour à la config employé) et recalculer
                 heures_sup_all = HeureSupplementaire.objects.filter(employe__user=request.user)
-                count = heures_sup_all.update(total_a_payer=0)
-                
-                messages.success(request, f'Montants réinitialisés pour {count} heures supplémentaires')
-                print(f"DEBUG: Montants réinitialisés pour {count} heures supplémentaires")
+                employe_id_post = request.POST.get('employe_id')
+                mois_post = request.POST.get('mois')
+                annee_post = request.POST.get('annee')
+                date_debut_post = request.POST.get('date_debut')
+                date_fin_post = request.POST.get('date_fin')
+
+                if employe_id_post:
+                    heures_sup_all = heures_sup_all.filter(employe_id=employe_id_post)
+                if mois_post and annee_post:
+                    heures_sup_all = heures_sup_all.filter(date__month=int(mois_post), date__year=int(annee_post))
+                else:
+                    if date_debut_post:
+                        heures_sup_all = heures_sup_all.filter(date__gte=date_debut_post)
+                    if date_fin_post:
+                        heures_sup_all = heures_sup_all.filter(date__lte=date_fin_post)
+
+                count = 0
+                for hs in heures_sup_all:
+                    hs.taux_horaire = None
+                    hs.save()
+                    count += 1
+                messages.success(request, f'Taux personnalisés réinitialisés pour {count} heures supplémentaires')
+                print(f"DEBUG: Taux personnalisés réinitialisés pour {count} heures supplémentaires")
                 
             except Exception as e:
                 messages.error(request, f'Erreur lors de la réinitialisation: {str(e)}')
@@ -923,6 +1050,64 @@ def heure_supplementaire_add(request):
         'date_aujourd_hui': date.today().strftime('%Y-%m-%d')
     }
     
+    return render(request, 'fleet_app/entreprise/heure_supplementaire_form.html', context)
+
+@login_required
+def heure_supplementaire_edit(request, pk):
+    """Modifier une heure supplémentaire existante"""
+    heure = get_object_or_404(HeureSupplementaire, pk=pk, employe__user=request.user)
+    employes = Employe.objects.filter(user=request.user).order_by('matricule')
+
+    if request.method == 'POST':
+        try:
+            employe_id = request.POST.get('employe')
+            date_str = request.POST.get('date')
+            heure_debut = request.POST.get('heure_debut')
+            heure_fin = request.POST.get('heure_fin')
+            taux_horaire = float(request.POST.get('taux_horaire', heure.taux_horaire or 5000))
+            autorise_par = request.POST.get('autorise_par', heure.autorise_par or 'Système')
+
+            if employe_id:
+                heure.employe = get_object_or_404(Employe, id=employe_id, user=request.user)
+            if date_str:
+                heure.date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            if heure_debut:
+                heure.heure_debut = datetime.strptime(heure_debut, '%H:%M').time()
+            if heure_fin:
+                heure.heure_fin = datetime.strptime(heure_fin, '%H:%M').time()
+
+            # Recalculer la durée si possible
+            if heure.heure_debut and heure.heure_fin:
+                dt_debut = datetime.combine(heure.date, heure.heure_debut)
+                dt_fin = datetime.combine(heure.date, heure.heure_fin)
+                if dt_fin <= dt_debut:
+                    dt_fin += timedelta(days=1)
+                duree_heures = (dt_fin - dt_debut).total_seconds() / 3600.0
+                heure.duree = round(duree_heures, 2)
+
+            heure.taux_horaire = taux_horaire
+            # Mettre à jour montant total/calculé
+            try:
+                # si un champ total_a_payer existe, le recalculer à partir du taux
+                montant_total = float(heure.duree or 0) * float(heure.taux_horaire or 0)
+                heure.total_a_payer = montant_total
+            except Exception:
+                pass
+
+            heure.autorise_par = autorise_par
+            heure.save()
+
+            messages.success(request, 'Heure supplémentaire modifiée avec succès')
+            return redirect('fleet_app:heure_supplementaire_list')
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification : {str(e)}')
+
+    # Préparer le contexte avec valeurs pré-remplies
+    context = {
+        'employes': employes,
+        'heure': heure,
+        'date_aujourd_hui': heure.date.strftime('%Y-%m-%d') if hasattr(heure, 'date') and heure.date else ''
+    }
     return render(request, 'fleet_app/entreprise/heure_supplementaire_form.html', context)
 
 @login_required
@@ -2099,7 +2284,7 @@ def employe_create(request):
                 if employe.calcul_salaire_auto:
                     messages.info(request, '📊 Le salaire de base sera calculé automatiquement depuis les présences')
                 
-                return redirect('fleet_app:employe_list')
+                return redirect('fleet_app:pointage_journalier')
                 
             except Exception as e:
                 messages.error(request, f'❌ Erreur lors de la création : {str(e)}')
@@ -2108,7 +2293,7 @@ def employe_create(request):
     else:
         form = EmployeForm()
     
-    return render(request, 'fleet_app/entreprise/employe_form_complete.html', {'form': form})
+    return render(request, 'fleet_app/entreprise/employe_form_simple.html', {'form': form})
 
 @login_required
 def employe_edit(request, pk):

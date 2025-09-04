@@ -91,6 +91,7 @@ urlpatterns = [
     path('feuilles-route/<int:pk>/', views.FeuilleRouteDetailView.as_view(), name='feuille_route_detail'),
     path('feuilles-route/modifier/<int:pk>/', views.feuille_route_edit, name='feuille_route_edit'),
     path('feuilles-route/supprimer/<int:pk>/', views.feuille_route_delete, name='feuille_route_delete'),
+    path('feuilles-route/imprimer/<int:pk>/', views.feuille_route_print, name='feuille_route_print'),
     
     # Alertes
     path('alertes/', views_alertes.alerte_list, name='alerte_list'),
@@ -123,6 +124,7 @@ urlpatterns = [
     # URLs pour les heures supplémentaires
     path('heures-supplementaires/', views_management_complete.heure_supplementaire_list, name='heure_supplementaire_list'),
     path('heures-supplementaires/ajouter/', views_management_complete.heure_supplementaire_add, name='heure_supplementaire_add'),
+    path('heures-supplementaires/modifier/<int:pk>/', views_management_complete.heure_supplementaire_edit, name='heure_supplementaire_edit'),
     path('heures-supplementaires/export/', views_management_complete.heure_supplementaire_export, name='heure_supplementaire_export'),
     path('ajax/employe-info/', views_management_complete.get_employe_info_ajax, name='get_employe_info_ajax'),
 
@@ -143,7 +145,6 @@ urlpatterns = [
     path('pointage/formulaire/', views_pointage.pointage_formulaire, name='pointage_formulaire'),
     path('pointage/rapide/', views_pointage.pointage_rapide, name='pointage_rapide'),
     path('pointage/historique/', views_pointage.historique_pointage, name='historique_pointage'),
-    path('pointage/configuration-salaire/', views_pointage.configuration_salaire, name='configuration_salaire'),
     
     # URLs pour les paramètres de paie
     path('parametres-paie/', views_management_complete.parametre_paie_list, name='parametre_paie_list'),
@@ -193,18 +194,22 @@ urlpatterns = [
     path('inventaire/sorties-stock/creer/', views_inventaire.sortie_stock_create, name='sortie_stock_create'),
     path('inventaire/sorties-stock/<str:pk>/modifier/', views_inventaire.sortie_stock_update, name='sortie_stock_update'),
     path('inventaire/sorties-stock/<str:pk>/supprimer/', views_inventaire.sortie_stock_delete, name='sortie_stock_delete'),
+    path('inventaire/dashboard/', views_inventaire.inventaire_dashboard, name='inventaire_dashboard'),
     path('inventaire/stock-actuel/', views_inventaire.stock_actuel, name='stock_actuel'),
     path('inventaire/mouvements-stock/', views_inventaire.mouvement_stock_list, name='mouvement_stock_list'),
     path('inventaire/commandes/', views_inventaire.commande_list, name='commande_list'),
-    path('inventaire/commandes/creer/', views_management.temp_redirect_view, name='commande_create'),
-    path('inventaire/commandes/export/', views_management.temp_redirect_view, name='export_commandes_excel'),
+    path('inventaire/commandes/creer/', views_inventaire.commande_create, name='commande_create'),
+    path('inventaire/commandes/<str:pk>/', views_inventaire.commande_detail, name='commande_detail'),
+    path('inventaire/commandes/<str:pk>/modifier/', views_inventaire.commande_update, name='commande_update'),
+    path('inventaire/commandes/<str:pk>/supprimer/', views_inventaire.commande_delete, name='commande_delete'),
+    path('inventaire/commandes/export/', views_inventaire.export_commandes_excel, name='export_commandes_excel'),
     path('inventaire/factures/', views_facturation.facture_list, name='facture_list'),
-    path('inventaire/factures/creer/', views_management.temp_redirect_view, name='facture_create'),
-    path('inventaire/factures/<str:pk>/', views_management.temp_redirect_view, name='facture_detail'),
-    path('inventaire/factures/<str:pk>/modifier/', views_management.temp_redirect_view, name='facture_update'),
-    path('inventaire/factures/<str:pk>/supprimer/', views_management.temp_redirect_view, name='facture_delete'),
-    path('inventaire/factures/<str:pk>/pdf/', views_management.temp_redirect_view, name='export_facture_pdf'),
-    path('inventaire/factures/export/', views_management.temp_redirect_view, name='export_factures_excel'),
+    path('inventaire/factures/creer/', views_facturation.facture_create, name='facture_create'),
+    path('inventaire/factures/<str:pk>/', views_facturation.facture_detail, name='facture_detail'),
+    path('inventaire/factures/<str:pk>/modifier/', views_facturation.facture_update, name='facture_update'),
+    path('inventaire/factures/<str:pk>/supprimer/', views_facturation.facture_delete, name='facture_delete'),
+    path('inventaire/factures/<str:pk>/pdf/', views_facturation.export_facture_pdf, name='export_facture_pdf'),
+    path('inventaire/factures/export/', views_facturation.export_factures_excel, name='export_factures_excel'),
     
     # Debug
     path('debug/vehicule/<str:id_vehicule>/', views_debug.debug_vehicle_relations, name='debug_vehicle_relations'),

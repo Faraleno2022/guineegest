@@ -11,6 +11,100 @@
         <li class="breadcrumb-item active">Inventaire - Mouvements de Stock</li>
     </ol>
     
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="small text-white-50">Total mouvements</div>
+                            <div class="h4 mb-0">{{ stats.total_mouvements }}</div>
+                        </div>
+                        <div><i class="fas fa-exchange-alt fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="small text-white-50">Entrées</div>
+                            <div class="h4 mb-0">{{ stats.total_entrees }}</div>
+                        </div>
+                        <div><i class="fas fa-arrow-down fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="small text-white-50">Sorties</div>
+                            <div class="h4 mb-0">{{ stats.total_sorties }}</div>
+                        </div>
+                        <div><i class="fas fa-arrow-up fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="small text-white-50">Produits concernés</div>
+                            <div class="h4 mb-0">{{ stats.produits_concernes }}</div>
+                        </div>
+                        <div><i class="fas fa-box fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top produits -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header py-2">
+                    <i class="fas fa-chart-bar me-1"></i>
+                    Top produits (par nombre de mouvements)
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for produit in top_produits %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ produit.produit__id_produit }} - {{ produit.produit__nom }}</span>
+                                <span class="badge bg-primary rounded-pill">{{ produit.nb_mouvements }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">Aucune donnée disponible</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header py-2">
+                    <i class="fas fa-calendar-day me-1"></i>
+                    Activité du jour
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Mouvements aujourd'hui</span>
+                        <span class="badge bg-secondary fs-6">{{ stats.mouvements_aujourd_hui }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card mb-4">
         <div class="card-header">
             <i class="fas fa-exchange-alt me-1"></i>

@@ -22,6 +22,36 @@
                 <a href="{% url 'fleet_app:heure_supplementaire_export' %}" class="btn btn-success btn-sm">
                     <i class="fas fa-file-excel me-1"></i>Exporter CSV
                 </a>
+                <!-- Définir un taux horaire global sur une période -->
+                <form method="post" action="{% url 'fleet_app:heure_supplementaire_list' %}" class="d-inline ms-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="definir_montant_global">
+                    <!-- Reprendre les filtres de période du GET si présents -->
+                    <input type="hidden" name="mois" value="{{ request.GET.mois }}">
+                    <input type="hidden" name="annee" value="{{ request.GET.annee }}">
+                    <input type="hidden" name="date_debut" value="{{ request.GET.date_debut }}">
+                    <input type="hidden" name="date_fin" value="{{ request.GET.date_fin }}">
+                    <input type="hidden" name="employe_id" value="{{ request.GET.employe_id }}">
+                    <div class="input-group input-group-sm" style="width: 220px;">
+                        <span class="input-group-text">Taux global</span>
+                        <input type="number" name="montant_global" class="form-control" placeholder="GNF" step="1" min="0" required>
+                        <button type="submit" class="btn btn-outline-primary" title="Appliquer au périmètre filtré">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                </form>
+                <form method="post" action="{% url 'fleet_app:heure_supplementaire_list' %}" class="d-inline ms-1">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reinitialiser_montant_global">
+                    <input type="hidden" name="mois" value="{{ request.GET.mois }}">
+                    <input type="hidden" name="annee" value="{{ request.GET.annee }}">
+                    <input type="hidden" name="date_debut" value="{{ request.GET.date_debut }}">
+                    <input type="hidden" name="date_fin" value="{{ request.GET.date_fin }}">
+                    <input type="hidden" name="employe_id" value="{{ request.GET.employe_id }}">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm" title="Réinitialiser les taux personnalisés du périmètre">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                </form>
             </div>
         </div>
         <div class="card-body">

@@ -330,11 +330,6 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item {% if request.resolver_match.url_name == 'configuration_salaire' %}active{% endif %}" href="{% url 'fleet_app:configuration_salaire' %}">
-                                <i class="fas fa-coins me-2"></i>Configuration Salaires
-                            </a>
-                            </li>
-                            <li>
                                 <a href="{% url 'fleet_app:kpi_disponibilite' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_disponibilite' %}active{% endif %}">
                                     <i class="fas fa-check-circle"></i> Disponibilité
                                 </a>
@@ -390,11 +385,6 @@
                             <li>
                                 <a href="{% url 'fleet_app:pointage_journalier' %}" class="dropdown-item {% if 'pointage' in request.resolver_match.url_name %}active{% endif %}">
                                     <i class="fas fa-calendar-check"></i> Pointage Journalier
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{% url 'fleet_app:configuration_salaire' %}" class="dropdown-item {% if 'configuration_salaire' in request.resolver_match.url_name %}active{% endif %}">
-                                    <i class="fas fa-coins"></i> Configuration Salaires
                                 </a>
                             </li>
 
@@ -459,6 +449,12 @@
                             <i class="fas fa-boxes"></i> Inventaire
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="inventaireDropdown">
+                            <li>
+                                <a href="{% url 'fleet_app:inventaire_dashboard' %}" class="dropdown-item {% if request.resolver_match.url_name == 'inventaire_dashboard' %}active{% endif %}">
+                                    <i class="fas fa-tachometer-alt"></i> Tableau de bord
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a href="{% url 'fleet_app:produit_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'produit_list' %}active{% endif %}">
                                     <i class="fas fa-box"></i> Produits

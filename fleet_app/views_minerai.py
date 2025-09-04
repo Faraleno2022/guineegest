@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Sum, Avg, Q
+from django.db.models import Sum, Avg, Q, Count
 from django.urls import reverse
 import csv
 import io
@@ -20,13 +20,85 @@ def pesee_camion_list(request):
     Filtrée pour n'afficher que les pesées de l'utilisateur connecté
     """
     # Récupérer uniquement les pesées de camions de l'utilisateur connecté
-    pesees = PeseeCamion.objects.filter(user=request.user).order_by('-date')
-    
-    context = {
-        'pesees': pesees,
-        'message': "Liste des pesées de camions"
+    qs = PeseeCamion.objects.filter(user=request.user)
+
+    # Filtre dynamique unique 'q'
+    q = (request.GET.get('q') or '').strip()
+    from datetime import datetime as _dt
+    import re
+    if q:
+        # 1) Plage de dates: YYYY-MM-DD..YYYY-MM-DD
+        m = re.search(r'(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})', q)
+        if m:
+            try:
+                d1 = _dt.strptime(m.group(1), '%Y-%m-%d').date()
+                d2 = _dt.strptime(m.group(2), '%Y-%m-%d').date()
+                qs = qs.filter(date__gte=d1, date__lte=d2)
+            except ValueError:
+                pass
+            # retirer ce fragment de la requête pour ne pas le re-traiter
+            q = q.replace(m.group(0), '').strip()
+
+        # 2) Mots-clés: date_debut:, date_fin:, plate:, zone:
+        # Exemple: plate:ABC123 zone:Mine-1 date_debut:2025-08-01 date_fin:2025-08-31
+        tokens = q.split()
+        remaining_terms = []
+        for t in tokens:
+            if t.lower().startswith('plate:'):
+                val = t.split(':', 1)[1]
+                if val:
+                    qs = qs.filter(plate__icontains=val)
+            elif t.lower().startswith('zone:'):
+                val = t.split(':', 1)[1]
+                if val:
+                    qs = qs.filter(loading_zone__icontains=val)
+            elif t.lower().startswith('date_debut:'):
+                val = t.split(':', 1)[1]
+                try:
+                    d = _dt.strptime(val, '%Y-%m-%d').date()
+                    qs = qs.filter(date__gte=d)
+                except Exception:
+                    pass
+            elif t.lower().startswith('date_fin:'):
+                val = t.split(':', 1)[1]
+                try:
+                    d = _dt.strptime(val, '%Y-%m-%d').date()
+                    qs = qs.filter(date__lte=d)
+                except Exception:
+                    pass
+            else:
+                remaining_terms.append(t)
+
+        # 3) Termes restants: recherche floue sur plaque et zone
+        for term in remaining_terms:
+            if term:
+                qs = qs.filter(Q(plate__icontains=term) | Q(loading_zone__icontains=term))
+
+    qs = qs.order_by('-date', '-weighing_end')
+
+    # Statistiques sur le queryset filtré
+    stats = {
+        'total_pesees': qs.count(),
+        'total_quantite': qs.aggregate(s=Sum('quantity'))['s'] or 0,
+        'moyenne_quantite': qs.aggregate(a=Avg('quantity'))['a'] or 0,
+        'top_plaques': list(qs.values('plate').annotate(total=Sum('quantity'), n=Count('id')).order_by('-total')[:5]),
+        'top_zones': list(qs.values('loading_zone').annotate(total=Sum('quantity'), n=Count('id')).order_by('-total')[:5]),
     }
-    
+
+    # Pagination (25 par page)
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, 25)
+    page_number = request.GET.get('page')
+    pesees_page = paginator.get_page(page_number)
+
+    context = {
+        'pesees': pesees_page,
+        'stats': stats,
+        'message': "Liste des pesées de camions",
+        'q': (request.GET.get('q') or '').strip(),
+    }
+    if request.GET.get('partial') == '1' or request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'fleet_app/entreprise/partials/pesee_camion_list_partial.html', context)
     return render(request, 'fleet_app/entreprise/pesee_camion_list.html', context)
 
 @login_required
@@ -36,29 +108,100 @@ def fiche_bord_machine_list(request):
     Filtrée pour n'afficher que les fiches de l'utilisateur connecté
     """
     try:
-        # Récupérer uniquement les fiches de bord machine de l'utilisateur connecté
-        fiches = FicheBordMachine.objects.filter(user=request.user).order_by('-annee', '-mois')
-        
-        # Ajouter le comptage des entrées pour chaque fiche
-        for fiche in fiches:
+        qs = FicheBordMachine.objects.filter(user=request.user)
+
+        # Recherche dynamique 'q'
+        q = (request.GET.get('q') or '').strip()
+        from datetime import datetime as _dt
+        import re
+        if q:
+            # Plage de dates: YYYY-MM-DD..YYYY-MM-DD
+            m = re.search(r'(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})', q)
+            if m:
+                try:
+                    d1 = _dt.strptime(m.group(1), '%Y-%m-%d').date()
+                    d2 = _dt.strptime(m.group(2), '%Y-%m-%d').date()
+                    qs = qs.filter(date__gte=d1, date__lte=d2)
+                except ValueError:
+                    pass
+                q = q.replace(m.group(0), '').strip()
+
+            tokens = q.split()
+            remaining_terms = []
+            for t in tokens:
+                if t.lower().startswith('date_debut:'):
+                    val = t.split(':', 1)[1]
+                    try:
+                        d = _dt.strptime(val, '%Y-%m-%d').date()
+                        qs = qs.filter(date__gte=d)
+                    except Exception:
+                        pass
+                elif t.lower().startswith('date_fin:'):
+                    val = t.split(':', 1)[1]
+                    try:
+                        d = _dt.strptime(val, '%Y-%m-%d').date()
+                        qs = qs.filter(date__lte=d)
+                    except Exception:
+                        pass
+                elif t.lower().startswith('machine:'):
+                    val = t.split(':', 1)[1]
+                    if val:
+                        qs = qs.filter(Q(machine__nom__icontains=val) | Q(machine__immatriculation__icontains=val))
+                elif t.lower().startswith('chauffeur:'):
+                    val = t.split(':', 1)[1]
+                    if val:
+                        qs = qs.filter(Q(chauffeur__prenom__icontains=val) | Q(chauffeur__nom__icontains=val))
+                else:
+                    remaining_terms.append(t)
+
+            for term in remaining_terms:
+                if term:
+                    qs = qs.filter(
+                        Q(machine__nom__icontains=term) |
+                        Q(machine__immatriculation__icontains=term) |
+                        Q(chauffeur__prenom__icontains=term) |
+                        Q(chauffeur__nom__icontains=term)
+                    )
+
+        qs = qs.order_by('-date')
+
+        # Statistiques
+        stats = {
+            'total_fiches': qs.count(),
+            'total_heures': qs.aggregate(s=Sum('heures_travail'))['s'] or 0,
+            'total_carburant': qs.aggregate(s=Sum('carburant_consomme'))['s'] or 0,
+            'top_machines': list(qs.values('machine__nom', 'machine__immatriculation').annotate(n=Count('id'), heures=Sum('heures_travail')).order_by('-heures')[:5]),
+            'top_chauffeurs': list(qs.values('chauffeur__prenom', 'chauffeur__nom').annotate(n=Count('id'), heures=Sum('heures_travail')).order_by('-heures')[:5]),
+        }
+
+        # Enrichir avec entrees_count
+        from django.core.paginator import Paginator
+        paginator = Paginator(qs, 25)
+        page_number = request.GET.get('page')
+        fiches_page = paginator.get_page(page_number)
+        for fiche in fiches_page:
             try:
                 fiche.entrees_count = fiche.entrees.count() if hasattr(fiche, 'entrees') else 0
-            except:
+            except Exception:
                 fiche.entrees_count = 0
-        
+
         context = {
-            'fiches': fiches,
-            'message': "Liste des fiches de bord machine"
+            'fiches': fiches_page,
+            'stats': stats,
+            'message': "Liste des fiches de bord machine",
+            'q': (request.GET.get('q') or '').strip(),
         }
-        
+        if request.GET.get('partial') == '1' or request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return render(request, 'fleet_app/entreprise/partials/fiche_bord_machine_list_partial.html', context)
         return render(request, 'fleet_app/entreprise/fiche_bord_machine_list.html', context)
-    
+
     except Exception as e:
-        # En cas d'erreur (comme la colonne manquante), afficher un message d'erreur
         context = {
             'fiches': [],
+            'stats': None,
             'message': f"Erreur lors du chargement des fiches: {str(e)}. Veuillez appliquer les migrations en cours.",
-            'error': True
+            'error': True,
+            'q': (request.GET.get('q') or '').strip(),
         }
         return render(request, 'fleet_app/entreprise/fiche_bord_machine_list.html', context)
 
@@ -100,14 +243,80 @@ def fiche_or_list(request):
     Vue pour afficher la liste des fiches d'or
     Filtrée pour n'afficher que les fiches de l'utilisateur connecté
     """
-    # Récupérer uniquement les fiches d'or de l'utilisateur connecté
-    fiches_or = FicheOr.objects.filter(user=request.user).order_by('-annee', '-mois')
-    
-    context = {
-        'fiches_or': fiches_or,
-        'message': "Liste des fiches d'or"
+    qs = FicheOr.objects.filter(user=request.user)
+
+    # Recherche dynamique 'q'
+    q = (request.GET.get('q') or '').strip()
+    from datetime import datetime as _dt
+    import re
+    if q:
+        m = re.search(r'(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})', q)
+        if m:
+            try:
+                d1 = _dt.strptime(m.group(1), '%Y-%m-%d').date()
+                d2 = _dt.strptime(m.group(2), '%Y-%m-%d').date()
+                qs = qs.filter(date__gte=d1, date__lte=d2)
+            except ValueError:
+                pass
+            q = q.replace(m.group(0), '').strip()
+
+        # Parsing des termes de recherche
+        terms = q.split()
+        remaining_terms = []
+        for t in terms:
+            if ':' in t:
+                key, val = t.split(':', 1)
+                if key == 'date_debut' and val:
+                    try:
+                        date_debut = datetime.strptime(val, '%Y-%m-%d').date()
+                        qs = qs.filter(date__gte=date_debut)
+                    except ValueError:
+                        pass
+                elif key == 'date_fin' and val:
+                    try:
+                        date_fin = datetime.strptime(val, '%Y-%m-%d').date()
+                        qs = qs.filter(date__lte=date_fin)
+                    except ValueError:
+                        pass
+                elif key == 'lieu' and val:
+                    qs = qs.filter(entrees__lieu__icontains=val)
+            else:
+                remaining_terms.append(t)
+
+        for term in remaining_terms:
+            if term:
+                qs = qs.filter(Q(entrees__lieu__icontains=term))
+
+    qs = qs.order_by('-date')
+
+    # Statistiques - agrégation depuis les entrées liées
+    stats = {
+        'total_fiches': qs.count(),
+        'total_quantite': qs.aggregate(s=Sum('entrees__quantite'))['s'] or 0,
+        'total_valeur': qs.aggregate(s=Sum('entrees__total_obtenu'))['s'] or 0,
+        'top_sites': list(qs.values('entrees__lieu').annotate(n=Count('id'), q=Sum('entrees__quantite')).exclude(entrees__lieu__isnull=True).order_by('-q')[:5]),
+        'top_responsables': [],  # Pas de champ responsable dans EntreeFicheOr
     }
-    
+
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, 25)
+    page_number = request.GET.get('page')
+    fiches_page = paginator.get_page(page_number)
+    # Ajouter entrees_count si relation disponible
+    for fiche in fiches_page:
+        try:
+            fiche.entrees_count = fiche.entrees.count() if hasattr(fiche, 'entrees') else 0
+        except Exception:
+            fiche.entrees_count = 0
+
+    context = {
+        'fiches': fiches_page,
+        'stats': stats,
+        'message': "Liste des fiches d'or",
+        'q': (request.GET.get('q') or '').strip(),
+    }
+    if request.GET.get('partial') == '1' or request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'fleet_app/entreprise/partials/fiche_or_list_partial.html', context)
     return render(request, 'fleet_app/entreprise/fiche_or_list.html', context)
 
 @login_required

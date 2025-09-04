@@ -125,3 +125,67 @@
         }
     }
 </style>
+
+<script>
+    (function() {
+        function updateUrl(month, year) {
+            try {
+                const url = new URL(window.location.href);
+                const params = url.searchParams;
+                if (month) params.set('mois', month);
+                if (year) params.set('annee', year);
+                // reset pagination when changing period
+                params.delete('page');
+                url.search = params.toString();
+                window.location.href = url.toString();
+            } catch (e) {
+                console.error('Erreur de navigation période:', e);
+            }
+        }
+
+        function clampMonthYear(m, y) {
+            // m in [1..12]
+            let month = parseInt(m, 10);
+            let year = parseInt(y, 10);
+            if (month < 1) { month = 12; year -= 1; }
+            if (month > 12) { month = 1; year += 1; }
+            return { month, year };
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const monthSel = document.getElementById('period-month');
+            const yearSel = document.getElementById('period-year');
+            const prevBtn = document.getElementById('prev-month');
+            const nextBtn = document.getElementById('next-month');
+
+            if (monthSel && yearSel) {
+                monthSel.addEventListener('change', function() {
+                    updateUrl(this.value, yearSel.value);
+                });
+                yearSel.addEventListener('change', function() {
+                    updateUrl(monthSel.value, this.value);
+                });
+            }
+
+            function navigate(delta) {
+                const currentMonth = parseInt(monthSel ? monthSel.value : '{{ sync_period.month }}', 10);
+                const currentYear = parseInt(yearSel ? yearSel.value : '{{ sync_period.year }}', 10);
+                const res = clampMonthYear(currentMonth + delta, currentYear);
+                updateUrl(res.month, res.year);
+            }
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    navigate(-1);
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    navigate(1);
+                });
+            }
+        });
+    })();
+</script>

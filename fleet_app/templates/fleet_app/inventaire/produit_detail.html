@@ -122,7 +122,7 @@
                         Dernières entrées en stock
                     </div>
                     <div>
-                        <a href="{% url 'fleet_app:entree_stock_create_with_product' produit.id_produit %}" class="btn btn-primary btn-sm">
+                        <a href="{% url 'fleet_app:entree_stock_create' %}?produit={{ produit.id_produit }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus"></i> Nouvelle entrée
                         </a>
                     </div>
@@ -169,7 +169,7 @@
                         Dernières sorties de stock
                     </div>
                     <div>
-                        <a href="{% url 'fleet_app:sortie_stock_create_with_product' produit.id_produit %}" class="btn btn-primary btn-sm">
+                        <a href="{% url 'fleet_app:sortie_stock_create' %}?produit={{ produit.id_produit }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus"></i> Nouvelle sortie
                         </a>
                     </div>

@@ -49,17 +49,19 @@ class EmployeForm(forms.ModelForm):
             'matricule', 'prenom', 'nom', 'fonction',
             'telephone', 'date_embauche', 'statut', 'salaire_journalier',
             'taux_horaire_specifique', 'calcul_salaire_auto',
+            # Champs obligatoires manquants
+            'montant_heure_supp_jour_ouvrable', 'montant_heure_supp_dimanche_ferie', 'mode_calcul_heures_supp',
             # Charges sociales guinéennes
             'appliquer_cnss', 'appliquer_rts', 'appliquer_vf',
             'taux_cnss_salarie_custom', 'taux_cnss_employeur_custom', 'taux_vf_custom'
         ]
         widgets = {
-            'matricule': forms.TextInput(attrs={'class': 'form-control'}),
-            'prenom': forms.TextInput(attrs={'class': 'form-control'}),
-            'nom': forms.TextInput(attrs={'class': 'form-control'}),
-            'fonction': forms.TextInput(attrs={'class': 'form-control'}),
-            'telephone': forms.TextInput(attrs={'class': 'form-control'}),
-            'date_embauche': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'matricule': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: EMP-001 ou 2025-0001'}),
+            'prenom': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Mamadou'}),
+            'nom': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Diallo'}),
+            'fonction': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Chauffeur, Mécanicien, Comptable'}),
+            'telephone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+224 6XX XX XX XX'}),
+            'date_embauche': forms.DateInput(attrs={'type': 'date', 'class': 'form-control', 'placeholder': 'AAAA-MM-JJ'}),
             'statut': forms.Select(attrs={'class': 'form-select'}),
             'salaire_journalier': forms.NumberInput(attrs={
                 'class': 'form-control', 
@@ -114,10 +116,18 @@ class EmployeForm(forms.ModelForm):
                 'max': '10',
                 'placeholder': '7.00 à 10.00'
             }),
+            
+            # Champs heures supplémentaires (cachés avec valeurs par défaut)
+            'montant_heure_supp_jour_ouvrable': forms.HiddenInput(),
+            'montant_heure_supp_dimanche_ferie': forms.HiddenInput(),
+            'mode_calcul_heures_supp': forms.HiddenInput(),
         }
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Configurer les choix pour le statut
+        self.fields['statut'].choices = Employe.STATUT_CHOICES
         
         # Ajouter des classes CSS et des labels personnalisés
         self.fields['calcul_salaire_auto'].label = "Calculer automatiquement le salaire de base depuis les présences"
@@ -145,6 +155,55 @@ class EmployeForm(forms.ModelForm):
         self.fields['taux_cnss_salarie_custom'].required = False
         self.fields['taux_cnss_employeur_custom'].required = False
         self.fields['taux_vf_custom'].required = False
+        self.fields['taux_horaire_specifique'].required = False
+        # Le salaire peut être vide si calcul automatique
+        self.fields['salaire_journalier'].required = False
+        # Clarifier le libellé du salaire pour l'utilisateur
+        self.fields['salaire_journalier'].label = "Salaire de base (GNF - journalier)"
+        self.fields['salaire_journalier'].help_text = (
+            "Montant de base par jour. Laissez vide si vous cochez 'Calculer automatiquement le salaire'."
+        )
+        
+        # Définir les valeurs initiales pour les champs cachés
+        self.fields['montant_heure_supp_jour_ouvrable'].initial = 0
+        self.fields['montant_heure_supp_dimanche_ferie'].initial = 0
+        self.fields['mode_calcul_heures_supp'].initial = 'standard'
+        # Ne pas exiger ces champs dans le formulaire simple (ils sont gérés avec des valeurs par défaut)
+        self.fields['montant_heure_supp_jour_ouvrable'].required = False
+        self.fields['montant_heure_supp_dimanche_ferie'].required = False
+        self.fields['mode_calcul_heures_supp'].required = False
+        
+    def clean(self):
+        """Validation personnalisée pour s'assurer que les valeurs par défaut sont définies"""
+        cleaned_data = super().clean()
+        
+        # S'assurer que tous les champs numériques ont des valeurs par défaut
+        numeric_fields = [
+            'taux_cnss_salarie_custom', 'taux_cnss_employeur_custom', 'taux_vf_custom',
+            'taux_horaire_specifique', 'montant_heure_supp_jour_ouvrable', 
+            'montant_heure_supp_dimanche_ferie'
+        ]
+        
+        for field in numeric_fields:
+            if not cleaned_data.get(field):
+                cleaned_data[field] = 0
+        
+        # S'assurer que mode_calcul_heures_supp a une valeur
+        if not cleaned_data.get('mode_calcul_heures_supp'):
+            cleaned_data['mode_calcul_heures_supp'] = 'standard'
+        
+        # Salaire journalier: requis si pas de calcul auto
+        calcul_auto = cleaned_data.get('calcul_salaire_auto')
+        salaire = cleaned_data.get('salaire_journalier')
+        if calcul_auto:
+            # autoriser vide => 0
+            if not salaire:
+                cleaned_data['salaire_journalier'] = 0
+        else:
+            if salaire in [None, "", 0, 0.0, 0.00]:
+                self.add_error('salaire_journalier', "Veuillez renseigner le salaire de base ou activer le calcul automatique.")
+            
+        return cleaned_data
 
 
 class PresenceJournaliereForm(forms.ModelForm):

@@ -15,7 +15,7 @@ from django.utils import timezone
 from .views_accounts import check_profile_completion
 
 # Import des modèles
-from .models import Vehicule, DistanceParcourue, ConsommationCarburant, DisponibiliteVehicule, CoutFonctionnement, CoutFinancier, IncidentSecurite, UtilisationActif, UtilisationVehicule, Chauffeur, FeuilleDeRoute, GalleryImage
+from .models import Vehicule, DistanceParcourue, ConsommationCarburant, DisponibiliteVehicule, CoutFonctionnement, CoutFinancier, IncidentSecurite, UtilisationActif, UtilisationVehicule, Chauffeur, FeuilleDeRoute, GalleryImage, DocumentAdministratif
 from .models_alertes import Alerte
 
 # Import des formulaires
@@ -1048,36 +1048,57 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         vehicule = self.get_object()
-        
+
         # Documents administratifs
-        context['documents'] = []
-        context['documents_error'] = "Table non disponible"
-        
+        try:
+            context['documents'] = DocumentAdministratif.objects.filter(vehicule=vehicule).order_by('-date_emission')
+            context['documents_error'] = False
+        except Exception:
+            context['documents'] = []
+            context['documents_error'] = True
+
         # Formulaire d'ajout de document administratif
         context['document_form'] = DocumentAdministratifForm(initial={'vehicule': vehicule})
-        
-        # Date du jour pour comparaison des dates d'expiration
+
+        # Date du jour
         from datetime import date
         context['today'] = date.today()
-        
+
         # Distances parcourues
-        context['distances'] = []
-        context['distances_error'] = "Table non disponible"
-        
+        try:
+            context['distances'] = DistanceParcourue.objects.filter(vehicule=vehicule).order_by('-date_debut')
+            context['distances_error'] = False
+        except Exception:
+            context['distances'] = []
+            context['distances_error'] = True
+
         # Consommation de carburant
-        context['consommations'] = []
-        context['consommations_error'] = "Table non disponible"
-        
+        try:
+            context['consommations'] = ConsommationCarburant.objects.filter(vehicule=vehicule).order_by('-date_plein1')
+            context['consommations_error'] = False
+        except Exception:
+            context['consommations'] = []
+            context['consommations_error'] = True
+
         # Coûts de fonctionnement
-        context['couts_fonctionnement'] = []
-        context['couts_fonctionnement_error'] = "Table non disponible"
-        
+        try:
+            context['couts_fonctionnement'] = CoutFonctionnement.objects.filter(vehicule=vehicule).order_by('-date')
+            context['couts_fonctionnement_error'] = False
+        except Exception:
+            context['couts_fonctionnement'] = []
+            context['couts_fonctionnement_error'] = True
+
         # Alertes
-        context['alertes'] = []
-        context['alertes_error'] = "Table non disponible"
-        
+        try:
+            # Statut choices in Alerte are 'Active', 'Résolue', 'Ignorée'
+            context['alertes'] = Alerte.objects.filter(vehicule=vehicule, statut='Active').order_by('-date_creation')
+            context['alertes_error'] = False
+        except Exception:
+            context['alertes'] = []
+            context['alertes_error'] = True
+
         return context
-        
+
     def post(self, request, *args, **kwargs):
         vehicule = self.get_object()
         form = DocumentAdministratifForm(request.POST, request.FILES)

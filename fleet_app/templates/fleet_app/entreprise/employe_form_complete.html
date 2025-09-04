@@ -443,7 +443,11 @@ $(document).ready(function() {
         let errors = [];
         
         // Vérifier les champs obligatoires
-        const requiredFields = ['matricule', 'nom', 'prenom', 'fonction', 'salaire_journalier'];
+        let requiredFields = ['matricule', 'nom', 'prenom', 'fonction', 'salaire_journalier'];
+        // Si le calcul automatique est activé, ne pas exiger le salaire_journalier
+        if ($('#calculSalaireAuto').is(':checked')) {
+            requiredFields = requiredFields.filter(f => f !== 'salaire_journalier');
+        }
         requiredFields.forEach(function(field) {
             const fieldElement = $(`#id_${field}`);
             if (!fieldElement.val().trim()) {
