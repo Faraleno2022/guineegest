@@ -108,6 +108,9 @@
                     <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('coutsFonctionnementTable', 'Couts_Fonctionnement')">
                         <i class="fas fa-file-excel me-1"></i> Excel
                     </button>
+                    <a href="{% url 'fleet_app:export_kpi_couts_fonctionnement_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}" class="btn btn-sm btn-danger">
+                        <i class="fas fa-file-pdf me-1"></i> PDF (serveur)
+                    </a>
                     <button type="button" class="btn btn-sm btn-danger" onclick="exportTableToPDF('coutsFonctionnementTable', 'Couts_Fonctionnement')">
                         <i class="fas fa-file-pdf me-1"></i> PDF
                     </button>

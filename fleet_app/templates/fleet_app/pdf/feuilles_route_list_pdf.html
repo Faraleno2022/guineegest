@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Feuilles de route</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 10.5pt; color: #222; }
+    h1 { font-size: 16pt; margin: 0 0 8px 0; }
+    .meta { font-size: 9pt; color: #666; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #888; padding: 6px; }
+    th { background: #f0f0f0; }
+    .nowrap { white-space: nowrap; }
+    .small { font-size: 9pt; }
+  </style>
+</head>
+<body>
+  <h1>Feuilles de route</h1>
+  <div class="meta">
+    Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
+    {% if start or end or period %}
+      Période: {% if start %}du {{ start }}{% endif %}{% if end %} au {{ end }}{% endif %}{% if period and not start and not end %} ({{ period }}){% endif %}
+    {% else %}
+      Période: Toutes
+    {% endif %}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 16%">Date départ</th>
+        <th style="width: 16%">Véhicule</th>
+        <th style="width: 22%">Chauffeur</th>
+        <th style="width: 28%">Destination</th>
+        <th style="width: 9%" class="nowrap">Distance</th>
+        <th style="width: 9%" class="nowrap">Conso</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in feuilles_route %}
+      <tr>
+        <td class="nowrap">{{ f.date_depart|date:"d/m/Y H:i" }}</td>
+        <td>{{ f.vehicule.immatriculation }}</td>
+        <td>{{ f.chauffeur.nom }} {{ f.chauffeur.prenom }}</td>
+        <td>{{ f.destination }}</td>
+        <td class="nowrap">{% if f.distance_parcourue %}{{ f.distance_parcourue }} km{% else %}-{% endif %}</td>
+        <td class="nowrap">{% if f.consommation %}{{ f.consommation }} L/100km{% else %}-{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="small">Aucune feuille de route pour cette période.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

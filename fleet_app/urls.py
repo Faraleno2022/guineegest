@@ -35,20 +35,37 @@ urlpatterns = [
     
     # Véhicules
     path('vehicules/', views.VehiculeListView.as_view(), name='vehicule_list'),
+    path('vehicules/export/pdf/', views.export_vehicules_pdf, name='export_vehicules_pdf'),
     path('vehicules/ajouter/', views.VehiculeCreateView.as_view(), name='vehicule_add'),
     path('vehicules/<str:id_vehicule>/', views.VehiculeDetailView.as_view(), name='vehicule_detail'),
     path('vehicules/modifier/<str:id_vehicule>/', views.VehiculeUpdateView.as_view(), name='vehicule_edit'),
     path('vehicules/supprimer/<str:id_vehicule>/', views.VehiculeDeleteView.as_view(), name='vehicule_delete'),
     path('vehicules/force-delete/<str:id_vehicule>/', views_force_delete.force_delete_vehicule, name='force_delete_vehicule'),
+    # Exports CSV spécifiques à un véhicule
+    path('vehicules/<str:id_vehicule>/export/documents/', views.export_vehicule_documents_csv, name='export_vehicule_documents_csv'),
+    path('vehicules/<str:id_vehicule>/export/distances/', views.export_vehicule_distances_csv, name='export_vehicule_distances_csv'),
+    path('vehicules/<str:id_vehicule>/export/consommations/', views.export_vehicule_consommations_csv, name='export_vehicule_consommations_csv'),
+    path('vehicules/<str:id_vehicule>/export/couts/', views.export_vehicule_couts_csv, name='export_vehicule_couts_csv'),
+    path('vehicules/<str:id_vehicule>/export/alertes/', views.export_vehicule_alertes_csv, name='export_vehicule_alertes_csv'),
     
     # KPI
     path('kpi/distance/', views.kpi_distance, name='kpi_distance'),
+    path('kpi/distance/export-csv/', views.export_kpi_distance_csv, name='export_kpi_distance_csv'),
+    path('kpi/distance/export-pdf/', views.export_kpi_distance_pdf, name='export_kpi_distance_pdf'),
     path('kpi/consommation/', views.kpi_consommation, name='kpi_consommation'),
+    path('kpi/consommation/export-csv/', views.export_kpi_consommation_csv, name='export_kpi_consommation_csv'),
+    path('kpi/consommation/export-pdf/', views.export_kpi_consommation_pdf, name='export_kpi_consommation_pdf'),
     path('kpi/disponibilite/', views.kpi_disponibilite, name='kpi_disponibilite'),
+    path('kpi/disponibilite/export-csv/', views.export_kpi_disponibilite_csv, name='export_kpi_disponibilite_csv'),
+    path('kpi/disponibilite/export-pdf/', views.export_kpi_disponibilite_pdf, name='export_kpi_disponibilite_pdf'),
     path('kpi/couts-fonctionnement/', views.kpi_couts_fonctionnement, name='kpi_couts_fonctionnement'),
+    path('kpi/couts-fonctionnement/export-pdf/', views.export_kpi_couts_fonctionnement_pdf, name='export_kpi_couts_fonctionnement_pdf'),
+    path('feuilles-route/export/pdf/', views.export_feuilles_route_pdf, name='export_feuilles_route_pdf'),
     path('kpi/couts-financiers/', views.kpi_couts_financiers, name='kpi_couts_financiers'),
+    path('kpi/incidents/export-pdf/', views.export_kpi_incidents_pdf, name='export_kpi_incidents_pdf'),
     path('kpi/incidents/', views.kpi_incidents, name='kpi_incidents'),
     path('kpi/utilisation/', views.kpi_utilisation, name='kpi_utilisation'),
+    path('kpi/utilisation/export-pdf/', views.export_kpi_utilisation_pdf, name='export_kpi_utilisation_pdf'),
     
     # Gestion des utilisations
     path('utilisations/modifier/<int:pk>/', views.utilisation_edit, name='utilisation_edit'),

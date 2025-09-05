@@ -6,10 +6,29 @@
 {% block content %}
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Feuilles de Route Chauffeur — Modèle intelligent</h1>
-        <a href="{% url 'fleet_app:feuille_route_add' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-            <i class="fas fa-plus fa-sm text-white-50"></i> Nouvelle feuille de route
-        </a>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h3 mb-0 text-gray-800">Feuilles de Route Chauffeur — Modèle intelligent</h1>
+            <form method="get" class="d-flex gap-2 align-items-center mb-0">
+                <select name="period" class="form-select form-select-sm">
+                    <option value="" {% if not period %}selected{% endif %}>Toutes</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>Dernier mois</option>
+                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>Dernière année</option>
+                </select>
+                <input type="date" name="start" class="form-control form-control-sm" value="{{ request.GET.start }}" placeholder="Du">
+                <input type="date" name="end" class="form-control form-control-sm" value="{{ request.GET.end }}" placeholder="Au">
+                <input type="hidden" name="search" value="{{ request.GET.search }}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="fas fa-filter"></i></button>
+            </form>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-dark" href="{% url 'fleet_app:export_feuilles_route_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}&search={{ request.GET.search }}">
+                <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            <a href="{% url 'fleet_app:feuille_route_add' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-plus fa-sm text-white-50"></i> Nouvelle feuille de route
+            </a>
+        </div>
     </div>
 
     {% include 'fleet_app/components/search_box.html' with table='feuilles_route' placeholder='Rechercher une feuille de route par destination, véhicule, chauffeur...' target_div='search-results-feuilles' %}

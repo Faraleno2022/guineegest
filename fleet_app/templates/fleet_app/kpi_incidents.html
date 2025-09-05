@@ -117,6 +117,9 @@
                     <button type="button" class="btn btn-sm btn-primary" onclick="exportTableToExcel('incidentTable', 'Incidents_Securite')">
                         <i class="fas fa-file-excel"></i> Excel
                     </button>
+                    <a href="{% url 'fleet_app:export_kpi_incidents_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}" class="btn btn-sm btn-danger">
+                        <i class="fas fa-file-pdf"></i> PDF (serveur)
+                    </a>
                     <button type="button" class="btn btn-sm btn-danger" onclick="exportTableToPDF('incidentTable', 'Incidents_Securite')">
                         <i class="fas fa-file-pdf"></i> PDF
                     </button>

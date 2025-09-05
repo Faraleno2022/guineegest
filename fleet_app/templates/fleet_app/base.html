@@ -603,6 +603,110 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Script utilitaire global (toasts, etc.) -->
+    <script>
+        // Helper pour afficher un toast Bootstrap 5
+        // type: 'success' | 'info' | 'warning' | 'danger'
+        function showToast(type, message, options = {}) {
+            try {
+                const container = document.getElementById('toastContainer');
+                if (!container) return alert(message);
+
+                const headerIcons = {
+                    success: 'fa-circle-check text-success',
+                    info: 'fa-circle-info text-info',
+                    warning: 'fa-triangle-exclamation text-warning',
+                    danger: 'fa-circle-exclamation text-danger'
+                };
+
+                const titleMap = {
+                    success: 'Succès',
+                    info: 'Information',
+                    warning: 'Attention',
+                    danger: 'Erreur'
+                };
+
+                const toast = document.createElement('div');
+                toast.className = 'toast align-items-center border-0 shadow';
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+
+                const autoHide = options.autohide !== undefined ? options.autohide : true;
+                const delay = options.delay !== undefined ? options.delay : 4000;
+
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <i class="fa-solid ${headerIcons[type] || headerIcons.info} me-2"></i>
+                        <strong class="me-auto">${titleMap[type] || titleMap.info}</strong>
+                        <small class="text-muted">maintenant</small>
+                        <button type="button" class="btn-close ms-2 mb-1" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                `;
+
+                container.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast, { autohide: autoHide, delay });
+                bsToast.show();
+
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toast.remove();
+                });
+            } catch (e) {
+                // Fallback ultime
+                alert(message);
+            }
+        }
+
+        // Exporter une table (par id) en PDF via html2pdf
+        function exportTableToPDF(tableId, fileName = 'export_table') {
+            try {
+                const table = document.getElementById(tableId);
+                if (!table) {
+                    return showToast ? showToast('danger', `Table introuvable: ${tableId}`) : alert(`Table introuvable: ${tableId}`);
+                }
+
+                // Cloner la table pour éviter d'altérer le DOM
+                const clone = table.cloneNode(true);
+                // Créer un conteneur avec styles de base
+                const container = document.createElement('div');
+                container.style.padding = '12px';
+                container.style.backgroundColor = '#fff';
+                container.innerHTML = '<h4 style="margin:0 0 10px 0;">' + (fileName || 'Export') + '</h4>';
+                container.appendChild(clone);
+
+                const opt = {
+                    margin:       10,
+                    filename:     `${fileName}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true, logging: false },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                };
+                html2pdf().set(opt).from(container).save();
+            } catch (e) {
+                console.error('Export PDF échoué:', e);
+                return showToast ? showToast('danger', 'Export PDF échoué') : alert('Export PDF échoué');
+            }
+        }
+
+        // Exporter une table (par id) en Excel via SheetJS
+        function exportTableToExcel(tableId, fileName = 'export_table') {
+            try {
+                const table = document.getElementById(tableId);
+                if (!table) {
+                    return showToast ? showToast('danger', `Table introuvable: ${tableId}`) : alert(`Table introuvable: ${tableId}`);
+                }
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.table_to_sheet(table, { raw: true });
+                XLSX.utils.book_append_sheet(wb, ws, 'Données');
+                XLSX.writeFile(wb, `${fileName}.xlsx`);
+            } catch (e) {
+                console.error('Export Excel échoué:', e);
+                return showToast ? showToast('danger', 'Export Excel échoué') : alert('Export Excel échoué');
+            }
+        }
+    </script>
+
     <!-- Script pour la recherche dynamique -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {

@@ -42,6 +42,7 @@
                         <div class="col-md-4 mb-3">
                             <label for="{{ form.heures_disponibles.id_for_label }}" class="form-label">Heures disponibles</label>
                             {{ form.heures_disponibles }}
+                            <small id="heuresDispoHelp" class="form-text text-muted"></small>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="{{ form.heures_totales.id_for_label }}" class="form-label">Heures totales</label>
@@ -58,7 +59,23 @@
                             {{ form.raison_indisponibilite }}
                         </div>
                     </div>
-                    <div class="text-end">
+                    <!-- Récapitulatif dynamique -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-secondary" id="recapDisponibilite" style="display: none;">
+                                <div class="d-flex flex-wrap gap-3 align-items-center">
+                                    <div><strong>Période:</strong> <span id="recapPeriodeJours">0</span> jours</div>
+                                    <div><strong>Heures totales:</strong> <span id="recapHeuresTotales">0</span> h</div>
+                                    <div><strong>Heures disponibles:</strong> <span id="recapHeuresDispo">0</span> h</div>
+                                    <div><strong>Disponibilité:</strong> <span id="recapDispoPct">0</span>%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" id="resetDisponibilite" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo"></i> Réinitialiser
+                        </button>
                         {% if edit_mode %}
                         <a href="{% url 'fleet_app:kpi_disponibilite' %}" class="btn btn-secondary me-2">
                             <i class="fas fa-times me-2"></i> Annuler
@@ -87,12 +104,17 @@
                     <i class="fas fa-chart-bar me-2"></i> Taux de disponibilité par véhicule (%)
                 </div>
                 <div>
-                    <select id="periodeSelect" class="form-select form-select-sm">
-                        <option value="all">Toutes les périodes</option>
-                        <option value="month">Dernier mois</option>
-                        <option value="quarter">Dernier trimestre</option>
-                        <option value="year">Dernière année</option>
-                    </select>
+                    <form method="get" class="d-flex gap-2 align-items-center">
+                        <select name="period" class="form-select form-select-sm">
+                            <option value="">Toutes</option>
+                            <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Dernier mois</option>
+                            <option value="quarter" {% if request.GET.period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
+                            <option value="year" {% if request.GET.period == 'year' %}selected{% endif %}>Dernière année</option>
+                        </select>
+                        <input type="date" name="start" class="form-control form-control-sm" value="{{ request.GET.start }}">
+                        <input type="date" name="end" class="form-control form-control-sm" value="{{ request.GET.end }}">
+                        <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i></button>
+                    </form>
                 </div>
             </div>
             <div class="card-body" style="height: 250px;">
@@ -163,6 +185,12 @@
                     <i class="fas fa-list me-2"></i> Détail des disponibilités
                 </div>
                 <div class="d-flex gap-2">
+                    <a href="{% url 'fleet_app:export_kpi_disponibilite_csv' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-file-csv me-1"></i> CSV
+                    </a>
+                    <a href="{% url 'fleet_app:export_kpi_disponibilite_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}" class="btn btn-sm btn-danger">
+                        <i class="fas fa-file-pdf me-1"></i> PDF (serveur)
+                    </a>
                     <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('disponibiliteTable', 'Disponibilite_Vehicules')">
                         <i class="fas fa-file-excel me-1"></i> Excel
                     </button>
@@ -575,6 +603,133 @@
             }
         });
         
+        // Auto-calcul heures totales et disponibilité (%) dans le formulaire
+        const dateDebutInput = document.getElementById('{{ form.date_debut.id_for_label }}');
+        const dateFinInput = document.getElementById('{{ form.date_fin.id_for_label }}');
+        const heuresDispoInput = document.getElementById('{{ form.heures_disponibles.id_for_label }}');
+        const heuresTotalesInput = document.getElementById('{{ form.heures_totales.id_for_label }}');
+        const dispoPctInput = document.getElementById('{{ form.disponibilite_pourcentage.id_for_label }}');
+
+        function parseDate(value) {
+            // value is yyyy-mm-dd
+            if (!value) return null;
+            const [y, m, d] = value.split('-').map(Number);
+            if (!y || !m || !d) return null;
+            // Use UTC to avoid timezone issues
+            return new Date(Date.UTC(y, m - 1, d));
+        }
+
+        function calcHeuresTotales() {
+            const d1 = parseDate(dateDebutInput.value);
+            const d2 = parseDate(dateFinInput.value);
+            if (d1 && d2) {
+                const diffDays = Math.floor((d2 - d1) / (1000*60*60*24)) + 1; // inclusif
+                if (diffDays >= 0) {
+                    const heuresTotales = diffDays * 24;
+                    heuresTotalesInput.value = heuresTotales;
+                    dateDebutInput.classList.remove('is-invalid');
+                    dateFinInput.classList.remove('is-invalid');
+                    dateDebutInput.classList.add('is-valid');
+                    dateFinInput.classList.add('is-valid');
+                    // Update recap
+                    const recap = document.getElementById('recapDisponibilite');
+                    const recapJours = document.getElementById('recapPeriodeJours');
+                    recap.style.display = '';
+                    recapJours.textContent = diffDays;
+                    return heuresTotales;
+                } else {
+                    dateDebutInput.classList.add('is-invalid');
+                    dateFinInput.classList.add('is-invalid');
+                    return 0;
+                }
+            }
+            return 0;
+        }
+
+        function calcDispoPourcentage() {
+            const heuresTotales = calcHeuresTotales();
+            let heuresDispo = parseFloat(heuresDispoInput.value) || 0;
+            if (heuresTotales > 0 && heuresDispo >= 0) {
+                const help = document.getElementById('heuresDispoHelp');
+                help.textContent = '';
+                if (heuresDispo > heuresTotales) {
+                    heuresDispo = heuresTotales;
+                    heuresDispoInput.value = heuresTotales;
+                    help.textContent = "Les heures disponibles ont été ajustées au maximum possible (heures totales).";
+                }
+                let pct = (heuresDispo * 100) / heuresTotales;
+                if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+                dispoPctInput.value = pct.toFixed(2);
+                // Update recap values
+                const recap = document.getElementById('recapDisponibilite');
+                const recapHeuresTotales = document.getElementById('recapHeuresTotales');
+                const recapHeuresDispo = document.getElementById('recapHeuresDispo');
+                const recapDispoPct = document.getElementById('recapDispoPct');
+                recap.style.display = '';
+                recapHeuresTotales.textContent = heuresTotales;
+                recapHeuresDispo.textContent = heuresDispo;
+                recapDispoPct.textContent = pct.toFixed(2);
+            } else {
+                dispoPctInput.value = '';
+                // Hide recap if incomplete
+                const recap = document.getElementById('recapDisponibilite');
+                recap.style.display = 'none';
+            }
+        }
+
+        if (dateDebutInput && dateFinInput && heuresDispoInput) {
+            dateDebutInput.addEventListener('change', () => { calcHeuresTotales(); calcDispoPourcentage(); });
+            dateFinInput.addEventListener('change', () => { calcHeuresTotales(); calcDispoPourcentage(); });
+            heuresDispoInput.addEventListener('input', calcDispoPourcentage);
+        }
+
+        // S'assurer que les valeurs sont à jour avant soumission
+        const dispoForm = dateDebutInput ? dateDebutInput.closest('form') : null;
+        if (dispoForm) {
+            dispoForm.addEventListener('submit', function(e) {
+                const d1 = parseDate(dateDebutInput.value);
+                const d2 = parseDate(dateFinInput.value);
+                if (d1 && d2 && d2 < d1) {
+                    e.preventDefault();
+                    if (typeof showToast === 'function') {
+                        showToast('danger', 'La date de fin doit être postérieure ou égale à la date de début.');
+                    } else {
+                        alert('La date de fin doit être postérieure ou égale à la date de début.');
+                    }
+                    dateDebutInput.classList.add('is-invalid');
+                    dateFinInput.classList.add('is-invalid');
+                    return false;
+                }
+                calcDispoPourcentage();
+            });
+        }
+
+        // Bouton Réinitialiser
+        const resetBtn = document.getElementById('resetDisponibilite');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                // Clear inputs
+                if (dateDebutInput) dateDebutInput.value = '';
+                if (dateFinInput) dateFinInput.value = '';
+                if (heuresDispoInput) heuresDispoInput.value = '';
+                if (heuresTotalesInput) heuresTotalesInput.value = '';
+                if (dispoPctInput) dispoPctInput.value = '';
+                const help = document.getElementById('heuresDispoHelp');
+                if (help) help.textContent = '';
+
+                // Remove validation classes
+                [dateDebutInput, dateFinInput, heuresDispoInput].forEach(el => {
+                    if (!el) return;
+                    el.classList.remove('is-valid');
+                    el.classList.remove('is-invalid');
+                });
+
+                // Hide recap
+                const recap = document.getElementById('recapDisponibilite');
+                if (recap) recap.style.display = 'none';
+            });
+        }
+
         // Créer le graphique de disponibilité par catégorie
         const ctxCategorie = document.getElementById('disponibiliteCategorieChart').getContext('2d');
         const disponibiliteCategorieChart = new Chart(ctxCategorie, {

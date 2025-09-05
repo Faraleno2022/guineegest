@@ -70,7 +70,14 @@
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
-                        <!-- Removed km_depart and carburant_depart fields as they don't exist in the form -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.km_depart|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.carburant_depart|as_crispy_field }}
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-md-6">
                                 {{ form.date_retour|as_crispy_field }}
@@ -87,24 +94,11 @@
                                 {{ form.carburant_retour|as_crispy_field }}
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                {{ form.date_retour|as_crispy_field }}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.heure_retour|as_crispy_field }}
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-info">
-                            <div class="form-group">
-                                <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input" id="signature_chauffeur" checked disabled>
-                                    <label class="custom-control-label" for="signature_chauffeur">
-                                        <strong>Signature du chauffeur</strong> - En mettant à jour cette feuille de route, vous la signez électroniquement.
-                                    </label>
-                                </div>
-                            </div>
+                        <div class="form-group form-check mt-3">
+                            {{ form.signature_chauffeur }}
+                            <label class="form-check-label" for="id_signature_chauffeur">
+                                <strong>Signature du chauffeur</strong> - En mettant à jour cette feuille de route, vous la signez électroniquement.
+                            </label>
                         </div>
                         
                         <div class="mt-4">

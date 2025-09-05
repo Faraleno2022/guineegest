@@ -105,7 +105,22 @@
                             {{ form.limite_annuelle }}
                         </div>
                     </div>
-                    <div class="text-end">
+                    <!-- Récapitulatif dynamique -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-secondary" id="recapDistance" style="display: none;">
+                                <div class="d-flex flex-wrap gap-3 align-items-center">
+                                    <div><strong>Km début:</strong> <span id="recapKmDebut">0</span></div>
+                                    <div><strong>Km fin:</strong> <span id="recapKmFin">0</span></div>
+                                    <div><strong>Distance:</strong> <span id="recapDistanceKm">0</span> km</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" id="resetDistance" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo"></i> Réinitialiser
+                        </button>
                         {% if edit_mode %}
                         <a href="{% url 'fleet_app:kpi_distance' %}" class="btn btn-secondary me-2">
                             <i class="fas fa-times me-2"></i> Annuler
@@ -134,12 +149,19 @@
                     <i class="fas fa-chart-bar me-2"></i> <strong>Distances totales par véhicule</strong>
                 </div>
                 <div>
-                    <select id="periodeSelect" class="form-select form-select-sm">
-                        <option value="all">Toutes les périodes</option>
-                        <option value="month">Dernier mois</option>
-                        <option value="quarter">Dernier trimestre</option>
-                        <option value="year">Dernière année</option>
-                    </select>
+                    <form method="get" class="d-flex gap-2 align-items-center text-dark">
+                        <select name="period" class="form-select form-select-sm">
+                            <option value="">Toutes</option>
+                            <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Dernier mois</option>
+                            <option value="quarter" {% if request.GET.period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
+                            <option value="year" {% if request.GET.period == 'year' %}selected{% endif %}>Dernière année</option>
+                        </select>
+                        <input type="date" name="start" class="form-control form-control-sm" value="{{ request.GET.start }}" placeholder="Du">
+                        <input type="date" name="end" class="form-control form-control-sm" value="{{ request.GET.end }}" placeholder="Au">
+                        <button type="submit" class="btn btn-sm btn-light">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
             <div class="card-body" style="height: 300px;">
@@ -189,6 +211,12 @@
                     <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#distanceModal">
                         <i class="fas fa-plus"></i> Ajouter
                     </button>
+                    <a href="{% url 'fleet_app:export_kpi_distance_csv' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </a>
+                    <a href="{% url 'fleet_app:export_kpi_distance_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}" class="btn btn-sm btn-danger">
+                        <i class="fas fa-file-pdf"></i> PDF (serveur)
+                    </a>
                     <button type="button" class="btn btn-sm btn-primary" onclick="exportTableToExcel('distanceTable', 'Distances_Parcourues')">
                         <i class="fas fa-file-excel"></i> Excel
                     </button>
@@ -386,9 +414,36 @@
             
             if (kmFin >= kmDebut) {
                 distanceParcourueInput.value = kmFin - kmDebut;
+                // Styles de validation
+                kmDebutInput.classList.remove('is-invalid');
+                kmFinInput.classList.remove('is-invalid');
+                kmDebutInput.classList.add('is-valid');
+                kmFinInput.classList.add('is-valid');
+                // Animation de surbrillance
+                distanceParcourueInput.classList.add('highlight-calculation');
+                setTimeout(() => distanceParcourueInput.classList.remove('highlight-calculation'), 800);
+                // Récapitulatif
+                const recap = document.getElementById('recapDistance');
+                const recapDebut = document.getElementById('recapKmDebut');
+                const recapFin = document.getElementById('recapKmFin');
+                const recapDist = document.getElementById('recapDistanceKm');
+                recap.style.display = '';
+                recapDebut.textContent = kmDebut;
+                recapFin.textContent = kmFin;
+                recapDist.textContent = (kmFin - kmDebut);
             } else if (kmFin > 0 && kmDebut > 0) {
-                // Afficher un message d'alerte si km_fin < km_debut
-                alert('Attention : Le kilométrage final est inférieur au kilométrage initial.');
+                // Afficher un toast si km_fin < km_debut
+                if (typeof showToast === 'function') {
+                    showToast('warning', 'Le kilométrage final est inférieur au kilométrage initial.');
+                } else {
+                    alert('Le kilométrage final est inférieur au kilométrage initial.');
+                }
+                kmDebutInput.classList.remove('is-valid');
+                kmFinInput.classList.remove('is-valid');
+                kmDebutInput.classList.add('is-invalid');
+                kmFinInput.classList.add('is-invalid');
+                const recap = document.getElementById('recapDistance');
+                recap.style.display = 'none';
             }
         }
         
@@ -397,6 +452,45 @@
         kmFinInput.addEventListener('input', calculerDistance);
         kmDebutInput.addEventListener('change', calculerDistance);
         kmFinInput.addEventListener('change', calculerDistance);
+
+        // Validation côté client au submit du formulaire
+        const distanceForm = kmDebutInput.closest('form');
+        if (distanceForm) {
+            distanceForm.addEventListener('submit', function(e) {
+                const kmDebut = parseInt(kmDebutInput.value) || 0;
+                const kmFin = parseInt(kmFinInput.value) || 0;
+                if (!kmDebut || !kmFin) {
+                    return; // Laisser la validation HTML gérer les champs requis
+                }
+                if (kmFin < kmDebut) {
+                    e.preventDefault();
+                    if (typeof showToast === 'function') {
+                        showToast('danger', 'Le kilométrage final doit être supérieur ou égal au kilométrage initial.');
+                    } else {
+                        alert('Le kilométrage final doit être supérieur ou égal au kilométrage initial.');
+                    }
+                    kmDebutInput.classList.add('is-invalid');
+                    kmFinInput.classList.add('is-invalid');
+                    return false;
+                }
+                // S'assurer que la distance est à jour avant l'envoi
+                distanceParcourueInput.value = kmFin - kmDebut;
+            });
+        }
+
+        // Bouton Réinitialiser
+        const resetBtn = document.getElementById('resetDistance');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                kmDebutInput.value = '';
+                kmFinInput.value = '';
+                distanceParcourueInput.value = '';
+                kmDebutInput.classList.remove('is-valid', 'is-invalid');
+                kmFinInput.classList.remove('is-valid', 'is-invalid');
+                const recap = document.getElementById('recapDistance');
+                recap.style.display = 'none';
+            });
+        }
         
         // Récupérer le type de moteur du véhicule sélectionné
         const vehiculeSelect = document.getElementById('{{ form.vehicule.id_for_label }}');

@@ -78,13 +78,40 @@
                             </div>
                             <small class="form-text text-muted">Calculé automatiquement ou saisissez manuellement</small>
                         </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.distance_parcourue.id_for_label }}" class="form-label">
+                                <i class="fas fa-road me-1" data-bs-toggle="tooltip" title="Distance parcourue calculée"></i> Distance parcourue
+                            </label>
+                            <div class="input-group">
+                                {{ form.distance_parcourue }}
+                                <span class="input-group-text">km</span>
+                            </div>
+                            <small class="form-text text-muted">Rempli automatiquement à partir des kilométrages</small>
+                        </div>
                         <div class="col-md-8 mb-3">
                             <div class="alert alert-info mt-2">
                                 <i class="fas fa-info-circle me-2"></i> La distance parcourue et la consommation aux 100km seront calculées automatiquement à partir des kilométrages et des litres ajoutés.
                             </div>
                         </div>
                     </div>
-                    <div class="text-end">
+                    <!-- Récapitulatif dynamique -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-secondary" id="recapConso" style="display: none;">
+                                <div class="d-flex flex-wrap gap-3 align-items-center">
+                                    <div><strong>Km premier plein:</strong> <span id="recapKm1">0</span></div>
+                                    <div><strong>Km second plein:</strong> <span id="recapKm2">0</span></div>
+                                    <div><strong>Distance:</strong> <span id="recapDistance">0</span> km</div>
+                                    <div><strong>Litres:</strong> <span id="recapLitres">0</span> L</div>
+                                    <div><strong>Conso:</strong> <span id="recapConso100">0.00</span> L/100km</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" id="resetConso" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo"></i> Réinitialiser
+                        </button>
                         {% if edit_mode %}
                         <a href="{% url 'fleet_app:kpi_consommation' %}" class="btn btn-secondary me-2">
                             <i class="fas fa-times me-2"></i> Annuler
@@ -110,15 +137,20 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
-                    <i class="fas fa-chart-bar me-2"></i> Consommation moyenne par véhicule (L/100km)
+                    <i class="fas fa-chart-bar me-2"></i> Consommation moyenne (L/100km)
                 </div>
                 <div>
-                    <select id="periodeSelect" class="form-select form-select-sm">
-                        <option value="all">Toutes les périodes</option>
-                        <option value="month">Dernier mois</option>
-                        <option value="quarter">Dernier trimestre</option>
-                        <option value="year">Dernière année</option>
-                    </select>
+                    <form method="get" class="d-flex gap-2 align-items-center">
+                        <select name="period" class="form-select form-select-sm">
+                            <option value="">Toutes</option>
+                            <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Dernier mois</option>
+                            <option value="quarter" {% if request.GET.period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
+                            <option value="year" {% if request.GET.period == 'year' %}selected{% endif %}>Dernière année</option>
+                        </select>
+                        <input type="date" name="start" class="form-control form-control-sm" value="{{ request.GET.start }}">
+                        <input type="date" name="end" class="form-control form-control-sm" value="{{ request.GET.end }}">
+                        <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i></button>
+                    </form>
                 </div>
             </div>
             <div class="card-body" style="height: 250px;">
@@ -175,6 +207,12 @@
                     <i class="fas fa-list me-2"></i> Détail des consommations
                 </div>
                 <div class="d-flex gap-2">
+                    <a href="{% url 'fleet_app:export_kpi_consommation_csv' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-file-csv me-1"></i> CSV
+                    </a>
+                    <a href="{% url 'fleet_app:export_kpi_consommation_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}" class="btn btn-sm btn-danger">
+                        <i class="fas fa-file-pdf me-1"></i> PDF (serveur)
+                    </a>
                     <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('consommationTable', 'Consommation_Carburant')">
                         <i class="fas fa-file-excel me-1"></i> Excel
                     </button>
@@ -318,6 +356,7 @@
         const kmPlein2Input = document.getElementById('{{ form.km_plein2.id_for_label }}');
         const litresAjoutesInput = document.getElementById('{{ form.litres_ajoutes.id_for_label }}');
         const consommation100kmInput = document.getElementById('{{ form.consommation_100km.id_for_label }}');
+        const distanceParcourueInput = document.getElementById('{{ form.distance_parcourue.id_for_label }}');
         
         // Fonction pour calculer la distance parcourue et la consommation
         function calculerConsommation() {
@@ -329,18 +368,39 @@
             if (kmPlein1 > 0 && kmPlein2 > 0 && litresAjoutes > 0) {
                 // Vérifier que km_plein2 est supérieur à km_plein1
                 if (kmPlein2 <= kmPlein1) {
-                    alert('Erreur: Le kilométrage au second plein doit être supérieur au kilométrage au premier plein.');
+                    if (typeof showToast === 'function') {
+                        showToast('danger', "Le kilométrage au second plein doit être supérieur au kilométrage au premier plein.");
+                    } else {
+                        alert('Le kilométrage au second plein doit être supérieur au kilométrage au premier plein.');
+                    }
                     return;
                 }
                 
                 // Calculer la distance parcourue
                 const distanceParcourue = kmPlein2 - kmPlein1;
+                if (distanceParcourueInput) {
+                    distanceParcourueInput.value = distanceParcourue;
+                }
                 
                 // Calculer la consommation aux 100km
                 const consommation100km = (litresAjoutes * 100) / distanceParcourue;
                 
                 // Mettre à jour le champ consommation_100km
                 consommation100kmInput.value = consommation100km.toFixed(2);
+
+                // Récapitulatif
+                const recap = document.getElementById('recapConso');
+                const recapKm1 = document.getElementById('recapKm1');
+                const recapKm2 = document.getElementById('recapKm2');
+                const recapDist = document.getElementById('recapDistance');
+                const recapLitres = document.getElementById('recapLitres');
+                const recapConso = document.getElementById('recapConso100');
+                recap.style.display = '';
+                recapKm1.textContent = kmPlein1;
+                recapKm2.textContent = kmPlein2;
+                recapDist.textContent = distanceParcourue;
+                recapLitres.textContent = litresAjoutes;
+                recapConso.textContent = consommation100km.toFixed(2);
             }
         }
         
@@ -349,6 +409,20 @@
             kmPlein1Input.addEventListener('input', calculerConsommation);
             kmPlein2Input.addEventListener('input', calculerConsommation);
             litresAjoutesInput.addEventListener('input', calculerConsommation);
+        }
+
+        // Bouton Réinitialiser
+        const resetBtn = document.getElementById('resetConso');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                kmPlein1Input.value = '';
+                kmPlein2Input.value = '';
+                litresAjoutesInput.value = '';
+                if (distanceParcourueInput) distanceParcourueInput.value = '';
+                if (consommation100kmInput) consommation100kmInput.value = '';
+                const recap = document.getElementById('recapConso');
+                if (recap) recap.style.display = 'none';
+            });
         }
         
         // Données pour le graphique

@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>KPI Disponibilité</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 10.5pt; color: #222; }
+    h1 { font-size: 16pt; margin: 0 0 8px 0; }
+    .meta { font-size: 9pt; color: #666; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #999; padding: 6px; }
+    th { background: #f0f0f0; }
+    .nowrap { white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <h1>KPI Disponibilité</h1>
+  <div class="meta">
+    Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
+    {% if start or end or period %}
+      Période: {% if start %}du {{ start }}{% endif %}{% if end %} au {{ end }}{% endif %}{% if period and not start and not end %} ({{ period }}){% endif %}
+    {% else %}Période: Toutes{% endif %}
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Véhicule</th>
+        <th>Date début</th>
+        <th>Date fin</th>
+        <th>Heures dispo</th>
+        <th>Heures totales</th>
+        <th>Disponibilité (%)</th>
+        <th>Raison</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.vehicule.marque }} {{ r.vehicule.modele }} ({{ r.vehicule.immatriculation }})</td>
+        <td class="nowrap">{{ r.date_debut|date:"d/m/Y H:i" }}</td>
+        <td class="nowrap">{{ r.date_fin|date:"d/m/Y H:i" }}</td>
+        <td>{{ r.heures_disponibles }}</td>
+        <td>{{ r.heures_totales }}</td>
+        <td>{{ r.disponibilite_pourcentage }}</td>
+        <td>{{ r.raison_indisponibilite }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">Aucune donnée pour cette période.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

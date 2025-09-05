@@ -8,8 +8,15 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.db.models import Sum, Avg, Count, Q, F, ExpressionWrapper, FloatField, Case, When, Value, IntegerField
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
+from django.template.loader import get_template
+from io import BytesIO
+try:
+    from xhtml2pdf import pisa
+except Exception:
+    pisa = None
 import json
+import csv
 from django import forms
 from django.utils import timezone
 from .views_accounts import check_profile_completion
@@ -19,7 +26,8 @@ from .models import Vehicule, DistanceParcourue, ConsommationCarburant, Disponib
 from .models_alertes import Alerte
 
 # Import des formulaires
-from .forms import VehiculeForm, DistanceForm, ConsommationCarburantForm, DisponibiliteForm, CoutFonctionnementForm, CoutFinancierForm, IncidentSecuriteForm, UtilisationActifForm, UtilisationVehiculeForm
+from .forms import VehiculeForm, DistanceForm, ConsommationCarburantForm, DisponibiliteForm, CoutFonctionnementForm, CoutFinancierForm, IncidentSecuriteForm, UtilisationActifForm, UtilisationVehiculeForm, AlerteForm
+from .forms_document import DocumentAdministratifForm
 
 # Import des utilitaires
 from .utils import convertir_en_gnf, formater_montant_gnf, formater_cout_par_km_gnf, TAUX_CONVERSION_EUR_GNF
@@ -115,6 +123,47 @@ def paginate_and_search(request, queryset, search_fields=None, per_page=10):
 from .models import *
 from .forms import *
 import json
+
+# Helpers de filtrage de période pour les KPI
+from datetime import date as _date, timedelta as _timedelta
+
+def _period_dates(period: str):
+    today = _date.today()
+    if period == 'month':
+        start = today.replace(day=1)
+        end = today
+    elif period == 'quarter':
+        q = (today.month - 1) // 3
+        start_month = q * 3 + 1
+        start = _date(today.year, start_month, 1)
+        end = today
+    elif period == 'year':
+        start = _date(today.year, 1, 1)
+        end = today
+    else:
+        start = None
+        end = None
+    return start, end
+
+def get_period_filter(request):
+    """Retourne (start_date, end_date) à partir des paramètres GET period/start/end (YYYY-MM-DD)."""
+    period = request.GET.get('period')
+    start_param = request.GET.get('start')
+    end_param = request.GET.get('end')
+    start_date = end_date = None
+    if period:
+        start_date, end_date = _period_dates(period)
+    # Priorité aux dates explicites si fournies
+    from datetime import datetime as _dt
+    fmt = '%Y-%m-%d'
+    try:
+        if start_param:
+            start_date = _dt.strptime(start_param, fmt).date()
+        if end_param:
+            end_date = _dt.strptime(end_param, fmt).date()
+    except Exception:
+        pass
+    return start_date, end_date
 
 # Vue de tableau de bord
 @login_required
@@ -883,15 +932,34 @@ class ChauffeurListView(LoginRequiredMixin, ListView):
     template_name = 'fleet_app/chauffeur_list.html'
     context_object_name = 'chauffeurs'
     ordering = ['nom', 'prenom']
-    
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = Chauffeur.objects.all().order_by(*self.ordering)
+        # Recherche
+        search = self.request.GET.get('search', '')
+        if search:
+            qs = qs.filter(
+                Q(nom__icontains=search) |
+                Q(prenom__icontains=search) |
+                Q(numero_permis__icontains=search) |
+                Q(telephone__icontains=search)
+            )
+        # Filtre de période sur la validité du permis (ou date_naissance si souhaité)
+        start_date, end_date = get_period_filter(self.request)
+        if start_date:
+            qs = qs.filter(date_validite_permis__gte=start_date)
+        if end_date:
+            qs = qs.filter(date_validite_permis__lte=end_date)
+        return qs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Pagination et recherche
-        search_fields = ['nom', 'prenom', 'numero_permis', 'telephone']
-        chauffeurs_list = Chauffeur.objects.all().order_by(*self.ordering)
-        chauffeurs, search_query = paginate_and_search(self.request, chauffeurs_list, search_fields)
-        context['chauffeurs'] = chauffeurs
-        context['search_query'] = search_query
+        start_date, end_date = get_period_filter(self.request)
+        context['period'] = self.request.GET.get('period', '')
+        context['period_start'] = start_date
+        context['period_end'] = end_date
+        context['search_query'] = self.request.GET.get('search', '')
         return context
 
 class ChauffeurDetailView(LoginRequiredMixin, DetailView):
@@ -955,16 +1023,95 @@ class FeuilleRouteListView(LoginRequiredMixin, ListView):
     template_name = 'fleet_app/feuille_route_list.html'
     context_object_name = 'feuilles_route'
     ordering = ['-date_depart']
-    
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = FeuilleDeRoute.objects.all().order_by(*self.ordering)
+        # Recherche
+        search = self.request.GET.get('search', '')
+        if search:
+            qs = qs.filter(
+                Q(vehicule__immatriculation__icontains=search) |
+                Q(chauffeur__nom__icontains=search) |
+                Q(chauffeur__prenom__icontains=search) |
+                Q(destination__icontains=search)
+            )
+        # Filtre de période sur date_depart/date_retour
+        start_date, end_date = get_period_filter(self.request)
+        if start_date:
+            qs = qs.filter(date_depart__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(date_depart__date__lte=end_date)
+        return qs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Pagination et recherche
-        search_fields = ['vehicule__immatriculation', 'chauffeur__nom', 'chauffeur__prenom', 'destination']
-        feuilles_list = FeuilleDeRoute.objects.all().order_by(*self.ordering)
-        feuilles, search_query = paginate_and_search(self.request, feuilles_list, search_fields)
-        context['feuilles_route'] = feuilles
-        context['search_query'] = search_query
+        start_date, end_date = get_period_filter(self.request)
+        context['period'] = self.request.GET.get('period', '')
+        context['period_start'] = start_date
+        context['period_end'] = end_date
+        context['search_query'] = self.request.GET.get('search', '')
         return context
+
+# ---------- PDF UTIL ----------
+def render_to_pdf(template_src, context_dict, filename):
+    if pisa is None:
+        return HttpResponse('xhtml2pdf non disponible sur ce serveur', status=500)
+    template = get_template(template_src)
+    html = template.render(context_dict)
+    result = BytesIO()
+    pdf = pisa.CreatePDF(src=html, dest=result)
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    return HttpResponse('Erreur lors de la génération du PDF', status=500)
+
+# ---------- PDF EXPORT VIEWS ----------
+@login_required
+def export_vehicules_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = Vehicule.objects.all().order_by('id_vehicule')
+    search = request.GET.get('search', '')
+    if search:
+        qs = qs.filter(Q(immatriculation__icontains=search) | Q(marque__icontains=search) | Q(modele__icontains=search))
+    if start_date:
+        qs = qs.filter(date_acquisition__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_acquisition__lte=end_date)
+    context = {
+        'vehicules': qs,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/vehicules_list_pdf.html', context, 'vehicules.pdf')
+
+@login_required
+def export_feuilles_route_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = FeuilleDeRoute.objects.all().order_by('-date_depart')
+    search = request.GET.get('search', '')
+    if search:
+        qs = qs.filter(
+            Q(vehicule__immatriculation__icontains=search) |
+            Q(chauffeur__nom__icontains=search) |
+            Q(chauffeur__prenom__icontains=search) |
+            Q(destination__icontains=search)
+        )
+    if start_date:
+        qs = qs.filter(date_depart__date__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_depart__date__lte=end_date)
+    context = {
+        'feuilles_route': qs,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/feuilles_route_list_pdf.html', context, 'feuilles_route.pdf')
 
 class FeuilleRouteDetailView(LoginRequiredMixin, DetailView):
     model = FeuilleDeRoute
@@ -993,18 +1140,26 @@ def feuille_route_edit(request, pk):
         form = FeuilleRouteUpdateForm(request.POST, instance=feuille_route)
         if form.is_valid():
             feuille = form.save(commit=False)
-            
+
+            # Marquer la feuille comme complétée par le chauffeur automatiquement
+            feuille.signature_chauffeur = True
+
             # Calculer la distance parcourue si les kilomètres sont fournis
-            if feuille.km_depart is not None and feuille.km_arrivee is not None:
-                feuille.distance_parcourue = max(0, feuille.km_arrivee - feuille.km_depart)
-            
-            # Calculer la consommation si les données nécessaires sont fournies
-            if feuille.distance_parcourue and feuille.distance_parcourue > 0 and feuille.carburant_utilise:
+            if feuille.km_depart is not None and feuille.km_retour is not None:
+                feuille.distance_parcourue = max(0, feuille.km_retour - feuille.km_depart)
+
+            # Calculer le carburant utilisé si les données nécessaires sont fournies
+            if feuille.carburant_depart is not None and feuille.carburant_retour is not None:
+                feuille.carburant_utilise = feuille.carburant_depart - feuille.carburant_retour
+
+            # Calculer la consommation si possible
+            if feuille.distance_parcourue and feuille.distance_parcourue > 0 and feuille.carburant_utilise is not None:
                 feuille.consommation = (feuille.carburant_utilise * 100) / feuille.distance_parcourue
-                
-                # Vérifier si la consommation dépasse le seuil (8 L/100km)
+                # Déterminer l'alerte de surconsommation (seuil 8 L/100km)
                 feuille.alerte_surconsommation = feuille.consommation > 8
-            
+            else:
+                feuille.alerte_surconsommation = False
+
             feuille.save()
             messages.success(request, 'Feuille de route mise à jour avec succès.')
             return redirect('fleet_app:feuille_route_detail', pk=feuille.pk)
@@ -1034,8 +1189,33 @@ class VehiculeListView(LoginRequiredMixin, ListView):
     template_name = 'fleet_app/vehicule_list.html'
     context_object_name = 'vehicules'
     ordering = ['id_vehicule']
+    paginate_by = 10
 
-from .forms_document import DocumentAdministratifForm
+    def get_queryset(self):
+        qs = super().get_queryset().order_by(*self.ordering)
+        # Appliquer filtre de recherche s'il existe
+        search = self.request.GET.get('search', '')
+        if search:
+            qs = qs.filter(
+                Q(immatriculation__icontains=search) |
+                Q(marque__icontains=search) |
+                Q(modele__icontains=search)
+            )
+        # Filtre de période sur la date d'acquisition
+        start_date, end_date = get_period_filter(self.request)
+        if start_date:
+            qs = qs.filter(date_acquisition__gte=start_date)
+        if end_date:
+            qs = qs.filter(date_acquisition__lte=end_date)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        start_date, end_date = get_period_filter(self.request)
+        context['period'] = self.request.GET.get('period', '')
+        context['period_start'] = start_date
+        context['period_end'] = end_date
+        return context
 from django.contrib import messages
 from django.shortcuts import redirect
 
@@ -1048,17 +1228,31 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         vehicule = self.get_object()
+        # Filtres de période depuis la querystring
+        start_date, end_date = get_period_filter(self.request)
+        context['period_start'] = start_date
+        context['period_end'] = end_date
+        context['period'] = self.request.GET.get('period', '')
 
         # Documents administratifs
         try:
-            context['documents'] = DocumentAdministratif.objects.filter(vehicule=vehicule).order_by('-date_emission')
+            documents_qs = DocumentAdministratif.objects.filter(vehicule=vehicule)
+            if start_date:
+                documents_qs = documents_qs.filter(date_emission__gte=start_date)
+            if end_date:
+                documents_qs = documents_qs.filter(date_emission__lte=end_date)
+            context['documents'] = documents_qs.order_by('-date_emission')
             context['documents_error'] = False
         except Exception:
             context['documents'] = []
             context['documents_error'] = True
 
-        # Formulaire d'ajout de document administratif
+        # Formulaires d'ajout
         context['document_form'] = DocumentAdministratifForm(initial={'vehicule': vehicule})
+        context['distance_form'] = DistanceForm(initial={'vehicule': vehicule})
+        context['consommation_form'] = ConsommationCarburantForm(initial={'vehicule': vehicule})
+        context['cout_form'] = CoutFonctionnementForm(initial={'vehicule': vehicule})
+        context['alerte_form'] = AlerteForm(initial={'vehicule': vehicule})
 
         # Date du jour
         from datetime import date
@@ -1066,7 +1260,12 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
 
         # Distances parcourues
         try:
-            context['distances'] = DistanceParcourue.objects.filter(vehicule=vehicule).order_by('-date_debut')
+            distances_qs = DistanceParcourue.objects.filter(vehicule=vehicule)
+            if start_date:
+                distances_qs = distances_qs.filter(date_debut__gte=start_date)
+            if end_date:
+                distances_qs = distances_qs.filter(date_fin__lte=end_date)
+            context['distances'] = distances_qs.order_by('-date_debut')
             context['distances_error'] = False
         except Exception:
             context['distances'] = []
@@ -1074,7 +1273,12 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
 
         # Consommation de carburant
         try:
-            context['consommations'] = ConsommationCarburant.objects.filter(vehicule=vehicule).order_by('-date_plein1')
+            consommations_qs = ConsommationCarburant.objects.filter(vehicule=vehicule)
+            if start_date:
+                consommations_qs = consommations_qs.filter(date_plein1__gte=start_date)
+            if end_date:
+                consommations_qs = consommations_qs.filter(date_plein2__lte=end_date)
+            context['consommations'] = consommations_qs.order_by('-date_plein1')
             context['consommations_error'] = False
         except Exception:
             context['consommations'] = []
@@ -1082,7 +1286,12 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
 
         # Coûts de fonctionnement
         try:
-            context['couts_fonctionnement'] = CoutFonctionnement.objects.filter(vehicule=vehicule).order_by('-date')
+            couts_qs = CoutFonctionnement.objects.filter(vehicule=vehicule)
+            if start_date:
+                couts_qs = couts_qs.filter(date__gte=start_date)
+            if end_date:
+                couts_qs = couts_qs.filter(date__lte=end_date)
+            context['couts_fonctionnement'] = couts_qs.order_by('-date')
             context['couts_fonctionnement_error'] = False
         except Exception:
             context['couts_fonctionnement'] = []
@@ -1091,7 +1300,12 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
         # Alertes
         try:
             # Statut choices in Alerte are 'Active', 'Résolue', 'Ignorée'
-            context['alertes'] = Alerte.objects.filter(vehicule=vehicule, statut='Active').order_by('-date_creation')
+            alertes_qs = Alerte.objects.filter(vehicule=vehicule, statut='Active')
+            if start_date:
+                alertes_qs = alertes_qs.filter(date_creation__date__gte=start_date)
+            if end_date:
+                alertes_qs = alertes_qs.filter(date_creation__date__lte=end_date)
+            context['alertes'] = alertes_qs.order_by('-date_creation')
             context['alertes_error'] = False
         except Exception:
             context['alertes'] = []
@@ -1101,19 +1315,118 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         vehicule = self.get_object()
-        form = DocumentAdministratifForm(request.POST, request.FILES)
+        # Important pour DetailView: assurer que self.object est défini pendant les requêtes POST
+        # afin que super().get_context_data() puisse accéder à l'objet.
+        self.object = vehicule
         
-        if form.is_valid():
-            document = form.save(commit=False)
-            document.vehicule = vehicule
-            document.save()
-            messages.success(request, 'Document administratif ajouté avec succès.')
+        # Déterminer quel formulaire a été soumis
+        if 'add_document' in request.POST:
+            form = DocumentAdministratifForm(request.POST, request.FILES)
+            if form.is_valid():
+                document = form.save(commit=False)
+                document.vehicule = vehicule
+                document.save()
+                messages.success(request, 'Document administratif ajouté avec succès.')
+                return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
+            else:
+                context = self.get_context_data()
+                context['document_form'] = form
+                messages.error(request, 'Erreur lors de l\'ajout du document administratif.')
+                return self.render_to_response(context)
+        
+        elif 'add_distance' in request.POST:
+            form = DistanceForm(request.POST)
+            if form.is_valid():
+                distance = form.save(commit=False)
+                distance.vehicule = vehicule
+                # Calculer automatiquement la distance parcourue
+                if distance.km_fin and distance.km_debut:
+                    distance.distance_parcourue = distance.km_fin - distance.km_debut
+                distance.save()
+                messages.success(request, 'Distance parcourue ajoutée avec succès.')
+                return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
+            else:
+                context = self.get_context_data()
+                context['distance_form'] = form
+                messages.error(request, 'Erreur lors de l\'ajout de la distance parcourue.')
+                return self.render_to_response(context)
+        
+        elif 'add_consommation' in request.POST:
+            form = ConsommationCarburantForm(request.POST)
+            if form.is_valid():
+                consommation = form.save(commit=False)
+                consommation.vehicule = vehicule
+                # Calculer automatiquement la distance et la consommation
+                if consommation.km_plein2 and consommation.km_plein1:
+                    consommation.distance_parcourue = consommation.km_plein2 - consommation.km_plein1
+                    if consommation.distance_parcourue > 0 and consommation.litres_ajoutes:
+                        consommation.consommation_100km = (consommation.litres_ajoutes * 100) / consommation.distance_parcourue
+                consommation.save()
+                messages.success(request, 'Consommation de carburant ajoutée avec succès.')
+                return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
+            else:
+                context = self.get_context_data()
+                context['consommation_form'] = form
+                messages.error(request, 'Erreur lors de l\'ajout de la consommation.')
+                return self.render_to_response(context)
+        
+        elif 'add_cout' in request.POST:
+            form = CoutFonctionnementForm(request.POST)
+            if form.is_valid():
+                cout = form.save(commit=False)
+                cout.vehicule = vehicule
+                # Calculer automatiquement le coût par km si possible
+                if cout.montant and cout.kilometrage and cout.kilometrage > 0:
+                    cout.cout_par_km = cout.montant / cout.kilometrage
+                cout.save()
+                messages.success(request, 'Coût de fonctionnement ajouté avec succès.')
+                return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
+            else:
+                context = self.get_context_data()
+                context['cout_form'] = form
+                messages.error(request, 'Erreur lors de l\'ajout du coût.')
+                return self.render_to_response(context)
+        
+        elif 'add_alerte' in request.POST:
+            form = AlerteForm(request.POST)
+            if form.is_valid():
+                alerte = form.save(commit=False)
+                alerte.vehicule = vehicule
+                # Statut par défaut actif; le modèle a déjà default='Active'
+                alerte.save()
+                messages.success(request, 'Alerte créée avec succès.')
+                return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
+            else:
+                context = self.get_context_data()
+                context['alerte_form'] = form
+                messages.error(request, 'Erreur lors de la création de l\'alerte.')
+                return self.render_to_response(context)
+        
+        elif 'resolve_alerte' in request.POST:
+            alerte_id = request.POST.get('alerte_id')
+            try:
+                alerte = Alerte.objects.get(pk=alerte_id, vehicule=vehicule)
+                alerte.statut = 'Résolue'
+                alerte.save()
+                messages.success(request, 'Alerte marquée comme résolue.')
+            except Alerte.DoesNotExist:
+                messages.error(request, "Alerte introuvable pour ce véhicule.")
             return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
-        else:
-            context = self.get_context_data()
-            context['document_form'] = form
-            messages.error(request, 'Erreur lors de l\'ajout du document administratif.')
-            return self.render_to_response(context)
+
+        elif 'ignore_alerte' in request.POST:
+            alerte_id = request.POST.get('alerte_id')
+            try:
+                alerte = Alerte.objects.get(pk=alerte_id, vehicule=vehicule)
+                alerte.statut = 'Ignorée'
+                alerte.save()
+                messages.success(request, 'Alerte ignorée.')
+            except Alerte.DoesNotExist:
+                messages.error(request, "Alerte introuvable pour ce véhicule.")
+            return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
+        
+        # Si aucun formulaire reconnu, retourner une erreur
+        messages.error(request, 'Action non reconnue.')
+        return redirect('fleet_app:vehicule_detail', id_vehicule=vehicule.id_vehicule)
 
 class VehiculeCreateView(LoginRequiredMixin, CreateView):
     model = Vehicule
@@ -1206,8 +1519,17 @@ def kpi_distance(request):
         from django.db.utils import OperationalError
         
         try:
-            # Récupérer toutes les distances et appliquer pagination et recherche
-            distances_list = DistanceParcourue.objects.all().order_by('-date_fin')
+            # Filtres de période
+            start_date, end_date = get_period_filter(request)
+
+            # Récupérer toutes les distances et appliquer filtres, pagination et recherche
+            distances_qs = DistanceParcourue.objects.all()
+            if start_date:
+                distances_qs = distances_qs.filter(date_debut__gte=start_date)
+            if end_date:
+                distances_qs = distances_qs.filter(date_fin__lte=end_date)
+
+            distances_list = distances_qs.order_by('-date_fin')
             
             # Champs sur lesquels effectuer la recherche
             search_fields = ['vehicule__marque', 'vehicule__modele', 'vehicule__immatriculation', 'conducteur', 'departement']
@@ -1222,8 +1544,14 @@ def kpi_distance(request):
             # Calcul des distances totales par véhicule
             data = []
             for v in vehicules:
-                total_distance = DistanceParcourue.objects.filter(vehicule=v).aggregate(Sum('distance_parcourue'))
+                v_qs = DistanceParcourue.objects.filter(vehicule=v)
+                if start_date:
+                    v_qs = v_qs.filter(date_debut__gte=start_date)
+                if end_date:
+                    v_qs = v_qs.filter(date_fin__lte=end_date)
+                total_distance = v_qs.aggregate(Sum('distance_parcourue'))
                 data.append(total_distance['distance_parcourue__sum'] or 0)
+            
         except OperationalError as e:
             if "no such table" in str(e).lower():
                 table_missing = True
@@ -1294,6 +1622,8 @@ def kpi_consommation(request):
     table_missing = False
     
     try:
+        # Filtres de période (appliqués au tableau et aux agrégats)
+        start_date, end_date = get_period_filter(request)
         if request.method == 'POST':
             try:
                 form = ConsommationCarburantForm(request.POST)
@@ -1311,19 +1641,29 @@ def kpi_consommation(request):
                 form = None
                 messages.warning(request, "Le formulaire de consommation n'a pas pu être chargé. La table correspondante n'existe peut-être pas encore.")
         
-        consommations = ConsommationCarburant.objects.all().order_by('-date_plein2')[:10]
+        conso_qs = ConsommationCarburant.objects.all()
+        if start_date:
+            conso_qs = conso_qs.filter(date_plein1__gte=start_date)
+        if end_date:
+            conso_qs = conso_qs.filter(date_plein2__lte=end_date)
+        consommations = conso_qs.order_by('-date_plein2')[:10]
         
         # Données pour graphiques
         vehicules = Vehicule.objects.all()
         labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
         
-        # Calcul des consommations moyennes par véhicule
+        # Calcul des consommations moyennes par véhicule (avec filtres)
         for v in vehicules:
             try:
-                conso_avg = ConsommationCarburant.objects.filter(vehicule=v).aggregate(Avg('consommation_100km'))
+                v_qs = ConsommationCarburant.objects.filter(vehicule=v)
+                if start_date:
+                    v_qs = v_qs.filter(date_plein1__gte=start_date)
+                if end_date:
+                    v_qs = v_qs.filter(date_plein2__lte=end_date)
+                conso_avg = v_qs.aggregate(Avg('consommation_100km'))
                 data.append(conso_avg['consommation_100km__avg'] or 0)
             except Exception:
-                data.append(0)  # Valeur par défaut si la table n'existe pas
+                data.append(0)
     
     except Exception as e:
         # Gérer l'erreur de table manquante ou autre erreur
@@ -1376,8 +1716,16 @@ def kpi_disponibilite(request):
                 form = None
                 messages.warning(request, "Le formulaire de disponibilité n'a pas pu être chargé. La table correspondante n'existe peut-être pas encore.")
         
+        # Filtres de période
+        start_date, end_date = get_period_filter(request)
+
         # Récupérer toutes les données de disponibilité pour le tableau
-        disponibilites_list = DisponibiliteVehicule.objects.all().order_by('-date_debut')
+        dispo_qs = DisponibiliteVehicule.objects.all()
+        if start_date:
+            dispo_qs = dispo_qs.filter(date_debut__gte=start_date)
+        if end_date:
+            dispo_qs = dispo_qs.filter(date_fin__lte=end_date)
+        disponibilites_list = dispo_qs.order_by('-date_debut')
         
         # Pagination
         paginator = Paginator(disponibilites_list, 10)  # 10 éléments par page
@@ -1392,13 +1740,18 @@ def kpi_disponibilite(request):
         # Données pour graphiques
         vehicules = Vehicule.objects.all()
         
-        # Calcul des disponibilités moyennes par véhicule
+        # Calcul des disponibilités moyennes par véhicule (avec filtres)
         for v in vehicules:
             label = f"{v.marque} {v.modele} ({v.immatriculation})"
             labels.append(label)
             
             try:
-                dispo_avg = DisponibiliteVehicule.objects.filter(vehicule=v).aggregate(Avg('disponibilite_pourcentage'))
+                v_qs = DisponibiliteVehicule.objects.filter(vehicule=v)
+                if start_date:
+                    v_qs = v_qs.filter(date_debut__gte=start_date)
+                if end_date:
+                    v_qs = v_qs.filter(date_fin__lte=end_date)
+                dispo_avg = v_qs.aggregate(Avg('disponibilite_pourcentage'))
                 data.append(dispo_avg['disponibilite_pourcentage__avg'] or 0)
             except Exception:
                 data.append(0)  # Valeur par défaut si la table n'existe pas
@@ -1881,17 +2234,19 @@ def kpi_consommation(request):
             
             # Créer ou mettre à jour une alerte automatique si nécessaire
             if c['alerte']:
-                # Vérifier si une alerte active existe déjà pour ce véhicule et ce type
+                # Vérifier si une alerte active existe déjà pour ce véhicule et ce titre
                 alerte_existante = Alerte.objects.filter(
                     vehicule=vehicule,
-                    type_alerte__startswith='Consommation excessive',
+                    titre__startswith='Consommation excessive',
                     statut='Active'
                 ).first()
                 
                 # Description de l'alerte
-                description = f"La consommation du véhicule {vehicule.marque} {vehicule.modele} ({vehicule.immatriculation}) "
-                description += f"est de {c['consommation_moyenne']:.1f} L/100km, "
-                description += f"ce qui dépasse la cible recommandée de {c['cible']:.1f} L/100km de {c['depassement']:.1f} L/100km."
+                description = (
+                    f"La consommation du véhicule {vehicule.marque} {vehicule.modele} ({vehicule.immatriculation}) "
+                    f"est de {c['consommation_moyenne']:.1f} L/100km, "
+                    f"ce qui dépasse la cible recommandée de {c['cible']:.1f} L/100km de {c['depassement']:.1f} L/100km."
+                )
                 
                 if alerte_existante:
                     # Mettre à jour l'alerte existante
@@ -1899,12 +2254,12 @@ def kpi_consommation(request):
                     alerte_existante.save()
                 else:
                     # Créer une nouvelle alerte
-                    niveau_urgence = 'Critique' if c['depassement'] > 5.0 else 'Élevé' if c['depassement'] > 3.5 else 'Moyen'
+                    niveau = 'Critique' if c['depassement'] > 5.0 else 'Élevé' if c['depassement'] > 3.5 else 'Moyen'
                     Alerte.objects.create(
                         vehicule=vehicule,
-                        type_alerte=f"Consommation excessive de carburant",
+                        titre="Consommation excessive de carburant",
                         description=description,
-                        niveau_urgence=niveau_urgence,
+                        niveau=niveau,
                         statut='Active'
                     )
         else:
@@ -2092,119 +2447,6 @@ def kpi_disponibilite(request):
     })
 
 @login_required
-def kpi_utilisation(request):
-    try:
-        # Récupérer les données d'utilisation agrégées par véhicule
-        utilisations_data = UtilisationActif.objects.values('vehicule').annotate(
-            jours_utilises_total=Sum('jours_utilises'),
-            jours_disponibles_total=Sum('jours_disponibles')
-        ).order_by('vehicule')
-        
-        utilisations = []
-        
-        for u in utilisations_data:
-            try:
-                vehicule = Vehicule.objects.get(id_vehicule=u['vehicule'])
-                
-                # Calculer le taux d'utilisation (éviter division par zéro)
-                if u['jours_disponibles_total'] > 0:
-                    taux_utilisation = (u['jours_utilises_total'] / u['jours_disponibles_total']) * 100
-                else:
-                    taux_utilisation = 0
-                
-                # Définir les cibles selon la catégorie du véhicule
-                if vehicule.categorie == 'Utilitaire':
-                    cible = 85
-                    cible_min = 70
-                elif vehicule.categorie == 'Berline':
-                    cible = 80
-                    cible_min = 65
-                else:
-                    cible = 75
-                    cible_min = 60
-                
-                # Créer un dictionnaire avec les informations
-                util_info = {
-                    'vehicule': vehicule.id_vehicule,
-                    'immatriculation': vehicule.immatriculation,
-                    'marque': vehicule.marque,
-                    'modele': vehicule.modele,
-                    'categorie': vehicule.categorie,
-                    'type_moteur': vehicule.type_moteur,
-                    'jours_utilises': u['jours_utilises_total'],
-                    'jours_disponibles': u['jours_disponibles_total'],
-                    'taux_utilisation': taux_utilisation,
-                    'cible': cible,
-                    'cible_min': cible_min,
-                    'alerte': taux_utilisation < cible_min or taux_utilisation > 95  # Alerte si utilisation < cible_min ou > 95%
-                }
-                
-                try:
-                    # Créer ou mettre à jour une alerte automatique si nécessaire
-                    if util_info['alerte']:
-                        # Vérifier si une alerte active existe déjà pour ce véhicule et ce type
-                        alerte_existante = Alerte.objects.filter(
-                            vehicule=vehicule,
-                            type_alerte__startswith='Taux d\'utilisation',
-                            statut='Active'
-                        ).first()
-                        
-                        # Description de l'alerte
-                        if taux_utilisation < cible_min:
-                            type_alerte = "Taux d'utilisation insuffisant"
-                            description = f"Le véhicule {vehicule.marque} {vehicule.modele} ({vehicule.immatriculation}) "
-                            description += f"a un taux d'utilisation de {taux_utilisation:.1f}%, "
-                            description += f"ce qui est inférieur au seuil minimal recommandé de {cible_min}%."
-                            niveau_urgence = 'Moyen' if taux_utilisation > cible_min - 15 else 'Élevé' if taux_utilisation > cible_min - 30 else 'Critique'
-                        else:  # taux_utilisation > 95
-                            type_alerte = "Taux d'utilisation excessif"
-                            description = f"Le véhicule {vehicule.marque} {vehicule.modele} ({vehicule.immatriculation}) "
-                            description += f"a un taux d'utilisation de {taux_utilisation:.1f}%, "
-                            description += f"ce qui est supérieur au seuil maximal recommandé de 95%."
-                            niveau_urgence = 'Moyen' if taux_utilisation < 97 else 'Élevé' if taux_utilisation < 99 else 'Critique'
-                        
-                        if alerte_existante:
-                            # Mettre à jour l'alerte existante
-                            alerte_existante.description = description
-                            alerte_existante.type_alerte = type_alerte
-                            alerte_existante.niveau_urgence = niveau_urgence
-                            alerte_existante.save()
-                        else:
-                            # Créer une nouvelle alerte
-                            Alerte.objects.create(
-                                vehicule=vehicule,
-                                type_alerte=type_alerte,
-                                description=description,
-                                niveau_urgence=niveau_urgence,
-                                statut='Active'
-                            )
-                except Exception:
-                    # La table Alerte peut être manquante
-                    pass
-                
-                utilisations.append(util_info)
-            except Exception:
-                # Erreur lors de la récupération du véhicule
-                pass
-        
-        # Trier par taux d'utilisation décroissant
-        utilisations = sorted(utilisations, key=lambda x: x['taux_utilisation'], reverse=True)
-        
-    except Exception as e:
-        # Gérer l'erreur de table manquante ou autre erreur
-        utilisations = []
-        messages.error(request, f"Erreur lors de l'accès aux données d'utilisation: {str(e)}. La table n'existe peut-être pas encore.")
-    
-    context = {
-        'utilisations': utilisations,
-        'titre': 'KPI - Utilisation des actifs',
-        'description': 'Analyse détaillée du taux d\'utilisation des véhicules disponibles',
-        'table_missing': 'utilisations' not in locals() or not utilisations
-    }
-    
-    return render(request, 'fleet_app/kpi_detail.html', context)
-
-@login_required
 def kpi_incidents(request):
     # Récupérer tous les incidents groupés par véhicule
     incidents_par_vehicule = Incident.objects.values('vehicule').annotate(total_incidents=Count('id')).order_by('-total_incidents')
@@ -2251,7 +2493,338 @@ def kpi_incidents(request):
     
     return render(request, 'fleet_app/kpi_detail.html', context)
 
+# --- Exports CSV pour KPI ---
+@login_required
+def export_kpi_distance_csv(request):
+    """Export CSV des distances par véhicule."""
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="kpi_distances.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Date début', 'Date fin', 'Km début', 'Km fin', 'Distance parcourue (km)'])
+
+    # Filtres de période
+    start_date, end_date = get_period_filter(request)
+    qs = DistanceParcourue.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_debut__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_fin__lte=end_date)
+    for d in qs.order_by('-date_fin'):
+        v = d.vehicule
+        writer.writerow([
+            f"{v.marque} {v.modele} ({v.immatriculation})",
+            d.date_debut, d.date_fin,
+            d.km_debut, d.km_fin, d.distance_parcourue
+        ])
+
+    return response
+
+@login_required
+def export_kpi_consommation_csv(request):
+    """Export CSV des consommations de carburant."""
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="kpi_consommation.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Date plein 1', 'Km plein 1', 'Date plein 2', 'Km plein 2', 'Litres ajoutés', 'Distance (km)', 'Conso (L/100km)'])
+
+    # Filtres de période
+    start_date, end_date = get_period_filter(request)
+    qs = ConsommationCarburant.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_plein1__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_plein2__lte=end_date)
+    qs = qs.order_by('-date_plein2')
+    for c in qs:
+        v = c.vehicule
+        writer.writerow([
+            f"{v.marque} {v.modele} ({v.immatriculation})",
+            c.date_plein1, c.km_plein1,
+            c.date_plein2, c.km_plein2,
+            c.litres_ajoutes,
+            c.distance_parcourue,
+            c.consommation_100km
+        ])
+
+    return response
+
+@login_required
+def export_kpi_disponibilite_csv(request):
+    """Export CSV des disponibilités."""
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="kpi_disponibilite.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Date début', 'Date fin', 'Heures disponibles', 'Heures totales', 'Disponibilité (%)', "Raison d'indisponibilité"]) 
+
+    # Filtres de période
+    start_date, end_date = get_period_filter(request)
+    qs = DisponibiliteVehicule.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_debut__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_fin__lte=end_date)
+    qs = qs.order_by('-date_fin')
+    for d in qs:
+        v = d.vehicule
+        writer.writerow([
+            f"{v.marque} {v.modele} ({v.immatriculation})",
+            d.date_debut, d.date_fin,
+            d.heures_disponibles, d.heures_totales, d.disponibilite_pourcentage,
+            d.raison_indisponibilite
+        ])
+
+    return response
+
+# --- Exports PDF pour KPI ---
+@login_required
+def export_kpi_distance_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = DistanceParcourue.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_debut__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_fin__lte=end_date)
+    qs = qs.order_by('-date_fin')
+    context = {
+        'rows': qs,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/kpi_distance_pdf.html', context, 'kpi_distance.pdf')
+
+@login_required
+def export_kpi_consommation_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = ConsommationCarburant.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_plein1__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_plein2__lte=end_date)
+    qs = qs.order_by('-date_plein2')
+    context = {
+        'rows': qs,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/kpi_consommation_pdf.html', context, 'kpi_consommation.pdf')
+
+@login_required
+def export_kpi_disponibilite_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = DisponibiliteVehicule.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_debut__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_fin__lte=end_date)
+    qs = qs.order_by('-date_fin')
+    context = {
+        'rows': qs,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/kpi_disponibilite_pdf.html', context, 'kpi_disponibilite.pdf')
+
+@login_required
+def export_kpi_couts_fonctionnement_pdf(request):
+    # Calcul simple par véhicule: coût total et coût moyen/km
+    start_date, end_date = get_period_filter(request)
+    couts = CoutFonctionnement.objects.all()
+    if start_date:
+        couts = couts.filter(date__gte=start_date)
+    if end_date:
+        couts = couts.filter(date__lte=end_date)
+    agg = couts.values('vehicule').annotate(cout_total=Sum('montant')).order_by('vehicule')
+    rows = []
+    for c in agg:
+        try:
+            v = Vehicule.objects.get(id_vehicule=c['vehicule'])
+        except Vehicule.DoesNotExist:
+            continue
+        distance_totale = DistanceParcourue.objects.filter(vehicule=v)
+        if start_date:
+            distance_totale = distance_totale.filter(date_debut__gte=start_date)
+        if end_date:
+            distance_totale = distance_totale.filter(date_fin__lte=end_date)
+        distance_totale = distance_totale.aggregate(Sum('distance_parcourue'))['distance_parcourue__sum'] or 0
+        cout_total = c['cout_total'] or 0
+        cout_moyen_par_km = cout_total / distance_totale if distance_totale else 0
+        rows.append({
+            'vehicule': v,
+            'cout_total': cout_total,
+            'distance_totale': distance_totale,
+            'cout_moyen_par_km': cout_moyen_par_km,
+        })
+    context = {
+        'rows': rows,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/kpi_couts_fonctionnement_pdf.html', context, 'kpi_couts_fonctionnement.pdf')
+
+@login_required
+def export_kpi_incidents_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = IncidentSecurite.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_incident__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_incident__lte=end_date)
+    qs = qs.order_by('-date_incident')
+    # Aggregation par véhicule pour un tableau synthétique
+    agg = qs.values('vehicule').annotate(total=Count('id')).order_by('-total')
+    rows = []
+    for a in agg:
+        try:
+            v = Vehicule.objects.get(id_vehicule=a['vehicule'])
+        except Vehicule.DoesNotExist:
+            continue
+        rows.append({'vehicule': v, 'total_incidents': a['total']})
+    context = {
+        'rows': rows,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/kpi_incidents_pdf.html', context, 'kpi_incidents.pdf')
+
+@login_required
+def export_kpi_utilisation_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = UtilisationActif.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date_debut__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_fin__lte=end_date)
+    qs = qs.order_by('-date_fin')
+    # Calcul du taux d'utilisation par enregistrement
+    rows = []
+    for u in qs:
+        taux = 0
+        try:
+            if u.jours_disponibles and u.jours_disponibles > 0:
+                taux = (u.jours_utilises / u.jours_disponibles) * 100
+        except Exception:
+            taux = 0
+        rows.append({'obj': u, 'taux': taux})
+    context = {
+        'rows': rows,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/kpi_utilisation_pdf.html', context, 'kpi_utilisation.pdf')
+
 from .utils import convertir_en_gnf, formater_montant_gnf, formater_cout_par_km_gnf
+
+# --- Exports CSV spécifiques à un véhicule ---
+@login_required
+def export_vehicule_documents_csv(request, id_vehicule):
+    vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="documents_{vehicule.immatriculation}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Type', 'Numéro', "Date d'émission", "Date d'expiration", 'Statut'])
+    start_date, end_date = get_period_filter(request)
+    qs = DocumentAdministratif.objects.filter(vehicule=vehicule)
+    if start_date:
+        qs = qs.filter(date_emission__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_emission__lte=end_date)
+    qs = qs.order_by('-date_emission')
+    for d in qs:
+        statut = 'Valide'
+        try:
+            if d.date_expiration and d.date_expiration < timezone.now().date():
+                statut = 'Expiré'
+        except Exception:
+            pass
+        writer.writerow([f"{vehicule.marque} {vehicule.modele} ({vehicule.immatriculation})", d.type_document, d.numero, d.date_emission, d.date_expiration, statut])
+    return response
+
+@login_required
+def export_vehicule_distances_csv(request, id_vehicule):
+    vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="distances_{vehicule.immatriculation}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Date début', 'Date fin', 'Km début', 'Km fin', 'Distance (km)'])
+    start_date, end_date = get_period_filter(request)
+    qs = DistanceParcourue.objects.filter(vehicule=vehicule)
+    if start_date:
+        qs = qs.filter(date_debut__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_fin__lte=end_date)
+    qs = qs.order_by('-date_fin')
+    for d in qs:
+        writer.writerow([f"{vehicule.marque} {vehicule.modele} ({vehicule.immatriculation})", d.date_debut, d.date_fin, d.km_debut, d.km_fin, d.distance_parcourue])
+    return response
+
+@login_required
+def export_vehicule_consommations_csv(request, id_vehicule):
+    vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="consommations_{vehicule.immatriculation}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Date plein 1', 'Km plein 1', 'Date plein 2', 'Km plein 2', 'Litres ajoutés', 'Distance (km)', 'Conso (L/100km)'])
+    start_date, end_date = get_period_filter(request)
+    qs = ConsommationCarburant.objects.filter(vehicule=vehicule)
+    if start_date:
+        qs = qs.filter(date_plein1__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_plein2__lte=end_date)
+    qs = qs.order_by('-date_plein2')
+    for c in qs:
+        writer.writerow([f"{vehicule.marque} {vehicule.modele} ({vehicule.immatriculation})", c.date_plein1, c.km_plein1, c.date_plein2, c.km_plein2, c.litres_ajoutes, c.distance_parcourue, c.consommation_100km])
+    return response
+
+@login_required
+def export_vehicule_couts_csv(request, id_vehicule):
+    vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="couts_{vehicule.immatriculation}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Date', 'Type', 'Montant', 'Kilométrage', 'Coût/km'])
+    start_date, end_date = get_period_filter(request)
+    qs = CoutFonctionnement.objects.filter(vehicule=vehicule)
+    if start_date:
+        qs = qs.filter(date__gte=start_date)
+    if end_date:
+        qs = qs.filter(date__lte=end_date)
+    qs = qs.order_by('-date')
+    for c in qs:
+        writer.writerow([f"{vehicule.marque} {vehicule.modele} ({vehicule.immatriculation})", c.date, c.type_cout, c.montant, getattr(c, 'kilometrage', ''), getattr(c, 'cout_par_km', '')])
+    return response
+
+@login_required
+def export_vehicule_alertes_csv(request, id_vehicule):
+    vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="alertes_{vehicule.immatriculation}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Véhicule', 'Date création', 'Type alerte', 'Description', 'Niveau', 'Statut'])
+    start_date, end_date = get_period_filter(request)
+    qs = Alerte.objects.filter(vehicule=vehicule)
+    if start_date:
+        qs = qs.filter(date_creation__date__gte=start_date)
+    if end_date:
+        qs = qs.filter(date_creation__date__lte=end_date)
+    qs = qs.order_by('-date_creation')
+    for a in qs:
+        writer.writerow([f"{vehicule.marque} {vehicule.modele} ({vehicule.immatriculation})", a.date_creation, a.type_alerte, a.description, getattr(a, 'niveau_urgence', ''), a.statut])
+    return response
 
 @login_required
 def kpi_couts_fonctionnement(request):

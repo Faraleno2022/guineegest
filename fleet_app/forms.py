@@ -1,6 +1,7 @@
 from django import forms
 from .models import Vehicule, DistanceParcourue, ConsommationCarburant, DisponibiliteVehicule, CoutFonctionnement, CoutFinancier, IncidentSecurite, UtilisationActif, UtilisationVehicule, Chauffeur, FeuilleDeRoute, DocumentAdministratif
 from .models_entreprise import Employe, ConfigurationMontantStatut, PresenceJournaliere
+from .models_alertes import Alerte
 
 class EmployeForm(forms.ModelForm):
     # Champs additionnels non présents dans le modèle mais attendus dans le template
@@ -129,9 +130,42 @@ class DistanceForm(forms.ModelForm):
         # Récupérer automatiquement le type de moteur du véhicule sélectionné
         if instance.vehicule:
             instance.type_moteur = instance.vehicule.type_moteur
+        # Calculer automatiquement la distance si possible
+        if instance.km_debut is not None and instance.km_fin is not None and instance.km_fin >= instance.km_debut:
+            instance.distance_parcourue = instance.km_fin - instance.km_debut
         if commit:
             instance.save()
         return instance
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Rendre la distance non requise (calculée automatiquement)
+        self.fields['distance_parcourue'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        km_debut = cleaned.get('km_debut')
+        km_fin = cleaned.get('km_fin')
+
+        if km_debut is not None and km_fin is not None:
+            if km_fin < km_debut:
+                self.add_error('km_fin', "Le kilométrage final doit être supérieur ou égal au kilométrage initial.")
+            else:
+                cleaned['distance_parcourue'] = (km_fin - km_debut)
+
+        return cleaned
+
+
+class AlerteForm(forms.ModelForm):
+    class Meta:
+        model = Alerte
+        fields = ['vehicule', 'titre', 'description', 'niveau']
+        widgets = {
+            'vehicule': forms.Select(attrs={'class': 'form-select'}),
+            'titre': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'niveau': forms.Select(attrs={'class': 'form-select'}),
+        }
 
 # Formulaire de consommation supprimé car remplacé par ConsommationCarburantForm
 
@@ -153,14 +187,23 @@ class FeuilleRouteForm(forms.ModelForm):
 class FeuilleRouteUpdateForm(forms.ModelForm):
     class Meta:
         model = FeuilleDeRoute
-        fields = ['date_retour', 'heure_retour', 'km_retour', 'carburant_retour', 'signature_chauffeur']
+        fields = ['km_depart', 'carburant_depart', 'date_retour', 'heure_retour', 'km_retour', 'carburant_retour', 'signature_chauffeur']
         widgets = {
+            'km_depart': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'readonly': 'readonly'}),
+            'carburant_depart': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01', 'readonly': 'readonly'}),
             'date_retour': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'heure_retour': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
             'km_retour': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'carburant_retour': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
-            'signature_chauffeur': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'signature_chauffeur': forms.CheckboxInput(attrs={'class': 'form-check-input', 'disabled': 'disabled'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Case visible, cochée par défaut et désactivée (informationnelle)
+        self.fields['signature_chauffeur'].initial = True
+        # S'assurer que l'attribut disabled est bien présent au rendu
+        self.fields['signature_chauffeur'].widget.attrs.update({'disabled': 'disabled'})
         
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -188,11 +231,65 @@ class DisponibiliteForm(forms.ModelForm):
             'date_debut': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'date_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'heures_disponibles': forms.NumberInput(attrs={'class': 'form-control'}),
-            'heures_totales': forms.NumberInput(attrs={'class': 'form-control'}),
-            'disponibilite_pourcentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'heures_totales': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'disponibilite_pourcentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
             'raison_indisponibilite': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'vehicule': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Rendre les champs calculés optionnels
+        self.fields['heures_totales'].required = False
+        self.fields['disponibilite_pourcentage'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        date_debut = cleaned.get('date_debut')
+        date_fin = cleaned.get('date_fin')
+        heures_dispo = cleaned.get('heures_disponibles')
+
+        # Valider dates
+        if date_debut and date_fin and date_fin < date_debut:
+            self.add_error('date_fin', "La date de fin doit être postérieure ou égale à la date de début.")
+
+        # Calculer heures totales et disponibilité
+        if date_debut and date_fin:
+            # Heures totales sur la période (inclusif) = (jours + 1) * 24
+            delta_jours = (date_fin - date_debut).days + 1
+            if delta_jours < 0:
+                delta_jours = 0
+            heures_totales = delta_jours * 24
+            cleaned['heures_totales'] = heures_totales
+
+            if heures_dispo is not None and heures_totales > 0:
+                if heures_dispo > heures_totales:
+                    self.add_error('heures_disponibles', "Les heures disponibles ne peuvent pas dépasser les heures totales de la période.")
+                    heures_dispo = heures_totales
+                dispo_pct = (heures_dispo * 100) / heures_totales
+                if dispo_pct > 100:
+                    dispo_pct = 100
+                cleaned['disponibilite_pourcentage'] = round(dispo_pct, 2)
+            else:
+                cleaned['disponibilite_pourcentage'] = 0
+
+        return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Recalcul de sécurité au cas où
+        if instance.date_debut and instance.date_fin:
+            delta_jours = (instance.date_fin - instance.date_debut).days + 1
+            if delta_jours < 0:
+                delta_jours = 0
+            instance.heures_totales = delta_jours * 24
+            if instance.heures_totales and instance.heures_totales > 0 and instance.heures_disponibles is not None:
+                if instance.heures_disponibles > instance.heures_totales:
+                    instance.heures_disponibles = instance.heures_totales
+                instance.disponibilite_pourcentage = (instance.heures_disponibles * 100) / instance.heures_totales
+        if commit:
+            instance.save()
+        return instance
 
 class CoutFonctionnementForm(forms.ModelForm):
     class Meta:
@@ -250,10 +347,52 @@ class ConsommationCarburantForm(forms.ModelForm):
             'date_plein2': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'km_plein2': forms.NumberInput(attrs={'class': 'form-control'}),
             'litres_ajoutes': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'distance_parcourue': forms.NumberInput(attrs={'class': 'form-control'}),
-            'consommation_100km': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'distance_parcourue': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'consommation_100km': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
             'consommation_constructeur': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Rendre optionnels les champs calculés pour permettre la saisie minimale
+        self.fields['distance_parcourue'].required = False
+        self.fields['consommation_100km'].required = False
+        self.fields['consommation_constructeur'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        km1 = cleaned.get('km_plein1')
+        km2 = cleaned.get('km_plein2')
+        litres = cleaned.get('litres_ajoutes')
+
+        # Validations de cohérence
+        if km1 is not None and km2 is not None:
+            if km2 <= km1:
+                self.add_error('km_plein2', "Le kilométrage au second plein doit être supérieur au premier plein.")
+
+        if litres is not None and litres <= 0:
+            self.add_error('litres_ajoutes', "Les litres ajoutés doivent être supérieurs à 0.")
+
+        # Calculs automatiques si possible
+        if km1 is not None and km2 is not None and litres is not None and km2 > km1 and litres > 0:
+            distance = km2 - km1
+            cleaned['distance_parcourue'] = cleaned.get('distance_parcourue') or distance
+            if distance > 0:
+                conso = (litres * 100) / distance
+                cleaned['consommation_100km'] = cleaned.get('consommation_100km') or round(conso, 2)
+
+        return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # S'assurer que les champs calculés sont bien renseignés
+        if instance.km_plein1 is not None and instance.km_plein2 is not None and instance.km_plein2 > instance.km_plein1:
+            instance.distance_parcourue = instance.distance_parcourue or (instance.km_plein2 - instance.km_plein1)
+            if instance.distance_parcourue and instance.distance_parcourue > 0 and instance.litres_ajoutes:
+                instance.consommation_100km = instance.consommation_100km or ((instance.litres_ajoutes * 100) / instance.distance_parcourue)
+        if commit:
+            instance.save()
+        return instance
 
 class UtilisationActifForm(forms.ModelForm):
     class Meta:
@@ -317,7 +456,7 @@ class FeuilleDeRouteForm(forms.ModelForm):
 class FeuilleDeRouteUpdateForm(forms.ModelForm):
     class Meta:
         model = FeuilleDeRoute
-        fields = ['km_depart', 'carburant_depart', 'km_retour', 'carburant_retour', 'date_retour', 'heure_retour']
+        fields = ['km_depart', 'carburant_depart', 'km_retour', 'carburant_retour', 'date_retour', 'heure_retour', 'signature_chauffeur']
         widgets = {
             'km_depart': forms.NumberInput(attrs={'class': 'form-control'}),
             'carburant_depart': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -325,6 +464,7 @@ class FeuilleDeRouteUpdateForm(forms.ModelForm):
             'carburant_retour': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'date_retour': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'heure_retour': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'signature_chauffeur': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 
