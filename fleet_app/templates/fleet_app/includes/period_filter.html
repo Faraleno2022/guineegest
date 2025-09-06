@@ -1,0 +1,18 @@
+{# Include réutilisable: filtre de période GET #}
+<form method="get" class="d-flex gap-2 align-items-center">
+  <select name="period" class="form-select form-select-sm">
+    <option value="">Toutes</option>
+    <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Dernier mois</option>
+    <option value="quarter" {% if request.GET.period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
+    <option value="year" {% if request.GET.period == 'year' %}selected{% endif %}>Dernière année</option>
+  </select>
+  <input type="date" name="start" class="form-control form-control-sm" value="{{ request.GET.start }}" placeholder="Du">
+  <input type="date" name="end" class="form-control form-control-sm" value="{{ request.GET.end }}" placeholder="Au">
+  {# Préserver les autres paramètres de la querystring (ex: search, page) #}
+  {% for key, value in request.GET.items %}
+    {% if key not in 'period,start,end' %}
+      <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% endif %}
+  {% endfor %}
+  <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i></button>
+</form>
