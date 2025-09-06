@@ -2727,6 +2727,33 @@ def export_kpi_utilisation_pdf(request):
     }
     return render_to_pdf('fleet_app/pdf/kpi_utilisation_pdf.html', context, 'kpi_utilisation.pdf')
 
+@login_required
+def export_kpi_couts_financiers_pdf(request):
+    start_date, end_date = get_period_filter(request)
+    qs = CoutFinancier.objects.select_related('vehicule')
+    if start_date:
+        qs = qs.filter(date__gte=start_date)
+    if end_date:
+        qs = qs.filter(date__lte=end_date)
+    qs = qs.order_by('-date')
+    # Agrégation par véhicule (total GNF) pour un tableau synthétique
+    agg = qs.values('vehicule').annotate(cout_total=Sum('montant')).order_by('-cout_total')
+    rows = []
+    for a in agg:
+        try:
+            v = Vehicule.objects.get(id_vehicule=a['vehicule'])
+        except Vehicule.DoesNotExist:
+            continue
+        rows.append({'vehicule': v, 'cout_total': a['cout_total'] or 0})
+    context = {
+        'rows': rows,
+        'generated_at': timezone.now(),
+        'period': request.GET.get('period', ''),
+        'start': request.GET.get('start', ''),
+        'end': request.GET.get('end', ''),
+    }
+    return render_to_pdf('fleet_app/pdf/kpi_couts_financiers_pdf.html', context, 'kpi_couts_financiers.pdf')
+
 from .utils import convertir_en_gnf, formater_montant_gnf, formater_cout_par_km_gnf
 
 # --- Exports CSV spécifiques à un véhicule ---

@@ -62,6 +62,7 @@ urlpatterns = [
     path('kpi/couts-fonctionnement/export-pdf/', views.export_kpi_couts_fonctionnement_pdf, name='export_kpi_couts_fonctionnement_pdf'),
     path('feuilles-route/export/pdf/', views.export_feuilles_route_pdf, name='export_feuilles_route_pdf'),
     path('kpi/couts-financiers/', views.kpi_couts_financiers, name='kpi_couts_financiers'),
+    path('kpi/couts-financiers/export-pdf/', views.export_kpi_couts_financiers_pdf, name='export_kpi_couts_financiers_pdf'),
     path('kpi/incidents/export-pdf/', views.export_kpi_incidents_pdf, name='export_kpi_incidents_pdf'),
     path('kpi/incidents/', views.kpi_incidents, name='kpi_incidents'),
     path('kpi/utilisation/', views.kpi_utilisation, name='kpi_utilisation'),
