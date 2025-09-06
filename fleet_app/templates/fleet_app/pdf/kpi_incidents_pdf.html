@@ -1,4 +1,5 @@
 {% load static %}
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -15,6 +16,11 @@
   </style>
 </head>
 <body>
+  <pdf:footer>
+    <div style="font-size:9pt; color:#666; text-align: right;">
+      Page <pdf:pagenumber/> / <pdf:pagecount/>
+    </div>
+  </pdf:footer>
   <h1>KPI Incidents</h1>
   <div class="meta">
     Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
@@ -33,7 +39,7 @@
       {% for r in rows %}
       <tr>
         <td>{{ r.vehicule.marque }} {{ r.vehicule.modele }} ({{ r.vehicule.immatriculation }})</td>
-        <td>{{ r.total_incidents }}</td>
+        <td>{{ r.total_incidents|intcomma }}</td>
       </tr>
       {% empty %}
       <tr><td colspan="2">Aucune donnée pour cette période.</td></tr>

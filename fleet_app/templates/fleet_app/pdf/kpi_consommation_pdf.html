@@ -1,4 +1,5 @@
 {% load static %}
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -16,6 +17,11 @@
   </style>
 </head>
 <body>
+  <pdf:footer>
+    <div style="font-size:9pt; color:#666; text-align: right;">
+      Page <pdf:pagenumber/> / <pdf:pagecount/>
+    </div>
+  </pdf:footer>
   <h1>KPI Consommation</h1>
   <div class="meta">
     Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
@@ -41,12 +47,12 @@
       <tr>
         <td>{{ r.vehicule.marque }} {{ r.vehicule.modele }} ({{ r.vehicule.immatriculation }})</td>
         <td class="nowrap">{{ r.date_plein1|date:"d/m/Y H:i" }}</td>
-        <td>{{ r.km_plein1 }}</td>
+        <td>{{ r.km_plein1|intcomma }}</td>
         <td class="nowrap">{{ r.date_plein2|date:"d/m/Y H:i" }}</td>
-        <td>{{ r.km_plein2 }}</td>
-        <td>{{ r.litres_ajoutes }}</td>
-        <td>{{ r.distance_parcourue }}</td>
-        <td>{{ r.consommation_100km }}</td>
+        <td>{{ r.km_plein2|intcomma }}</td>
+        <td>{{ r.litres_ajoutes|floatformat:2 }}</td>
+        <td>{{ r.distance_parcourue|intcomma }}</td>
+        <td>{{ r.consommation_100km|floatformat:2 }}</td>
       </tr>
       {% empty %}
       <tr><td colspan="8">Aucune donnée pour cette période.</td></tr>
