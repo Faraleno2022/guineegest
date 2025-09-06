@@ -22,13 +22,69 @@
       Page <pdf:pagenumber/> / <pdf:pagecount/>
     </div>
   </pdf:footer>
-  <h1>KPI Disponibilité</h1>
+  {% include 'fleet_app/pdf/includes/header.html' with title='KPI Disponibilité' %}
   <div class="meta">
     Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
     {% if start or end or period %}
       Période: {% if start %}du {{ start }}{% endif %}{% if end %} au {{ end }}{% endif %}{% if period and not start and not end %} ({{ period }}){% endif %}
     {% else %}Période: Toutes{% endif %}
   </div>
+  {% if summary %}
+  <div class="summary">
+    <table>
+      <tr>
+        <td><strong>Heures disponibles</strong></td>
+        <td class="right">{{ summary.total_heures_disponibles|intcomma }}</td>
+        <td><strong>Heures totales</strong></td>
+        <td class="right">{{ summary.total_heures_totales|intcomma }}</td>
+        <td><strong>Disponibilité moyenne</strong></td>
+        <td class="right">{{ summary.avg_disponibilite|floatformat:1 }}%</td>
+        <td><strong>Lignes</strong></td>
+        <td class="right">{{ summary.rows_count }}</td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+  {% if global_summary %}
+  <div class="summary">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Mois</th>
+          <th>Trimestre</th>
+          <th>Année</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Heures dispo</strong></td>
+          <td class="right">{{ global_summary.month.total_heures_disponibles|intcomma }}</td>
+          <td class="right">{{ global_summary.quarter.total_heures_disponibles|intcomma }}</td>
+          <td class="right">{{ global_summary.year.total_heures_disponibles|intcomma }}</td>
+        </tr>
+        <tr>
+          <td><strong>Heures totales</strong></td>
+          <td class="right">{{ global_summary.month.total_heures_totales|intcomma }}</td>
+          <td class="right">{{ global_summary.quarter.total_heures_totales|intcomma }}</td>
+          <td class="right">{{ global_summary.year.total_heures_totales|intcomma }}</td>
+        </tr>
+        <tr>
+          <td><strong>Disponibilité moyenne</strong></td>
+          <td class="right">{{ global_summary.month.avg_disponibilite|floatformat:1 }}%</td>
+          <td class="right">{{ global_summary.quarter.avg_disponibilite|floatformat:1 }}%</td>
+          <td class="right">{{ global_summary.year.avg_disponibilite|floatformat:1 }}%</td>
+        </tr>
+        <tr>
+          <td><strong>Lignes</strong></td>
+          <td class="right">{{ global_summary.month.rows_count }}</td>
+          <td class="right">{{ global_summary.quarter.rows_count }}</td>
+          <td class="right">{{ global_summary.year.rows_count }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
   <table>
     <thead>
       <tr>
@@ -47,9 +103,9 @@
         <td>{{ r.vehicule.marque }} {{ r.vehicule.modele }} ({{ r.vehicule.immatriculation }})</td>
         <td class="nowrap">{{ r.date_debut|date:"d/m/Y H:i" }}</td>
         <td class="nowrap">{{ r.date_fin|date:"d/m/Y H:i" }}</td>
-        <td>{{ r.heures_disponibles|intcomma }}</td>
-        <td>{{ r.heures_totales|intcomma }}</td>
-        <td>{{ r.disponibilite_pourcentage|floatformat:1 }}</td>
+        <td class="right">{{ r.heures_disponibles|intcomma }}</td>
+        <td class="right">{{ r.heures_totales|intcomma }}</td>
+        <td class="right">{{ r.disponibilite_pourcentage|floatformat:1 }}%</td>
         <td>{{ r.raison_indisponibilite }}</td>
       </tr>
       {% empty %}

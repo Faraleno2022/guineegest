@@ -69,7 +69,7 @@ class IncidentAdmin(admin.ModelAdmin):
 
 @admin.register(CoutFonctionnement)
 class CoutFonctionnementAdmin(admin.ModelAdmin):
-    list_display = ('vehicule', 'date', 'type_cout', 'montant', 'kilometrage', 'cout_par_km')
+    list_display = ('vehicule', 'date', 'type_cout', 'montant', 'km_actuel', 'cout_par_km')
     list_filter = ('type_cout',)
     search_fields = ('vehicule__immatriculation', 'type_cout')
     date_hierarchy = 'date'

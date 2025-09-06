@@ -294,12 +294,12 @@ class DisponibiliteForm(forms.ModelForm):
 class CoutFonctionnementForm(forms.ModelForm):
     class Meta:
         model = CoutFonctionnement
-        fields = ['vehicule', 'date', 'type_cout', 'montant', 'kilometrage', 'cout_par_km', 'description']
+        fields = ['vehicule', 'date', 'type_cout', 'montant', 'km_actuel', 'cout_par_km', 'description']
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'type_cout': forms.TextInput(attrs={'class': 'form-control'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'kilometrage': forms.NumberInput(attrs={'class': 'form-control'}),
+            'km_actuel': forms.NumberInput(attrs={'class': 'form-control'}),
             'cout_par_km': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'vehicule': forms.Select(attrs={'class': 'form-select'}),

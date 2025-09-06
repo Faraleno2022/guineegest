@@ -15,6 +15,8 @@
     th { background: #f0f0f0; }
     .nowrap { white-space: nowrap; }
     .right { text-align: right; }
+    .summary { margin: 8px 0 12px 0; }
+    .summary td { border: none; }
   </style>
 </head>
 <body>
@@ -23,13 +25,63 @@
       Page <pdf:pagenumber/> / <pdf:pagecount/>
     </div>
   </pdf:footer>
-  <h1>KPI Utilisation</h1>
+  {% include 'fleet_app/pdf/includes/header.html' with title='KPI Utilisation' %}
   <div class="meta">
     Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
     {% if start or end or period %}
       Période: {% if start %}du {{ start }}{% endif %}{% if end %} au {{ end }}{% endif %}{% if period and not start and not end %} ({{ period }}){% endif %}
     {% else %}Période: Toutes{% endif %}
   </div>
+  {% if summary %}
+  <div class="summary">
+    <table>
+      <tr>
+        <td><strong>Jours utilisés</strong></td>
+        <td class="right">{{ summary.total_jours_utilises|intcomma }}</td>
+        <td><strong>Jours disponibles</strong></td>
+        <td class="right">{{ summary.total_jours_disponibles|intcomma }}</td>
+        <td><strong>Taux moyen</strong></td>
+        <td class="right">{{ summary.avg_taux|floatformat:1 }}%</td>
+        <td><strong>Lignes</strong></td>
+        <td class="right">{{ summary.rows_count }}</td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+  {% if global_summary %}
+  <div class="summary">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Mois</th>
+          <th>Trimestre</th>
+          <th>Année</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Jours utilisés</strong></td>
+          <td class="right">{{ global_summary.month.total_jours_utilises|intcomma }}</td>
+          <td class="right">{{ global_summary.quarter.total_jours_utilises|intcomma }}</td>
+          <td class="right">{{ global_summary.year.total_jours_utilises|intcomma }}</td>
+        </tr>
+        <tr>
+          <td><strong>Jours disponibles</strong></td>
+          <td class="right">{{ global_summary.month.total_jours_disponibles|intcomma }}</td>
+          <td class="right">{{ global_summary.quarter.total_jours_disponibles|intcomma }}</td>
+          <td class="right">{{ global_summary.year.total_jours_disponibles|intcomma }}</td>
+        </tr>
+        <tr>
+          <td><strong>Taux moyen</strong></td>
+          <td class="right">{{ global_summary.month.avg_taux|floatformat:1 }}%</td>
+          <td class="right">{{ global_summary.quarter.avg_taux|floatformat:1 }}%</td>
+          <td class="right">{{ global_summary.year.avg_taux|floatformat:1 }}%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
   <table>
     <thead>
       <tr>

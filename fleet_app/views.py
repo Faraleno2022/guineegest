@@ -19,6 +19,7 @@ import json
 import csv
 from django import forms
 from django.utils import timezone
+from datetime import datetime, date
 from .views_accounts import check_profile_completion
 
 # Import des modèles
@@ -2579,6 +2580,25 @@ def export_kpi_disponibilite_csv(request):
     return response
 
 # --- Exports PDF pour KPI ---
+def _calendar_ranges(now=None):
+    """Retourne les bornes calendaires (début du mois, trimestre, année) jusqu'à maintenant.
+    Format: {'month': (start, end), 'quarter': (start, end), 'year': (start, end)}
+    """
+    if now is None:
+        now = timezone.now()
+    # Début du mois
+    month_start = now.replace(day=1).date()
+    # Début du trimestre calendaire
+    q_month = ((now.month - 1) // 3) * 3 + 1
+    quarter_start = date(year=now.year, month=q_month, day=1)
+    # Début de l'année
+    year_start = date(year=now.year, month=1, day=1)
+    end = now.date()
+    return {
+        'month': (month_start, end),
+        'quarter': (quarter_start, end),
+        'year': (year_start, end),
+    }
 @login_required
 def export_kpi_distance_pdf(request):
     start_date, end_date = get_period_filter(request)
@@ -2588,12 +2608,28 @@ def export_kpi_distance_pdf(request):
     if end_date:
         qs = qs.filter(date_fin__lte=end_date)
     qs = qs.order_by('-date_fin')
+    total_distance = qs.aggregate(Sum('distance_parcourue'))['distance_parcourue__sum'] or 0
+    count = qs.count()
+    # Résumé global calendaire (M/T/A)
+    cal = _calendar_ranges()
+    global_summary = {}
+    for key, (s, e) in cal.items():
+        qf = DistanceParcourue.objects.select_related('vehicule').filter(date_debut__gte=s, date_fin__lte=e)
+        global_summary[key] = {
+            'total_distance': qf.aggregate(Sum('distance_parcourue'))['distance_parcourue__sum'] or 0,
+            'rows_count': qf.count(),
+        }
     context = {
         'rows': qs,
         'generated_at': timezone.now(),
         'period': request.GET.get('period', ''),
         'start': request.GET.get('start', ''),
         'end': request.GET.get('end', ''),
+        'summary': {
+            'total_distance': total_distance,
+            'rows_count': count,
+        },
+        'global_summary': global_summary,
     }
     return render_to_pdf('fleet_app/pdf/kpi_distance_pdf.html', context, 'kpi_distance.pdf')
 
@@ -2606,12 +2642,35 @@ def export_kpi_consommation_pdf(request):
     if end_date:
         qs = qs.filter(date_plein2__lte=end_date)
     qs = qs.order_by('-date_plein2')
+    sums = qs.aggregate(
+        total_litres=Sum('litres_ajoutes'),
+        total_distance=Sum('distance_parcourue'),
+        avg_conso=Avg('consommation_100km'),
+    )
+    cal = _calendar_ranges()
+    global_summary = {}
+    for key, (s, e) in cal.items():
+        qf = ConsommationCarburant.objects.select_related('vehicule').filter(date_plein1__gte=s, date_plein2__lte=e)
+        ag = qf.aggregate(total_litres=Sum('litres_ajoutes'), total_distance=Sum('distance_parcourue'), avg_conso=Avg('consommation_100km'))
+        global_summary[key] = {
+            'total_litres': ag.get('total_litres') or 0,
+            'total_distance': ag.get('total_distance') or 0,
+            'avg_conso': ag.get('avg_conso') or 0,
+            'rows_count': qf.count(),
+        }
     context = {
         'rows': qs,
         'generated_at': timezone.now(),
         'period': request.GET.get('period', ''),
         'start': request.GET.get('start', ''),
         'end': request.GET.get('end', ''),
+        'summary': {
+            'total_litres': sums.get('total_litres') or 0,
+            'total_distance': sums.get('total_distance') or 0,
+            'avg_conso': sums.get('avg_conso') or 0,
+            'rows_count': qs.count(),
+        },
+        'global_summary': global_summary,
     }
     return render_to_pdf('fleet_app/pdf/kpi_consommation_pdf.html', context, 'kpi_consommation.pdf')
 
@@ -2624,12 +2683,35 @@ def export_kpi_disponibilite_pdf(request):
     if end_date:
         qs = qs.filter(date_fin__lte=end_date)
     qs = qs.order_by('-date_fin')
+    sums = qs.aggregate(
+        total_heures_disponibles=Sum('heures_disponibles'),
+        total_heures_totales=Sum('heures_totales'),
+        avg_disponibilite=Avg('disponibilite_pourcentage'),
+    )
+    cal = _calendar_ranges()
+    global_summary = {}
+    for key, (s, e) in cal.items():
+        qf = DisponibiliteVehicule.objects.select_related('vehicule').filter(date_debut__gte=s, date_fin__lte=e)
+        ag = qf.aggregate(total_heures_disponibles=Sum('heures_disponibles'), total_heures_totales=Sum('heures_totales'), avg_disponibilite=Avg('disponibilite_pourcentage'))
+        global_summary[key] = {
+            'total_heures_disponibles': ag.get('total_heures_disponibles') or 0,
+            'total_heures_totales': ag.get('total_heures_totales') or 0,
+            'avg_disponibilite': ag.get('avg_disponibilite') or 0,
+            'rows_count': qf.count(),
+        }
     context = {
         'rows': qs,
         'generated_at': timezone.now(),
         'period': request.GET.get('period', ''),
         'start': request.GET.get('start', ''),
         'end': request.GET.get('end', ''),
+        'summary': {
+            'total_heures_disponibles': sums.get('total_heures_disponibles') or 0,
+            'total_heures_totales': sums.get('total_heures_totales') or 0,
+            'avg_disponibilite': sums.get('avg_disponibilite') or 0,
+            'rows_count': qs.count(),
+        },
+        'global_summary': global_summary,
     }
     return render_to_pdf('fleet_app/pdf/kpi_disponibilite_pdf.html', context, 'kpi_disponibilite.pdf')
 
@@ -2663,12 +2745,36 @@ def export_kpi_couts_fonctionnement_pdf(request):
             'distance_totale': distance_totale,
             'cout_moyen_par_km': cout_moyen_par_km,
         })
+    total_cout = sum(r['cout_total'] for r in rows)
+    total_km = sum(r['distance_totale'] for r in rows)
+    avg_cout_km = (total_cout / total_km) if total_km else 0
+    cal = _calendar_ranges()
+    global_summary = {}
+    for key, (s, e) in cal.items():
+        qcf = CoutFonctionnement.objects.filter(date__gte=s, date__lte=e)
+        ag_cout = qcf.aggregate(total_cout=Sum('montant'))
+        # Distance globale sur la même fenêtre
+        qd = DistanceParcourue.objects.filter(date_debut__gte=s, date_fin__lte=e)
+        total_km_g = qd.aggregate(total_km=Sum('distance_parcourue'))['total_km'] or 0
+        total_cout_g = ag_cout.get('total_cout') or 0
+        global_summary[key] = {
+            'total_cout': total_cout_g,
+            'total_km': total_km_g,
+            'avg_cout_km': (total_cout_g / total_km_g) if total_km_g else 0,
+        }
     context = {
         'rows': rows,
         'generated_at': timezone.now(),
         'period': request.GET.get('period', ''),
         'start': request.GET.get('start', ''),
         'end': request.GET.get('end', ''),
+        'summary': {
+            'total_cout': total_cout,
+            'total_km': total_km,
+            'avg_cout_km': avg_cout_km,
+            'rows_count': len(rows),
+        },
+        'global_summary': global_summary,
     }
     return render_to_pdf('fleet_app/pdf/kpi_couts_fonctionnement_pdf.html', context, 'kpi_couts_fonctionnement.pdf')
 
@@ -2690,12 +2796,25 @@ def export_kpi_incidents_pdf(request):
         except Vehicule.DoesNotExist:
             continue
         rows.append({'vehicule': v, 'total_incidents': a['total']})
+    total_incidents = sum(r['total_incidents'] for r in rows)
+    cal = _calendar_ranges()
+    global_summary = {}
+    for key, (s, e) in cal.items():
+        qf = IncidentSecurite.objects.select_related('vehicule').filter(date_incident__gte=s, date_incident__lte=e)
+        global_summary[key] = {
+            'total_incidents': qf.count(),
+        }
     context = {
         'rows': rows,
         'generated_at': timezone.now(),
         'period': request.GET.get('period', ''),
         'start': request.GET.get('start', ''),
         'end': request.GET.get('end', ''),
+        'summary': {
+            'total_incidents': total_incidents,
+            'vehicules_concernes': len(rows),
+        },
+        'global_summary': global_summary,
     }
     return render_to_pdf('fleet_app/pdf/kpi_incidents_pdf.html', context, 'kpi_incidents.pdf')
 
@@ -2718,12 +2837,35 @@ def export_kpi_utilisation_pdf(request):
         except Exception:
             taux = 0
         rows.append({'obj': u, 'taux': taux})
+    total_jours_utilises = sum((r['obj'].jours_utilises or 0) for r in rows)
+    total_jours_disponibles = sum((r['obj'].jours_disponibles or 0) for r in rows)
+    avg_taux = (total_jours_utilises / total_jours_disponibles * 100) if total_jours_disponibles else 0
+    cal = _calendar_ranges()
+    global_summary = {}
+    for key, (s, e) in cal.items():
+        qf = UtilisationActif.objects.select_related('vehicule').filter(date_debut__gte=s, date_fin__lte=e)
+        # Taux moyen global sur la fenêtre
+        total_u = qf.aggregate(Sum('jours_utilises'))['jours_utilises__sum'] or 0
+        total_d = qf.aggregate(Sum('jours_disponibles'))['jours_disponibles__sum'] or 0
+        avg_taux_g = (total_u / total_d * 100) if total_d else 0
+        global_summary[key] = {
+            'total_jours_utilises': total_u,
+            'total_jours_disponibles': total_d,
+            'avg_taux': avg_taux_g,
+        }
     context = {
         'rows': rows,
         'generated_at': timezone.now(),
         'period': request.GET.get('period', ''),
         'start': request.GET.get('start', ''),
         'end': request.GET.get('end', ''),
+        'summary': {
+            'total_jours_utilises': total_jours_utilises,
+            'total_jours_disponibles': total_jours_disponibles,
+            'avg_taux': avg_taux,
+            'rows_count': len(rows),
+        },
+        'global_summary': global_summary,
     }
     return render_to_pdf('fleet_app/pdf/kpi_utilisation_pdf.html', context, 'kpi_utilisation.pdf')
 
@@ -2745,16 +2887,59 @@ def export_kpi_couts_financiers_pdf(request):
         except Vehicule.DoesNotExist:
             continue
         rows.append({'vehicule': v, 'cout_total': a['cout_total'] or 0})
+    total_cout = sum(r['cout_total'] for r in rows)
+    cal = _calendar_ranges()
+    global_summary = {}
+    for key, (s, e) in cal.items():
+        qf = CoutFinancier.objects.select_related('vehicule').filter(date__gte=s, date__lte=e)
+        total = qf.aggregate(Sum('montant'))['montant__sum'] or 0
+        global_summary[key] = {
+            'total_cout': total,
+        }
     context = {
         'rows': rows,
         'generated_at': timezone.now(),
         'period': request.GET.get('period', ''),
         'start': request.GET.get('start', ''),
         'end': request.GET.get('end', ''),
+        'summary': {
+            'total_cout': total_cout,
+            'rows_count': len(rows),
+        },
+        'global_summary': global_summary,
     }
     return render_to_pdf('fleet_app/pdf/kpi_couts_financiers_pdf.html', context, 'kpi_couts_financiers.pdf')
 
 from .utils import convertir_en_gnf, formater_montant_gnf, formater_cout_par_km_gnf
+from django.http import JsonResponse
+
+# --- API pour récupérer le dernier kilométrage d'un véhicule ---
+@login_required
+def get_vehicule_last_km(request, id_vehicule):
+    """API pour récupérer le dernier kilométrage enregistré d'un véhicule"""
+    try:
+        vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule)
+        derniere_distance = DistanceParcourue.objects.filter(
+            vehicule=vehicule
+        ).order_by('-date_fin').first()
+        
+        if derniere_distance:
+            return JsonResponse({
+                'success': True,
+                'last_km': derniere_distance.km_fin,
+                'date': derniere_distance.date_fin.strftime('%Y-%m-%d')
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'last_km': 0,
+                'date': None
+            })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
 # --- Exports CSV spécifiques à un véhicule ---
 @login_required
@@ -3101,7 +3286,32 @@ def kpi_couts_fonctionnement(request):
             try:
                 form = CoutFonctionnementForm(request.POST)
                 if form.is_valid():
-                    form.save()
+                    cout = form.save(commit=False)
+                    
+                    # Calcul automatique du coût par km
+                    if cout.montant and cout.km_actuel:
+                        # Récupérer le kilométrage précédent du véhicule
+                        try:
+                            derniere_distance = DistanceParcourue.objects.filter(
+                                vehicule=cout.vehicule
+                            ).order_by('-date_fin').first()
+                            
+                            if derniere_distance:
+                                km_precedent = derniere_distance.km_fin
+                                distance_parcourue = cout.km_actuel - km_precedent
+                                if distance_parcourue > 0:
+                                    cout.cout_par_km = cout.montant / distance_parcourue
+                                else:
+                                    # Si pas de distance valide, utiliser une estimation
+                                    cout.cout_par_km = cout.montant / 1000
+                            else:
+                                # Pas de données précédentes, estimation basée sur 1000km
+                                cout.cout_par_km = cout.montant / 1000
+                        except Exception:
+                            # En cas d'erreur, estimation simple
+                            cout.cout_par_km = cout.montant / 1000
+                    
+                    cout.save()
                     messages.success(request, 'Coût de fonctionnement ajouté avec succès.')
                     return redirect('fleet_app:kpi_couts_fonctionnement')
             except Exception as e:
@@ -3218,7 +3428,32 @@ def kpi_couts_financiers(request):
     if request.method == 'POST':
         form = CoutFinancierForm(request.POST)
         if form.is_valid():
-            form.save()
+            cout = form.save(commit=False)
+            
+            # Calcul automatique du coût par km
+            if cout.montant and cout.kilometrage:
+                # Récupérer le kilométrage précédent du véhicule
+                try:
+                    derniere_distance = DistanceParcourue.objects.filter(
+                        vehicule=cout.vehicule
+                    ).order_by('-date_fin').first()
+                    
+                    if derniere_distance:
+                        km_precedent = derniere_distance.km_fin
+                        distance_parcourue = cout.kilometrage - km_precedent
+                        if distance_parcourue > 0:
+                            cout.cout_par_km = cout.montant / distance_parcourue
+                        else:
+                            # Si pas de distance valide, utiliser une estimation
+                            cout.cout_par_km = cout.montant / 1000
+                    else:
+                        # Pas de données précédentes, estimation basée sur 1000km
+                        cout.cout_par_km = cout.montant / 1000
+                except Exception:
+                    # En cas d'erreur, estimation simple
+                    cout.cout_par_km = cout.montant / 1000
+            
+            cout.save()
             messages.success(request, 'Coût financier ajouté avec succès.')
             return redirect('fleet_app:kpi_couts_financiers')
     else:
@@ -3230,6 +3465,8 @@ def kpi_couts_financiers(request):
     for cout in couts:
         cout.montant_gnf = convertir_en_gnf(cout.montant)
         cout.cout_par_km_gnf = convertir_en_gnf(cout.cout_par_km)
+        cout.montant_gnf_formatte = formater_montant_gnf(cout.montant)
+        cout.cout_par_km_gnf_formatte = formater_cout_par_km_gnf(cout.cout_par_km)
     
     # Données pour graphiques
     vehicules = Vehicule.objects.all()
@@ -3272,7 +3509,28 @@ def cout_financier_edit(request, pk):
         if request.method == 'POST':
             form = CoutFinancierForm(request.POST, instance=cout)
             if form.is_valid():
-                form.save()
+                cout = form.save(commit=False)
+                
+                # Recalcul automatique du coût par km lors de la modification
+                if cout.montant and cout.kilometrage:
+                    try:
+                        derniere_distance = DistanceParcourue.objects.filter(
+                            vehicule=cout.vehicule
+                        ).order_by('-date_fin').first()
+                        
+                        if derniere_distance:
+                            km_precedent = derniere_distance.km_fin
+                            distance_parcourue = cout.kilometrage - km_precedent
+                            if distance_parcourue > 0:
+                                cout.cout_par_km = cout.montant / distance_parcourue
+                            else:
+                                cout.cout_par_km = cout.montant / 1000
+                        else:
+                            cout.cout_par_km = cout.montant / 1000
+                    except Exception:
+                        cout.cout_par_km = cout.montant / 1000
+                
+                cout.save()
                 messages.success(request, "Le coût financier a été modifié avec succès.")
                 return redirect('fleet_app:kpi_couts_financiers')
         else:

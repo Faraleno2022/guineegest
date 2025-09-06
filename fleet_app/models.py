@@ -205,7 +205,7 @@ class CoutFonctionnement(models.Model):
     date = models.DateField(verbose_name="Date")
     type_cout = models.CharField(max_length=50, verbose_name="Type de coût")
     montant = models.FloatField(verbose_name="Montant")
-    kilometrage = models.IntegerField(verbose_name="Kilométrage")
+    km_actuel = models.IntegerField(verbose_name="Kilométrage actuel", default=0)
     cout_par_km = models.FloatField(verbose_name="Coût par km")
     description = models.TextField(blank=True, verbose_name="Description")
     

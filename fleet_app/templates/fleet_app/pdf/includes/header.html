@@ -1,0 +1,17 @@
+{% comment %}
+En-tête PDF commun pour xhtml2pdf
+Utilisation: {% include 'fleet_app/pdf/includes/header.html' with title='KPI Distance' %}
+{% endcomment %}
+<style>
+  .pdf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid #444; padding-bottom: 6px; }
+  .brand { font-size: 12pt; font-weight: 700; letter-spacing: 0.3px; }
+  .report-title { font-size: 14pt; font-weight: 700; }
+  .subtitle { font-size: 9pt; color: #666; }
+</style>
+<div class="pdf-header">
+  <div>
+    <div class="brand">GuinéeGest</div>
+    <div class="subtitle">Gestion de parc automobile</div>
+  </div>
+  <div class="report-title">{{ title }}</div>
+</div>

@@ -48,6 +48,9 @@ urlpatterns = [
     path('vehicules/<str:id_vehicule>/export/couts/', views.export_vehicule_couts_csv, name='export_vehicule_couts_csv'),
     path('vehicules/<str:id_vehicule>/export/alertes/', views.export_vehicule_alertes_csv, name='export_vehicule_alertes_csv'),
     
+    # API pour récupérer le dernier kilométrage d'un véhicule
+    path('api/vehicule/<str:id_vehicule>/last-km/', views.get_vehicule_last_km, name='get_vehicule_last_km'),
+    
     # KPI
     path('kpi/distance/', views.kpi_distance, name='kpi_distance'),
     path('kpi/distance/export-csv/', views.export_kpi_distance_csv, name='export_kpi_distance_csv'),

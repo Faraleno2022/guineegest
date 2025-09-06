@@ -14,6 +14,8 @@
     th, td { border: 1px solid #999; padding: 6px; }
     th { background: #f0f0f0; }
     .right { text-align: right; }
+    .summary { margin: 8px 0 12px 0; }
+    .summary td { border: none; }
   </style>
 </head>
 <body>
@@ -22,13 +24,63 @@
       Page <pdf:pagenumber/> / <pdf:pagecount/>
     </div>
   </pdf:footer>
-  <h1>KPI Coûts de fonctionnement</h1>
+  {% include 'fleet_app/pdf/includes/header.html' with title='KPI Coûts de fonctionnement' %}
   <div class="meta">
     Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
     {% if start or end or period %}
       Période: {% if start %}du {{ start }}{% endif %}{% if end %} au {{ end }}{% endif %}{% if period and not start and not end %} ({{ period }}){% endif %}
     {% else %}Période: Toutes{% endif %}
   </div>
+  {% if summary %}
+  <div class="summary">
+    <table>
+      <tr>
+        <td><strong>Coût total</strong></td>
+        <td class="right">{{ summary.total_cout|floatformat:0|intcomma }} GNF</td>
+        <td><strong>Distance totale</strong></td>
+        <td class="right">{{ summary.total_km|intcomma }} km</td>
+        <td><strong>Coût moyen/km</strong></td>
+        <td class="right">{{ summary.avg_cout_km|floatformat:3 }} GNF/km</td>
+        <td><strong>Lignes</strong></td>
+        <td class="right">{{ summary.rows_count }}</td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+  {% if global_summary %}
+  <div class="summary">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Mois</th>
+          <th>Trimestre</th>
+          <th>Année</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Coût total</strong></td>
+          <td class="right">{{ global_summary.month.total_cout|floatformat:0|intcomma }} GNF</td>
+          <td class="right">{{ global_summary.quarter.total_cout|floatformat:0|intcomma }} GNF</td>
+          <td class="right">{{ global_summary.year.total_cout|floatformat:0|intcomma }} GNF</td>
+        </tr>
+        <tr>
+          <td><strong>Distance totale</strong></td>
+          <td class="right">{{ global_summary.month.total_km|intcomma }} km</td>
+          <td class="right">{{ global_summary.quarter.total_km|intcomma }} km</td>
+          <td class="right">{{ global_summary.year.total_km|intcomma }} km</td>
+        </tr>
+        <tr>
+          <td><strong>Coût moyen/km</strong></td>
+          <td class="right">{{ global_summary.month.avg_cout_km|floatformat:3 }} GNF/km</td>
+          <td class="right">{{ global_summary.quarter.avg_cout_km|floatformat:3 }} GNF/km</td>
+          <td class="right">{{ global_summary.year.avg_cout_km|floatformat:3 }} GNF/km</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
   <table>
     <thead>
       <tr>
