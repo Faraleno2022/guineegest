@@ -15,4 +15,8 @@
     {% endif %}
   {% endfor %}
   <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i></button>
+  {# Lien de réinitialisation: retire period/start/end et conserve le reste #}
+  <a class="btn btn-sm btn-outline-secondary" href="?{% for key, value in request.GET.items %}{% if key != 'period' and key != 'start' and key != 'end' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}">
+    Réinitialiser
+  </a>
 </form>

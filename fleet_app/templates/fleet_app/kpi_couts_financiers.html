@@ -58,13 +58,14 @@
                 <div>
                     <i class="fas fa-chart-bar me-2"></i> Coûts financiers par véhicule
                 </div>
-                <div>
+                <div class="d-flex gap-2 align-items-center">
                     <select id="periodeSelect" class="form-select form-select-sm">
                         <option value="all">Toutes les périodes</option>
                         <option value="month">Dernier mois</option>
                         <option value="quarter">Dernier trimestre</option>
                         <option value="year">Dernière année</option>
                     </select>
+                    {% include 'fleet_app/includes/period_filter.html' %}
                 </div>
             </div>
             <div class="card-body" style="height: 250px;">
