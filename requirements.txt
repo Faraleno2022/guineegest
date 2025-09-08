@@ -5,26 +5,13 @@ django-bootstrap5==25.2
 django-crispy-forms==2.4
 django-sslserver==0.22
 django-widget-tweaks==1.5.0
-<<<<<<< HEAD
-numpy==2.3.2
-pandas==2.3.2
-pillow==11.3.0
-psycopg2-binary==2.9.10
-python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
-pytz==2025.2
-setuptools==80.9.0
-six==1.17.0
+pillow==11.3.0
 sqlparse==0.5.3
 tzdata==2025.2
-wheel==0.45.1
-=======
-python-dotenv==1.0.1
-pillow==9.5.0
 # PDF generation dependencies for views_facturation (pisa)
 # Pin to known compatible pair to avoid ShowBoundaryValue import error
 xhtml2pdf==0.2.10
 reportlab==3.5.67
 # PostgreSQL driver
-psycopg2-binary==2.9.9
->>>>>>> 5219eab (chore: cleanup desktop app, update web-only Django stack, add migrations and template fixes\n\n- Removed desktop Tkinter app (main.py, modules/)\n- Updated requirements.txt to web-only\n- Security middlewares/CSRF disabled for local dev (fleet_management/settings.py)\n- New migrations (0005, 0006)\n- Many template and view updates across entreprise/pointage/inventaire\n- Utility scripts added (create_fresh_db.py, fix_alerte_table_direct.py, etc.))
+psycopg2-binary==2.9.10
