@@ -1237,6 +1237,9 @@ class VehiculeDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'vehicule'
     pk_url_kwarg = 'id_vehicule'
     
+    def get_queryset(self):
+        return Vehicule.objects.filter(user=self.request.user)
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         vehicule = self.get_object()
@@ -1457,6 +1460,9 @@ class VehiculeUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('fleet_app:vehicule_list')
     pk_url_kwarg = 'id_vehicule'
     
+    def get_queryset(self):
+        return Vehicule.objects.filter(user=self.request.user)
+    
     def form_valid(self, form):
         messages.success(self.request, 'Véhicule modifié avec succès.')
         return super().form_valid(form)
@@ -1466,6 +1472,9 @@ class VehiculeDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'fleet_app/vehicule_confirm_delete.html'
     success_url = reverse_lazy('fleet_app:vehicule_list')
     pk_url_kwarg = 'id_vehicule'
+    
+    def get_queryset(self):
+        return Vehicule.objects.filter(user=self.request.user)
     
     def delete(self, request, *args, **kwargs):
         try:
@@ -1550,7 +1559,7 @@ def kpi_distance(request):
             distances, search_query = paginate_and_search(request, distances_list, search_fields)
             
             # Données pour graphiques
-            vehicules = Vehicule.objects.all()
+            vehicules = Vehicule.objects.filter(user=request.user)
             labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
             
             # Calcul des distances totales par véhicule
@@ -1661,7 +1670,7 @@ def kpi_consommation(request):
         consommations = conso_qs.order_by('-date_plein2')[:10]
         
         # Données pour graphiques
-        vehicules = Vehicule.objects.all()
+        vehicules = Vehicule.objects.filter(user=request.user)
         labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
         
         # Calcul des consommations moyennes par véhicule (avec filtres)
@@ -1750,7 +1759,7 @@ def kpi_disponibilite(request):
             disponibilites = paginator.page(paginator.num_pages)
         
         # Données pour graphiques
-        vehicules = Vehicule.objects.all()
+        vehicules = Vehicule.objects.filter(user=request.user)
         
         # Calcul des disponibilités moyennes par véhicule (avec filtres)
         for v in vehicules:
@@ -1798,7 +1807,7 @@ def kpi_disponibilite(request):
 @login_required
 def disponibilite_edit(request, pk):
     try:
-        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk)
+        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk, vehicule__user=request.user)
         if request.method == 'POST':
             form = DisponibiliteForm(request.POST, instance=disponibilite)
             if form.is_valid():
@@ -1827,7 +1836,7 @@ def disponibilite_edit(request, pk):
 @login_required
 def disponibilite_delete(request, pk):
     try:
-        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk)
+        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk, vehicule__user=request.user)
         if request.method == 'POST':
             disponibilite.delete()
             messages.success(request, "La période de disponibilité a été supprimée avec succès.")
@@ -1979,7 +1988,7 @@ def consommation_delete(request, pk):
 @login_required
 def disponibilite_edit(request, pk):
     try:
-        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk)
+        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk, vehicule__user=request.user)
         if request.method == 'POST':
             form = DisponibiliteForm(request.POST, instance=disponibilite)
             if form.is_valid():
@@ -2042,7 +2051,7 @@ def disponibilite_edit(request, pk):
 @login_required
 def disponibilite_delete(request, pk):
     try:
-        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk)
+        disponibilite = get_object_or_404(DisponibiliteVehicule, pk=pk, vehicule__user=request.user)
         if request.method == 'POST':
             disponibilite.delete()
             messages.success(request, "La période de disponibilité a été supprimée avec succès.")
@@ -2878,7 +2887,7 @@ from django.http import JsonResponse
 def get_vehicule_last_km(request, id_vehicule):
     """API pour récupérer le dernier kilométrage enregistré d'un véhicule"""
     try:
-        vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule)
+        vehicule = get_object_or_404(Vehicule, id_vehicule=id_vehicule, user=request.user)
         derniere_distance = DistanceParcourue.objects.filter(
             vehicule=vehicule
         ).order_by('-date_fin').first()
@@ -3280,7 +3289,7 @@ def kpi_couts_fonctionnement(request):
         couts = CoutFonctionnement.objects.filter(user=request.user).order_by('-date')[:10]
         
         # Données pour graphiques
-        vehicules = Vehicule.objects.all()
+        vehicules = Vehicule.objects.filter(user=request.user)
         labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
         
         # Calcul des coûts moyens par véhicule
@@ -3533,7 +3542,7 @@ def kpi_incidents(request):
         form = IncidentSecuriteForm()
     
     # Récupérer tous les incidents et appliquer pagination et recherche
-    incidents_list = IncidentSecurite.objects.all().order_by('-date_incident')
+    incidents_list = IncidentSecurite.objects.filter(user=request.user).order_by('-date_incident')
     
     # Champs sur lesquels effectuer la recherche
     search_fields = ['vehicule__marque', 'vehicule__modele', 'vehicule__immatriculation', 'conducteur', 'description', 'gravite']
@@ -3542,7 +3551,7 @@ def kpi_incidents(request):
     incidents, search_query = paginate_and_search(request, incidents_list, search_fields)
     
     # Données pour graphiques
-    vehicules = Vehicule.objects.all()
+    vehicules = Vehicule.objects.filter(user=request.user)
     labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
     
     # Calcul du nombre d'incidents par véhicule
@@ -3571,7 +3580,7 @@ def kpi_incidents(request):
 @login_required
 def kpi_utilisation(request):
     # Récupérer tous les véhicules
-    vehicules = Vehicule.objects.all()
+    vehicules = Vehicule.objects.filter(user=request.user)
     labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
     
     # Initialiser les variables
@@ -3603,7 +3612,7 @@ def kpi_utilisation(request):
                 messages.warning(request, "Le formulaire d'utilisation n'a pas pu être chargé. La table correspondante n'existe peut-être pas encore.")
         
         # Récupérer toutes les utilisations avec filtre de recherche
-        utilisations_list = UtilisationVehicule.objects.all().order_by('-date_debut')
+        utilisations_list = UtilisationVehicule.objects.filter(user=request.user).order_by('-date_debut')
         
         # Appliquer le filtre de recherche si présent
         if search_query:
@@ -3667,7 +3676,7 @@ def kpi_utilisation(request):
 @login_required
 def kpi_distance(request):
     # Récupérer tous les véhicules
-    vehicules = Vehicule.objects.all()
+    vehicules = Vehicule.objects.filter(user=request.user)
     labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
     
     # Formulaire d'ajout de distance parcourue
@@ -3682,7 +3691,7 @@ def kpi_distance(request):
     
     # Récupérer toutes les distances avec filtre de recherche
     search_query = request.GET.get('search', '')
-    distances_list = DistanceParcourue.objects.all().order_by('-date_debut')
+    distances_list = DistanceParcourue.objects.filter(user=request.user).order_by('-date_debut')
     
     # Appliquer le filtre de recherche si présent
     if search_query:
@@ -3902,7 +3911,7 @@ def get_alertes_kpi(request):
     alertes_kpi = []
     
     # 1. Récupérer tous les véhicules
-    vehicules = Vehicule.objects.all()
+    vehicules = Vehicule.objects.filter(user=request.user)
     
     for vehicule in vehicules:
         # 2. Calculer les KPI pour chaque véhicule
@@ -4389,7 +4398,7 @@ def rapports(request):
         return profile_check
         
     # Récupérer tous les véhicules pour le filtre
-    vehicules = Vehicule.objects.all().order_by('marque', 'modele')
+    vehicules = Vehicule.objects.filter(user=request.user).order_by('marque', 'modele')
     
     # Récupérer les rapports enregistrés (simulation)
     rapports_enregistres = [
