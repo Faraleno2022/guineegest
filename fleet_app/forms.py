@@ -88,6 +88,12 @@ class EmployeForm(forms.ModelForm):
         }
 
 class VehiculeForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['chauffeur_principal'].queryset = Chauffeur.objects.filter(user=user)
+    
     class Meta:
         model = Vehicule
         fields = ['id_vehicule', 'immatriculation', 'marque', 'modele', 'type_moteur', 'categorie', 
@@ -112,6 +118,12 @@ class VehiculeForm(forms.ModelForm):
         }
 
 class DistanceForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+    
     class Meta:
         model = DistanceParcourue
         fields = ['vehicule', 'date_debut', 'date_fin', 'km_debut', 'km_fin', 'distance_parcourue', 'limite_annuelle']
@@ -157,6 +169,12 @@ class DistanceForm(forms.ModelForm):
 
 
 class AlerteForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+    
     class Meta:
         model = Alerte
         fields = ['vehicule', 'titre', 'description', 'niveau']
@@ -171,6 +189,13 @@ class AlerteForm(forms.ModelForm):
 
 # Formulaires pour les feuilles de route
 class FeuilleRouteForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+            self.fields['chauffeur'].queryset = Chauffeur.objects.filter(user=user)
+    
     class Meta:
         model = FeuilleDeRoute
         fields = ['vehicule', 'chauffeur', 'date_depart', 'heure_depart', 'km_depart', 'destination', 'objet_deplacement']
@@ -224,6 +249,15 @@ class FeuilleRouteUpdateForm(forms.ModelForm):
         return instance
 
 class DisponibiliteForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+        # Rendre les champs calculés optionnels
+        self.fields['heures_totales'].required = False
+        self.fields['disponibilite_pourcentage'].required = False
+    
     class Meta:
         model = DisponibiliteVehicule
         fields = ['vehicule', 'date_debut', 'date_fin', 'heures_disponibles', 'heures_totales', 'disponibilite_pourcentage', 'raison_indisponibilite']
@@ -292,6 +326,12 @@ class DisponibiliteForm(forms.ModelForm):
         return instance
 
 class CoutFonctionnementForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+    
     class Meta:
         model = CoutFonctionnement
         fields = ['vehicule', 'date', 'type_cout', 'montant', 'km_actuel', 'cout_par_km', 'description']
@@ -306,6 +346,12 @@ class CoutFonctionnementForm(forms.ModelForm):
         }
 
 class CoutFinancierForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+    
     class Meta:
         model = CoutFinancier
         fields = ['vehicule', 'date', 'type_cout', 'montant', 'kilometrage', 'cout_par_km', 'periode_amortissement', 'description']
@@ -321,6 +367,13 @@ class CoutFinancierForm(forms.ModelForm):
         }
 
 class IncidentSecuriteForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+            self.fields['conducteur'].queryset = Chauffeur.objects.filter(user=user)
+    
     class Meta:
         model = IncidentSecurite
         fields = ['vehicule', 'date_incident', 'conducteur', 'type_incident', 'gravite', 'lieu', 'description', 'mesures_prises', 'commentaires']
@@ -337,6 +390,16 @@ class IncidentSecuriteForm(forms.ModelForm):
         }
 
 class ConsommationCarburantForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+        # Rendre optionnels les champs calculés pour permettre la saisie minimale
+        self.fields['distance_parcourue'].required = False
+        self.fields['consommation_100km'].required = False
+        self.fields['consommation_constructeur'].required = False
+    
     class Meta:
         model = ConsommationCarburant
         fields = ['vehicule', 'date_plein1', 'km_plein1', 'date_plein2', 'km_plein2', 'litres_ajoutes', 'distance_parcourue', 'consommation_100km', 'consommation_constructeur']
@@ -395,6 +458,13 @@ class ConsommationCarburantForm(forms.ModelForm):
         return instance
 
 class UtilisationActifForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+            self.fields['conducteur'].queryset = Chauffeur.objects.filter(user=user)
+    
     class Meta:
         model = UtilisationActif
         fields = ['vehicule', 'date_debut', 'date_fin', 'conducteur', 'departement', 'motif_utilisation']
@@ -408,6 +478,13 @@ class UtilisationActifForm(forms.ModelForm):
         }
 
 class UtilisationVehiculeForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+            self.fields['conducteur'].queryset = Chauffeur.objects.filter(user=user)
+    
     class Meta:
         model = UtilisationVehicule
         fields = ['vehicule', 'date_debut', 'date_fin', 'conducteur', 'departement', 'motif', 'km_depart', 'km_retour', 'observations']
@@ -440,6 +517,13 @@ class ChauffeurForm(forms.ModelForm):
 
 
 class FeuilleDeRouteForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['vehicule'].queryset = Vehicule.objects.filter(user=user)
+            self.fields['chauffeur'].queryset = Chauffeur.objects.filter(user=user)
+    
     class Meta:
         model = FeuilleDeRoute
         fields = ['vehicule', 'chauffeur', 'date_depart', 'heure_depart', 'destination', 'objet_deplacement']

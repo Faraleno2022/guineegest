@@ -8,6 +8,18 @@ from django.core.exceptions import ValidationError
 class ProduitForm(forms.ModelForm):
     """Formulaire pour la création et modification de produits"""
     
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
+    
     class Meta:
         model = Produit
         fields = ['id_produit', 'nom', 'categorie', 'unite', 'seuil_minimum', 'prix_unitaire', 'fournisseur', 'date_ajout']
@@ -27,6 +39,20 @@ class ProduitForm(forms.ModelForm):
 
 class EntreeStockForm(forms.ModelForm):
     """Formulaire pour les entrées en stock"""
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self.user:
+            self.fields['produit'].queryset = Produit.objects.filter(user=self.user)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
     
     class Meta:
         model = EntreeStock
@@ -54,6 +80,20 @@ class EntreeStockForm(forms.ModelForm):
 
 class SortieStockForm(forms.ModelForm):
     """Formulaire pour les sorties de stock"""
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self.user:
+            self.fields['produit'].queryset = Produit.objects.filter(user=self.user)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
     
     class Meta:
         model = SortieStock
@@ -148,6 +188,10 @@ class CommandeForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         
+        # Assigner l'utilisateur pour les nouvelles commandes
+        if self.user and not instance.pk:
+            instance.user = self.user
+        
         if commit:
             instance.save()
             # Recalculer les montants après sauvegarde
@@ -171,7 +215,12 @@ class LigneCommandeForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Filtrer les produits par utilisateur
+        if self.user:
+            self.fields['produit'].queryset = Produit.objects.filter(user=self.user)
         
         # Pré-remplir les champs si on a un produit
         if 'initial' not in kwargs and self.instance.pk and self.instance.produit:
@@ -249,7 +298,12 @@ class LigneFactureForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Filtrer les produits par utilisateur
+        if self.user:
+            self.fields['produit'].queryset = Produit.objects.filter(user=self.user)
         
         # Pré-remplir le prix unitaire et la description si on a un produit
         if 'initial' not in kwargs and self.instance.pk and self.instance.produit:

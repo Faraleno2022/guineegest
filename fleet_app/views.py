@@ -2,24 +2,32 @@ from django.shortcuts import render, redirect, get_object_or_404
 from datetime import timedelta
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.db.models import Q, Sum, Avg, Count
 from django.db.models.functions import TruncMonth
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
-from django.db.models import Sum, Avg, Count, Q, F, ExpressionWrapper, FloatField, Case, When, Value, IntegerField
-from django.contrib import messages
-from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
-from django.template.loader import get_template
-from io import BytesIO
-try:
-    from xhtml2pdf import pisa
-except Exception:
-    pisa = None
-import json
-import csv
-from django import forms
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from datetime import datetime, date
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.template.loader import render_to_string
+from django.core.exceptions import ValidationError
+from decimal import Decimal, InvalidOperation
+from datetime import datetime, timedelta, date
+import json
+import logging
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from io import BytesIO
+from .security import require_user_ownership, get_user_object_or_404
 from .views_accounts import check_profile_completion
 
 # Import des modèles
@@ -802,17 +810,17 @@ def dashboard(request):
     
     # Récupérer les données des feuilles de route pour le tableau de bord
     # 1. Feuilles de route récentes (5 dernières)
-    feuilles_route_recentes = FeuilleDeRoute.objects.all().order_by('-date_depart')[:5]
+    feuilles_route_recentes = FeuilleDeRoute.objects.filter(vehicule__user=request.user).order_by('-date_depart')[:5]
     
     # 2. Feuilles de route avec surconsommation (consommation > 8 L/100km)
-    feuilles_route_surconsommation = FeuilleDeRoute.objects.filter(consommation__gt=8).order_by('-consommation')[:5]
+    feuilles_route_surconsommation = FeuilleDeRoute.objects.filter(vehicule__user=request.user, consommation__gt=8).order_by('-consommation')[:5]
     
     # 3. Feuilles de route en attente (non complétées par les chauffeurs)
     feuilles_route_attente = FeuilleDeRoute.objects.filter(
         Q(km_retour__isnull=True) | 
         Q(carburant_utilise__isnull=True) | 
         Q(signature_chauffeur=False)
-    ).order_by('-date_depart')[:5]
+    ).filter(vehicule__user=request.user).order_by('-date_depart')[:5]
     
     # Préparer les données pour les graphiques
     labels_mois = []
@@ -852,7 +860,7 @@ def dashboard(request):
     chauffeurs_inactifs = Chauffeur.objects.filter(statut='Inactif').count()
     
     # Liste de tous les chauffeurs
-    tous_chauffeurs = Chauffeur.objects.all().order_by('nom', 'prenom')
+    tous_chauffeurs = Chauffeur.objects.filter(user=request.user).order_by('nom', 'prenom')
     
     # Dates pour la gestion des expirations de permis
     today = timezone.now().date()
@@ -936,7 +944,7 @@ class ChauffeurListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = Chauffeur.objects.all().order_by(*self.ordering)
+        qs = Chauffeur.objects.filter(user=self.request.user).order_by(*self.ordering)
         # Recherche
         search = self.request.GET.get('search', '')
         if search:
@@ -1027,7 +1035,7 @@ class FeuilleRouteListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = FeuilleDeRoute.objects.all().order_by(*self.ordering)
+        qs = FeuilleDeRoute.objects.filter(vehicule__user=self.request.user).order_by(*self.ordering)
         # Recherche
         search = self.request.GET.get('search', '')
         if search:
@@ -1072,7 +1080,7 @@ def render_to_pdf(template_src, context_dict, filename):
 @login_required
 def export_vehicules_pdf(request):
     start_date, end_date = get_period_filter(request)
-    qs = Vehicule.objects.all().order_by('id_vehicule')
+    qs = Vehicule.objects.filter(user=request.user).order_by('id_vehicule')
     search = request.GET.get('search', '')
     if search:
         qs = qs.filter(Q(immatriculation__icontains=search) | Q(marque__icontains=search) | Q(modele__icontains=search))
@@ -1092,7 +1100,7 @@ def export_vehicules_pdf(request):
 @login_required
 def export_feuilles_route_pdf(request):
     start_date, end_date = get_period_filter(request)
-    qs = FeuilleDeRoute.objects.all().order_by('-date_depart')
+    qs = FeuilleDeRoute.objects.filter(vehicule__user=request.user).order_by('-date_depart')
     search = request.GET.get('search', '')
     if search:
         qs = qs.filter(
@@ -1135,8 +1143,9 @@ def feuille_route_add(request):
     return render(request, 'fleet_app/feuille_route_form.html', {'form': form})
 
 @login_required
+@require_user_ownership(FeuilleDeRoute)
 def feuille_route_edit(request, pk):
-    feuille_route = get_object_or_404(FeuilleDeRoute, pk=pk)
+    feuille_route = get_user_object_or_404(FeuilleDeRoute, request.user, pk=pk)
     if request.method == 'POST':
         form = FeuilleRouteUpdateForm(request.POST, instance=feuille_route)
         if form.is_valid():
@@ -1170,8 +1179,9 @@ def feuille_route_edit(request, pk):
     return render(request, 'fleet_app/feuille_route_update_form.html', {'form': form, 'feuille_route': feuille_route})
 
 @login_required
+@require_user_ownership(FeuilleDeRoute)
 def feuille_route_delete(request, pk):
-    feuille_route = get_object_or_404(FeuilleDeRoute, pk=pk)
+    feuille_route = get_user_object_or_404(FeuilleDeRoute, request.user, pk=pk)
     if request.method == 'POST':
         feuille_route.delete()
         messages.success(request, 'Feuille de route supprimée avec succès.')
@@ -1180,8 +1190,9 @@ def feuille_route_delete(request, pk):
     return render(request, 'fleet_app/feuille_route_confirm_delete.html', {'feuille_route': feuille_route})
 
 @login_required
+@require_user_ownership(FeuilleDeRoute)
 def feuille_route_print(request, pk):
-    feuille_route = get_object_or_404(FeuilleDeRoute, pk=pk)
+    feuille_route = get_user_object_or_404(FeuilleDeRoute, request.user, pk=pk)
     return render(request, 'fleet_app/feuille_route_print.html', {'feuille_route': feuille_route})
 
 # Vues pour les véhicules
@@ -1191,9 +1202,9 @@ class VehiculeListView(LoginRequiredMixin, ListView):
     context_object_name = 'vehicules'
     ordering = ['id_vehicule']
     paginate_by = 10
-
+    
     def get_queryset(self):
-        qs = super().get_queryset().order_by(*self.ordering)
+        qs = Vehicule.objects.filter(user=self.request.user).order_by(*self.ordering)
         # Appliquer filtre de recherche s'il existe
         search = self.request.GET.get('search', '')
         if search:
@@ -1524,7 +1535,7 @@ def kpi_distance(request):
             start_date, end_date = get_period_filter(request)
 
             # Récupérer toutes les distances et appliquer filtres, pagination et recherche
-            distances_qs = DistanceParcourue.objects.all()
+            distances_qs = DistanceParcourue.objects.filter(user=request.user)
             if start_date:
                 distances_qs = distances_qs.filter(date_debut__gte=start_date)
             if end_date:
@@ -1642,7 +1653,7 @@ def kpi_consommation(request):
                 form = None
                 messages.warning(request, "Le formulaire de consommation n'a pas pu être chargé. La table correspondante n'existe peut-être pas encore.")
         
-        conso_qs = ConsommationCarburant.objects.all()
+        conso_qs = ConsommationCarburant.objects.filter(user=request.user)
         if start_date:
             conso_qs = conso_qs.filter(date_plein1__gte=start_date)
         if end_date:
@@ -1721,7 +1732,7 @@ def kpi_disponibilite(request):
         start_date, end_date = get_period_filter(request)
 
         # Récupérer toutes les données de disponibilité pour le tableau
-        dispo_qs = DisponibiliteVehicule.objects.all()
+        dispo_qs = DisponibiliteVehicule.objects.filter(user=request.user)
         if start_date:
             dispo_qs = dispo_qs.filter(date_debut__gte=start_date)
         if end_date:
@@ -1844,9 +1855,11 @@ def disponibilite_delete(request, pk):
     }
     
     return render(request, 'fleet_app/kpi_distance.html', context)
+@login_required
+@require_user_ownership(DistanceParcourue)
 def distance_delete(request, pk):
     try:
-        distance = get_object_or_404(DistanceParcourue, pk=pk)
+        distance = get_user_object_or_404(DistanceParcourue, request.user, pk=pk)
         if request.method == 'POST':
             distance.delete()
             messages.success(request, "La distance parcourue a été supprimée avec succès.")
@@ -1865,9 +1878,10 @@ def distance_delete(request, pk):
 
 # Vues pour la gestion des consommations de carburant
 @login_required
+@require_user_ownership(ConsommationCarburant)
 def consommation_edit(request, pk):
     try:
-        consommation = get_object_or_404(ConsommationCarburant, pk=pk)
+        consommation = get_user_object_or_404(ConsommationCarburant, request.user, pk=pk)
         if request.method == 'POST':
             form = ConsommationCarburantForm(request.POST, instance=consommation)
             if form.is_valid():
@@ -1878,7 +1892,7 @@ def consommation_edit(request, pk):
             form = ConsommationCarburantForm(instance=consommation)
         
         # Récupérer toutes les données de consommation pour le tableau
-        consommations_list = ConsommationCarburant.objects.all().order_by('-date_plein2')
+        consommations_list = ConsommationCarburant.objects.filter(user=request.user).order_by('-date_plein2')
         
         # Pagination
         paginator = Paginator(consommations_list, 10)  # 10 éléments par page
@@ -1941,9 +1955,10 @@ def consommation_edit(request, pk):
         return redirect('fleet_app:kpi_consommation')
 
 @login_required
+@require_user_ownership(ConsommationCarburant)
 def consommation_delete(request, pk):
     try:
-        consommation = get_object_or_404(ConsommationCarburant, pk=pk)
+        consommation = get_user_object_or_404(ConsommationCarburant, request.user, pk=pk)
         if request.method == 'POST':
             consommation.delete()
             messages.success(request, "La consommation de carburant a été supprimée avec succès.")
@@ -1975,7 +1990,7 @@ def disponibilite_edit(request, pk):
             form = DisponibiliteForm(instance=disponibilite)
         
         # Récupérer toutes les données de disponibilité pour le tableau
-        disponibilites_list = DisponibiliteVehicule.objects.all().order_by('-date_fin')
+        disponibilites_list = DisponibiliteVehicule.objects.filter(user=request.user).order_by('-date_fin')
         
         # Pagination
         paginator = Paginator(disponibilites_list, 10)  # 10 éléments par page
@@ -2044,62 +2059,7 @@ def disponibilite_delete(request, pk):
         messages.error(request, f"La période de disponibilité avec l'ID {pk} n'existe pas ou a déjà été supprimée. Erreur: {str(e)}")
         return redirect('fleet_app:kpi_disponibilite')
 
-# Vues pour les chauffeurs
-class ChauffeurListView(LoginRequiredMixin, ListView):
-    model = Chauffeur
-    template_name = 'fleet_app/chauffeur_list.html'
-    context_object_name = 'chauffeurs'
-    ordering = ['nom', 'prenom']
-
-class ChauffeurDetailView(LoginRequiredMixin, DetailView):
-    model = Chauffeur
-    template_name = 'fleet_app/chauffeur_detail.html'
-    context_object_name = 'chauffeur'
-    pk_url_kwarg = 'id_chauffeur'
-
-class ChauffeurCreateView(LoginRequiredMixin, CreateView):
-    model = Chauffeur
-    form_class = ChauffeurForm
-    template_name = 'fleet_app/chauffeur_form.html'
-    success_url = reverse_lazy('fleet_app:chauffeur_list')
-    
-    def form_valid(self, form):
-        messages.success(self.request, "Le chauffeur a été ajouté avec succès.")
-        return super().form_valid(form)
-
-class ChauffeurUpdateView(LoginRequiredMixin, UpdateView):
-    model = Chauffeur
-    form_class = ChauffeurForm
-    template_name = 'fleet_app/chauffeur_form.html'
-    success_url = reverse_lazy('fleet_app:chauffeur_list')
-    pk_url_kwarg = 'id_chauffeur'
-    
-    def form_valid(self, form):
-        messages.success(self.request, "Le chauffeur a été modifié avec succès.")
-        return super().form_valid(form)
-
-class ChauffeurDeleteView(LoginRequiredMixin, DeleteView):
-    model = Chauffeur
-    template_name = 'fleet_app/chauffeur_confirm_delete.html'
-    success_url = reverse_lazy('fleet_app:chauffeur_list')
-    pk_url_kwarg = 'id_chauffeur'
-    
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Le chauffeur a été supprimé avec succès.")
-        return super().delete(request, *args, **kwargs)
-
-
-# Vues pour les feuilles de route
-class FeuilleDeRouteListView(LoginRequiredMixin, ListView):
-    model = FeuilleDeRoute
-    template_name = 'fleet_app/feuille_route_list.html'
-    context_object_name = 'feuilles_route'
-    ordering = ['-date_creation']
-
-class FeuilleDeRouteDetailView(LoginRequiredMixin, DetailView):
-    model = FeuilleDeRoute
-    template_name = 'fleet_app/feuille_route_detail.html'
-    context_object_name = 'feuille_route'
+# Classes dupliquées supprimées - utiliser les versions sécurisées ci-dessus
 
 @login_required
 def feuille_route_create(request):
@@ -2182,7 +2142,7 @@ def kpi_consommation(request):
         form = ConsommationCarburantForm()
     
     # Récupérer toutes les données de consommation pour le tableau
-    consommations_list = ConsommationCarburant.objects.all().order_by('-date_plein2')
+    consommations_list = ConsommationCarburant.objects.filter(user=request.user).order_by('-date_plein2')
     
     # Pagination
     paginator = Paginator(consommations_list, 10)  # 10 éléments par page
@@ -2314,7 +2274,7 @@ def consommation_edit(request, pk):
     
     return render(request, 'fleet_app/kpi_consommation.html', {
         'form': form,
-        'consommations': ConsommationCarburant.objects.all().order_by('-date_plein2'),
+        'consommations': ConsommationCarburant.objects.filter(user=request.user).order_by('-date_plein2'),
         'edit_mode': True,
         'consommation': consommation
     })
@@ -2368,7 +2328,7 @@ def kpi_disponibilite(request):
                 messages.warning(request, "Le formulaire de disponibilité n'a pas pu être chargé. La table correspondante n'existe peut-être pas encore.")
         
         # Récupérer toutes les données de disponibilité pour le tableau
-        disponibilites_list = DisponibiliteVehicule.objects.all().order_by('-date_fin')
+        disponibilites_list = DisponibiliteVehicule.objects.filter(user=request.user).order_by('-date_fin')
         
         # Pagination
         paginator = Paginator(disponibilites_list, 10)  # 10 éléments par page
@@ -2409,7 +2369,7 @@ def kpi_disponibilite(request):
         # Ajouter des données factices si aucune donnée n'est disponible
         if not labels:
             # Récupérer tous les véhicules pour créer des données factices
-            vehicules = Vehicule.objects.all()[:5]  # Limiter à 5 véhicules
+            vehicules = Vehicule.objects.filter(user=request.user)[:5]  # Limiter à 5 véhicules
             for v in vehicules:
                 labels.append(f"{v.marque} {v.modele} ({v.immatriculation})")
                 # Générer une valeur aléatoire entre 50 et 100
@@ -2719,7 +2679,7 @@ def export_kpi_disponibilite_pdf(request):
 def export_kpi_couts_fonctionnement_pdf(request):
     # Calcul simple par véhicule: coût total et coût moyen/km
     start_date, end_date = get_period_filter(request)
-    couts = CoutFonctionnement.objects.all()
+    couts = CoutFonctionnement.objects.filter(user=request.user)
     if start_date:
         couts = couts.filter(date__gte=start_date)
     if end_date:
@@ -3256,15 +3216,7 @@ def kpi_couts_financiers(request):
     
     return render(request, 'fleet_app/kpi_detail.html', context)
 
-# Vue pour les alertes
-class AlerteListView(LoginRequiredMixin, ListView):
-    model = Alerte
-    template_name = 'fleet_app/alerte_list.html'
-    context_object_name = 'alertes'
-    ordering = ['-date_creation']
-    
-    def get_queryset(self):
-        return Alerte.objects.filter(statut='Active')
+# Classes dupliquées supprimées - utiliser les versions sécurisées ci-dessous
 
 # Vues pour les KPI additionnels
 @login_required
@@ -3325,7 +3277,7 @@ def kpi_couts_fonctionnement(request):
                 messages.warning(request, "Le formulaire de coûts de fonctionnement n'a pas pu être chargé. La table correspondante n'existe peut-être pas encore.")
         
         # Récupérer les données de coûts de fonctionnement
-        couts = CoutFonctionnement.objects.all().order_by('-date')[:10]
+        couts = CoutFonctionnement.objects.filter(user=request.user).order_by('-date')[:10]
         
         # Données pour graphiques
         vehicules = Vehicule.objects.all()
@@ -3377,9 +3329,10 @@ def kpi_couts_fonctionnement(request):
     return render(request, 'fleet_app/kpi_couts_fonctionnement.html', context)
 
 @login_required
+@require_user_ownership(CoutFonctionnement)
 def cout_fonctionnement_edit(request, pk):
     try:
-        cout = get_object_or_404(CoutFonctionnement, pk=pk)
+        cout = get_user_object_or_404(CoutFonctionnement, request.user, pk=pk)
         
         # Conversion des montants en GNF pour l'affichage
         cout.montant_gnf = convertir_en_gnf(cout.montant)
@@ -3406,9 +3359,10 @@ def cout_fonctionnement_edit(request, pk):
         return redirect('fleet_app:kpi_couts_fonctionnement')
 
 @login_required
+@require_user_ownership(CoutFonctionnement)
 def cout_fonctionnement_delete(request, pk):
     try:
-        cout = get_object_or_404(CoutFonctionnement, pk=pk)
+        cout = get_user_object_or_404(CoutFonctionnement, request.user, pk=pk)
         if request.method == 'POST':
             cout.delete()
             messages.success(request, "Le coût de fonctionnement a été supprimé avec succès.")
@@ -3459,7 +3413,7 @@ def kpi_couts_financiers(request):
     else:
         form = CoutFinancierForm()
     
-    couts = CoutFinancier.objects.all().order_by('-date')[:10]
+    couts = CoutFinancier.objects.filter(user=request.user).order_by('-date')[:10]
     
     # Conversion des montants en GNF pour l'affichage
     for cout in couts:
@@ -3469,7 +3423,7 @@ def kpi_couts_financiers(request):
         cout.cout_par_km_gnf_formatte = formater_cout_par_km_gnf(cout.cout_par_km)
     
     # Données pour graphiques
-    vehicules = Vehicule.objects.all()
+    vehicules = Vehicule.objects.filter(user=request.user)
     labels = [f"{v.marque} {v.modele} ({v.immatriculation})" for v in vehicules]
     
     # Calcul des coûts totaux par véhicule (convertis en GNF)
@@ -3498,9 +3452,10 @@ def kpi_couts_financiers(request):
     return render(request, 'fleet_app/kpi_couts_financiers.html', context)
 
 @login_required
+@require_user_ownership(CoutFinancier)
 def cout_financier_edit(request, pk):
     try:
-        cout = get_object_or_404(CoutFinancier, pk=pk)
+        cout = get_user_object_or_404(CoutFinancier, request.user, pk=pk)
         
         # Conversion des montants en GNF pour l'affichage
         cout.montant_gnf = convertir_en_gnf(cout.montant)
@@ -3548,9 +3503,10 @@ def cout_financier_edit(request, pk):
         return redirect('fleet_app:kpi_couts_financiers')
 
 @login_required
+@require_user_ownership(CoutFinancier)
 def cout_financier_delete(request, pk):
     try:
-        cout = get_object_or_404(CoutFinancier, pk=pk)
+        cout = get_user_object_or_404(CoutFinancier, request.user, pk=pk)
         if request.method == 'POST':
             cout.delete()
             messages.success(request, "Le coût financier a été supprimé avec succès.")
@@ -4313,16 +4269,13 @@ def get_alertes_kpi(request):
     
     return JsonResponse({'alertes_kpi': alertes_kpi})
 
-# Vue pour la liste des alertes
-class AlerteListView(LoginRequiredMixin, ListView):
-    model = Alerte
-    template_name = 'fleet_app/alerte_list.html'
-    context_object_name = 'alertes'
+# Classes dupliquées supprimées - utiliser les versions sécurisées ci-dessus
 
 # Vues pour la gestion des utilisations de véhicules
 @login_required
+@require_user_ownership(UtilisationVehicule)
 def utilisation_edit(request, pk):
-    utilisation = get_object_or_404(UtilisationVehicule, pk=pk)
+    utilisation = get_user_object_or_404(UtilisationVehicule, request.user, pk=pk)
     if request.method == 'POST':
         form = UtilisationVehiculeForm(request.POST, instance=utilisation)
         if form.is_valid():
@@ -4340,8 +4293,9 @@ def utilisation_edit(request, pk):
     return render(request, 'fleet_app/utilisation_form.html', context)
 
 @login_required
+@require_user_ownership(UtilisationVehicule)
 def utilisation_delete(request, pk):
-    utilisation = get_object_or_404(UtilisationVehicule, pk=pk)
+    utilisation = get_user_object_or_404(UtilisationVehicule, request.user, pk=pk)
     if request.method == 'POST':
         utilisation.delete()
         messages.success(request, "L'utilisation a été supprimée avec succès.")
@@ -4355,8 +4309,9 @@ def utilisation_delete(request, pk):
 
 # Vues pour la gestion des incidents de sécurité
 @login_required
+@require_user_ownership(IncidentSecurite)
 def incident_edit(request, pk):
-    incident = get_object_or_404(IncidentSecurite, pk=pk)
+    incident = get_user_object_or_404(IncidentSecurite, request.user, pk=pk)
     if request.method == 'POST':
         form = IncidentSecuriteForm(request.POST, instance=incident)
         if form.is_valid():
@@ -4374,8 +4329,9 @@ def incident_edit(request, pk):
     return render(request, 'fleet_app/incident_form.html', context)
 
 @login_required
+@require_user_ownership(IncidentSecurite)
 def incident_delete(request, pk):
-    incident = get_object_or_404(IncidentSecurite, pk=pk)
+    incident = get_user_object_or_404(IncidentSecurite, request.user, pk=pk)
     if request.method == 'POST':
         incident.delete()
         messages.success(request, "L'incident a été supprimé avec succès.")
@@ -4389,9 +4345,10 @@ def incident_delete(request, pk):
 
 # Vues pour la gestion des distances parcourues
 @login_required
+@require_user_ownership(DistanceParcourue)
 def distance_edit(request, pk):
     try:
-        distance = get_object_or_404(DistanceParcourue, pk=pk)
+        distance = get_user_object_or_404(DistanceParcourue, request.user, pk=pk)
         if request.method == 'POST':
             form = DistanceForm(request.POST, instance=distance)
             if form.is_valid():
@@ -4412,67 +4369,14 @@ def distance_edit(request, pk):
         return redirect('fleet_app:kpi_distance')
 
 # Vues pour la gestion des consommations de carburant
-@login_required
-def consommation_edit(request, pk):
-    try:
-        consommation = get_object_or_404(ConsommationCarburant, pk=pk)
-        if request.method == 'POST':
-            form = ConsommationCarburantForm(request.POST, instance=consommation)
-            if form.is_valid():
-                form.save()
-                messages.success(request, "La consommation de carburant a été modifiée avec succès.")
-                return redirect('fleet_app:kpi_consommation')
-        else:
-            form = ConsommationCarburantForm(instance=consommation)
-        
-        context = {
-            'form': form,
-            'consommation': consommation,
-            'title': 'Modifier une consommation de carburant',
-        }
-        return render(request, 'fleet_app/consommation_form.html', context)
-    except:
-        messages.error(request, f"La consommation de carburant avec l'ID {pk} n'existe pas ou a été supprimée.")
-        return redirect('fleet_app:kpi_consommation')
+# Vue dupliquée supprimée - utiliser la version sécurisée ci-dessus
 
-@login_required
-def distance_delete(request, pk):
-    try:
-        distance = get_object_or_404(DistanceParcourue, pk=pk)
-        if request.method == 'POST':
-            distance.delete()
-            messages.success(request, "La distance parcourue a été supprimée avec succès.")
-            return redirect('fleet_app:kpi_distance')
-        
-        context = {
-            'distance': distance,
-            'title': 'Supprimer une distance parcourue',
-        }
-        return render(request, 'fleet_app/distance_confirm_delete.html', context)
-    except:
-        messages.error(request, f"La distance parcourue avec l'ID {pk} n'existe pas ou a déjà été supprimée.")
-        return redirect('fleet_app:kpi_distance')
+# Vue dupliquée supprimée - utiliser la version sécurisée ci-dessus
 
-@login_required
-def consommation_delete(request, pk):
-    try:
-        consommation = get_object_or_404(ConsommationCarburant, pk=pk)
-        if request.method == 'POST':
-            consommation.delete()
-            messages.success(request, "La consommation de carburant a été supprimée avec succès.")
-            return redirect('fleet_app:kpi_consommation')
-        
-        context = {
-            'consommation': consommation,
-            'title': 'Supprimer une consommation de carburant',
-        }
-        return render(request, 'fleet_app/consommation_confirm_delete.html', context)
-    except:
-        messages.error(request, f"La consommation de carburant avec l'ID {pk} n'existe pas ou a déjà été supprimée.")
-        return redirect('fleet_app:kpi_consommation')
+# Vue dupliquée supprimée - utiliser la version sécurisée ci-dessus
     
     def get_queryset(self):
-        return Alerte.objects.all().order_by('-date_creation')
+        return Alerte.objects.filter(user=self.request.user).order_by('-date_creation')
 
 
 
@@ -4584,10 +4488,11 @@ def alertes(request):
     return render(request, 'fleet_app/alerte_list.html', context)
 
 @login_required
+@require_user_ownership(Alerte)
 def alerte_resoudre(request, pk):
     """Marquer une alerte comme résolue"""
     if request.method == 'POST':
-        alerte = get_object_or_404(Alerte, pk=pk)
+        alerte = get_user_object_or_404(Alerte, request.user, pk=pk)
         alerte.statut = 'Résolue'
         alerte.save()
         messages.success(request, f"L'alerte '{alerte.type_alerte}' a été marquée comme résolue.")
@@ -4595,21 +4500,22 @@ def alerte_resoudre(request, pk):
     return JsonResponse({'success': False}, status=400)
 
 @login_required
+@require_user_ownership(Alerte)
 def alerte_ignorer(request, pk):
     """Marquer une alerte comme ignorée"""
     if request.method == 'POST':
-        alerte = get_object_or_404(Alerte, pk=pk)
+        alerte = get_user_object_or_404(Alerte, request.user, pk=pk)
         alerte.statut = 'Ignorée'
         alerte.save()
         messages.success(request, f"L'alerte '{alerte.type_alerte}' a été ignorée.")
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
-
 @login_required
+@require_user_ownership(Alerte)
 def alerte_supprimer(request, pk):
     """Supprimer une alerte"""
     if request.method == 'POST':
-        alerte = get_object_or_404(Alerte, pk=pk)
+        alerte = get_user_object_or_404(Alerte, request.user, pk=pk)
         alerte.delete()
         messages.success(request, f"L'alerte '{alerte.type_alerte}' a été supprimée.")
         return JsonResponse({'success': True})
@@ -4627,9 +4533,10 @@ def alerte_nouvelle(request):
         
         # Créer la nouvelle alerte
         try:
-            vehicule = Vehicule.objects.get(id_vehicule=vehicule_id) if vehicule_id else None
+            vehicule = Vehicule.objects.filter(user=request.user, id_vehicule=vehicule_id).first() if vehicule_id else None
             
             alerte = Alerte(
+                user=request.user,
                 vehicule=vehicule,
                 type_alerte=type_alerte,
                 description=description,
@@ -4645,7 +4552,7 @@ def alerte_nouvelle(request):
             return redirect('fleet_app:alerte_list')
     
     # Afficher le formulaire de création d'alerte
-    vehicules = Vehicule.objects.all().order_by('marque', 'modele')
+    vehicules = Vehicule.objects.filter(user=request.user).order_by('marque', 'modele')
     context = {
         'vehicules': vehicules,
         'titre': 'Nouvelle alerte',

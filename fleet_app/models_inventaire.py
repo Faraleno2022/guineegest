@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.db.models import Sum
+from django.contrib.auth.models import User
 import os
 
 class Produit(models.Model):
@@ -33,6 +34,7 @@ class Produit(models.Model):
     prix_unitaire = models.DecimalField(max_digits=12, decimal_places=0, validators=[MinValueValidator(0)], verbose_name="Prix unitaire (GNF)")
     fournisseur = models.CharField(max_length=100, verbose_name="Fournisseur")
     date_ajout = models.DateField(default=timezone.now, verbose_name="Date d'ajout")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.id_produit} - {self.nom}"

@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 # Import des modèles d'entreprise
 from .models_entreprise import (
@@ -47,6 +48,7 @@ class Vehicule(models.Model):
     numero_moteur = models.CharField(max_length=50, blank=True, verbose_name="Numéro de moteur")
     observations = models.TextField(blank=True, verbose_name="Observations")
     chauffeur_principal = models.ForeignKey('Chauffeur', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules_assignes', verbose_name="Chauffeur principal")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.marque} {self.modele} ({self.immatriculation})"
@@ -65,6 +67,7 @@ class DocumentAdministratif(models.Model):
     date_expiration = models.DateField(verbose_name="Date d'expiration")
     fichier = models.FileField(upload_to='documents/', null=True, blank=True, verbose_name="Fichier")
     commentaires = models.TextField(blank=True, verbose_name="Commentaires")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.type_document} - {self.vehicule}"
@@ -91,6 +94,7 @@ class DistanceParcourue(models.Model):
     distance_parcourue = models.IntegerField(verbose_name="Distance parcourue")
     type_moteur = models.CharField(max_length=20, verbose_name="Type de moteur")
     limite_annuelle = models.IntegerField(null=True, blank=True, verbose_name="Limite annuelle")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.vehicule} - {self.date_debut} à {self.date_fin}"
@@ -110,6 +114,7 @@ class ConsommationCarburant(models.Model):
     litres_ajoutes = models.FloatField(verbose_name="Litres ajoutés")
     distance_parcourue = models.IntegerField(verbose_name="Distance parcourue")
     consommation_100km = models.FloatField(verbose_name="Consommation aux 100km")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     consommation_constructeur = models.FloatField(null=True, blank=True, verbose_name="Consommation constructeur")
     ecart_constructeur = models.FloatField(null=True, blank=True, verbose_name="Écart avec constructeur")
     
@@ -130,6 +135,7 @@ class DisponibiliteVehicule(models.Model):
     heures_totales = models.IntegerField(verbose_name="Heures totales")
     disponibilite_pourcentage = models.FloatField(verbose_name="Pourcentage de disponibilité")
     raison_indisponibilite = models.TextField(blank=True, verbose_name="Raison d'indisponibilité")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     # Champs conservés pour compatibilité avec l'existant
     periode = models.CharField(max_length=50, verbose_name="Période", blank=True)
@@ -152,6 +158,7 @@ class UtilisationActif(models.Model):
     conducteur = models.ForeignKey('Chauffeur', on_delete=models.SET_NULL, null=True, related_name='utilisations_actifs', verbose_name="Conducteur")
     departement = models.CharField(max_length=100, verbose_name="Département", null=True)
     motif_utilisation = models.TextField(verbose_name="Motif d'utilisation", null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     # Champs existants dans la base de données
     periode = models.CharField(max_length=100, null=True)
@@ -189,6 +196,7 @@ class IncidentSecurite(models.Model):
     description = models.TextField(verbose_name="Description de l'incident", blank=True, null=True)
     mesures_prises = models.TextField(verbose_name="Mesures prises", blank=True, null=True)
     commentaires = models.TextField(blank=True, null=True, verbose_name="Commentaires")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.vehicule} - {self.type_incident} - {self.date_incident}"
@@ -208,6 +216,7 @@ class CoutFonctionnement(models.Model):
     km_actuel = models.IntegerField(verbose_name="Kilométrage actuel", default=0)
     cout_par_km = models.FloatField(verbose_name="Coût par km")
     description = models.TextField(blank=True, verbose_name="Description")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.vehicule} - {self.type_cout} - {self.date}"
@@ -227,6 +236,7 @@ class CoutFinancier(models.Model):
     cout_par_km = models.FloatField(verbose_name="Coût par km")
     periode_amortissement = models.IntegerField(verbose_name="Période d'amortissement")
     description = models.TextField(blank=True, verbose_name="Description")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.vehicule} - {self.type_cout} - {self.date}"
@@ -257,6 +267,7 @@ class UtilisationVehicule(models.Model):
     km_depart = models.IntegerField(verbose_name="Kilométrage au départ")
     km_retour = models.IntegerField(verbose_name="Kilométrage au retour")
     observations = models.TextField(blank=True, verbose_name="Observations")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.vehicule} - {self.conducteur} - {self.date_debut}"
@@ -281,6 +292,7 @@ class Chauffeur(models.Model):
     telephone = models.CharField(max_length=20, verbose_name="Téléphone")
     email = models.EmailField(blank=True, null=True, verbose_name="Email")
     statut = models.CharField(max_length=20, default='Actif', verbose_name="Statut")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     
     def __str__(self):
         return f"{self.nom} {self.prenom}"

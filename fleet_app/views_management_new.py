@@ -18,7 +18,7 @@ def employe_list(request):
     """
     Vue pour afficher la liste des employés
     """
-    queryset = Employe.objects.all().order_by('nom', 'prenom')
+    queryset = Employe.objects.filter(user=request.user).order_by('nom', 'prenom')
     paginator = Paginator(queryset, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
