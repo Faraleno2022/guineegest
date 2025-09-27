@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# GuinéeGest - Système de gestion de parc automobile
+# Sitemap: https://gestionnairedeparc.pythonanywhere.com/sitemap.xml
