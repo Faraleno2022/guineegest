@@ -1,6 +1,5 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
@@ -9,12 +8,12 @@ from django.core.paginator import Paginator
 from django.template.loader import render_to_string, get_template
 import calendar
 from io import BytesIO
-from xhtml2pdf import pisa
 
 from .models_location import (
     FournisseurVehicule,
     LocationVehicule,
     FeuillePontageLocation,
+{{ ... }}
     FactureLocation,
 )
 from .forms_location import (
@@ -1066,6 +1065,12 @@ def facture_pdf(request, pk):
     html = template.render(context)
     
     # Création du PDF
+    try:
+        from xhtml2pdf import pisa
+    except Exception:
+        messages.error(request, "Génération PDF indisponible: dépendances non installées (xhtml2pdf/reportlab).")
+        return redirect('fleet_app:facture_location_detail', pk=pk)
+
     result = BytesIO()
     pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
     
