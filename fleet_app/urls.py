@@ -321,5 +321,7 @@ urlpatterns = [
     path('synchronization/status/', views_synchronization.status_synchronization_api, name='status_synchronization_api'),
     path('synchronization/relations/', views_synchronization.relations_modules_info, name='relations_modules_info'),
     
+    # API de recherche dynamique
+    path('api/recherche/', views.recherche_dynamique, name='api_recherche'),
 
 ]
