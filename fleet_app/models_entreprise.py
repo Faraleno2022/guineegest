@@ -4,6 +4,12 @@ from django.utils import timezone
 from decimal import Decimal
 import datetime
 
+
+"""
+Note: Le modèle Entreprise est défini dans models_accounts.py (Entreprise).
+Ne pas redéclarer ici pour éviter les conflits d'enregistrement Django.
+"""
+
 # Modèles métiers pour l'entreprise
 
 class Employe(models.Model):

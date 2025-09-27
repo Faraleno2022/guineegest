@@ -8,6 +8,18 @@ from .models_entreprise import (
 
 
 class PeseeCamionForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
+    
     class Meta:
         model = PeseeCamion
         fields = [
@@ -32,6 +44,18 @@ class PeseeCamionForm(forms.ModelForm):
 
 
 class ParametrePaieForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
+    
     class Meta:
         model = ParametrePaie
         fields = ['cle', 'valeur', 'description']
@@ -43,6 +67,65 @@ class ParametrePaieForm(forms.ModelForm):
 
 
 class EmployeForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Configurer les choix pour le statut
+        self.fields['statut'].choices = Employe.STATUT_CHOICES
+        
+        # Ajouter des classes CSS et des labels personnalisés
+        self.fields['calcul_salaire_auto'].label = "Calculer automatiquement le salaire de base depuis les présences"
+        self.fields['calcul_salaire_auto'].help_text = "Si activé, le salaire sera calculé à partir des pointages (P(Am), P(Pm), P(Am&Pm))"
+        
+        self.fields['appliquer_cnss'].label = "Appliquer CNSS"
+        self.fields['appliquer_cnss'].help_text = "Caisse Nationale de Sécurité Sociale (5% salarié + 18% employeur)"
+        
+        self.fields['appliquer_rts'].label = "Appliquer RTS"
+        self.fields['appliquer_rts'].help_text = "Retenue sur Traitement et Salaire (barème progressif)"
+        
+        self.fields['appliquer_vf'].label = "Appliquer VF"
+        self.fields['appliquer_vf'].help_text = "Versement Forfaitaire (7-10% du chiffre d'affaires)"
+        
+        self.fields['taux_cnss_salarie_custom'].label = "Taux CNSS salarié personnalisé (%)"
+        self.fields['taux_cnss_salarie_custom'].help_text = "Laisser vide pour utiliser 5% (taux standard)"
+        
+        self.fields['taux_cnss_employeur_custom'].label = "Taux CNSS employeur personnalisé (%)"
+        self.fields['taux_cnss_employeur_custom'].help_text = "Laisser vide pour utiliser 18% (taux standard)"
+        
+        self.fields['taux_vf_custom'].label = "Taux VF personnalisé (%)"
+        self.fields['taux_vf_custom'].help_text = "Entre 7% et 10% (laisser vide pour 7%)"
+        
+        # Rendre certains champs optionnels
+        self.fields['taux_cnss_salarie_custom'].required = False
+        self.fields['taux_cnss_employeur_custom'].required = False
+        self.fields['taux_vf_custom'].required = False
+        self.fields['taux_horaire_specifique'].required = False
+        # Le salaire peut être vide si calcul automatique
+        self.fields['salaire_journalier'].required = False
+        # Clarifier le libellé du salaire pour l'utilisateur
+        self.fields['salaire_journalier'].label = "Salaire de base (GNF - journalier)"
+        self.fields['salaire_journalier'].help_text = (
+            "Montant de base par jour. Laissez vide si vous cochez 'Calculer automatiquement le salaire'."
+        )
+        
+        # Définir les valeurs initiales pour les champs cachés
+        self.fields['montant_heure_supp_jour_ouvrable'].initial = 0
+        self.fields['montant_heure_supp_dimanche_ferie'].initial = 0
+        self.fields['mode_calcul_heures_supp'].initial = 'standard'
+        # Ne pas exiger ces champs dans le formulaire simple (ils sont gérés avec des valeurs par défaut)
+        self.fields['montant_heure_supp_jour_ouvrable'].required = False
+        self.fields['montant_heure_supp_dimanche_ferie'].required = False
+        self.fields['mode_calcul_heures_supp'].required = False
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
+    
     class Meta:
         model = Employe
         fields = [
@@ -123,56 +206,6 @@ class EmployeForm(forms.ModelForm):
             'mode_calcul_heures_supp': forms.HiddenInput(),
         }
         
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Configurer les choix pour le statut
-        self.fields['statut'].choices = Employe.STATUT_CHOICES
-        
-        # Ajouter des classes CSS et des labels personnalisés
-        self.fields['calcul_salaire_auto'].label = "Calculer automatiquement le salaire de base depuis les présences"
-        self.fields['calcul_salaire_auto'].help_text = "Si activé, le salaire sera calculé à partir des pointages (P(Am), P(Pm), P(Am&Pm))"
-        
-        self.fields['appliquer_cnss'].label = "Appliquer CNSS"
-        self.fields['appliquer_cnss'].help_text = "Caisse Nationale de Sécurité Sociale (5% salarié + 18% employeur)"
-        
-        self.fields['appliquer_rts'].label = "Appliquer RTS"
-        self.fields['appliquer_rts'].help_text = "Retenue sur Traitement et Salaire (barème progressif)"
-        
-        self.fields['appliquer_vf'].label = "Appliquer VF"
-        self.fields['appliquer_vf'].help_text = "Versement Forfaitaire (7-10% du chiffre d'affaires)"
-        
-        self.fields['taux_cnss_salarie_custom'].label = "Taux CNSS salarié personnalisé (%)"
-        self.fields['taux_cnss_salarie_custom'].help_text = "Laisser vide pour utiliser 5% (taux standard)"
-        
-        self.fields['taux_cnss_employeur_custom'].label = "Taux CNSS employeur personnalisé (%)"
-        self.fields['taux_cnss_employeur_custom'].help_text = "Laisser vide pour utiliser 18% (taux standard)"
-        
-        self.fields['taux_vf_custom'].label = "Taux VF personnalisé (%)"
-        self.fields['taux_vf_custom'].help_text = "Entre 7% et 10% (laisser vide pour 7%)"
-        
-        # Rendre certains champs optionnels
-        self.fields['taux_cnss_salarie_custom'].required = False
-        self.fields['taux_cnss_employeur_custom'].required = False
-        self.fields['taux_vf_custom'].required = False
-        self.fields['taux_horaire_specifique'].required = False
-        # Le salaire peut être vide si calcul automatique
-        self.fields['salaire_journalier'].required = False
-        # Clarifier le libellé du salaire pour l'utilisateur
-        self.fields['salaire_journalier'].label = "Salaire de base (GNF - journalier)"
-        self.fields['salaire_journalier'].help_text = (
-            "Montant de base par jour. Laissez vide si vous cochez 'Calculer automatiquement le salaire'."
-        )
-        
-        # Définir les valeurs initiales pour les champs cachés
-        self.fields['montant_heure_supp_jour_ouvrable'].initial = 0
-        self.fields['montant_heure_supp_dimanche_ferie'].initial = 0
-        self.fields['mode_calcul_heures_supp'].initial = 'standard'
-        # Ne pas exiger ces champs dans le formulaire simple (ils sont gérés avec des valeurs par défaut)
-        self.fields['montant_heure_supp_jour_ouvrable'].required = False
-        self.fields['montant_heure_supp_dimanche_ferie'].required = False
-        self.fields['mode_calcul_heures_supp'].required = False
-        
     def clean(self):
         """Validation personnalisée pour s'assurer que les valeurs par défaut sont définies"""
         cleaned_data = super().clean()
@@ -207,6 +240,20 @@ class EmployeForm(forms.ModelForm):
 
 
 class PresenceJournaliereForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self.user:
+            self.fields['employe'].queryset = Employe.objects.filter(user=self.user)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
+    
     class Meta:
         model = PresenceJournaliere
         fields = ['employe', 'date', 'statut']
@@ -218,6 +265,18 @@ class PresenceJournaliereForm(forms.ModelForm):
 
 
 class PaieEmployeForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and not instance.pk:
+            instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
+    
     class Meta:
         model = PaieEmploye
         fields = [

@@ -5,10 +5,72 @@
 {% block page_title %}Alertes{% endblock %}
 
 {% block content %}
+<!-- Zone de recherche dynamique -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-search"></i> Recherche Dynamique des Alertes
+                <button class="btn btn-sm btn-dark float-end" type="button" id="toggleAlertesSearch">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            <div class="card-body" id="alertesSearchPanel">
+                <form id="alertesSearchForm">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Recherche générale</label>
+                            <input type="text" class="form-control" id="search_text" name="search_text" 
+                                   placeholder="Titre, description, type..." value="{{ search_text }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Niveau d'urgence</label>
+                            <select class="form-select" id="search_niveau" name="search_niveau">
+                                <option value="">Tous</option>
+                                {% for value, label in niveaux_urgence %}
+                                <option value="{{ value }}" {% if search_niveau == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Véhicule</label>
+                            <input type="text" class="form-control" id="search_vehicule" name="search_vehicule" 
+                                   placeholder="Immatriculation, marque..." value="{{ search_vehicule }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Date min</label>
+                            <input type="date" class="form-control" id="date_creation_min" name="date_creation_min" value="{{ date_creation_min }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Date max</label>
+                            <input type="date" class="form-control" id="date_creation_max" name="date_creation_max" value="{{ date_creation_max }}">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAlertesSearch">
+                                <i class="fas fa-times"></i> Effacer les filtres
+                            </button>
+                            <div class="float-end">
+                                <div id="alertesLoadingSpinner" class="d-none">
+                                    <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                        <span class="visually-hidden">Recherche...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <div>
             <i class="fas fa-bell me-2"></i> Alertes actives
+            <span class="badge bg-danger ms-2" id="activesCount">{{ active_count }}</span>
         </div>
         <div>
             <a href="{% url 'fleet_app:alerte_nouvelle' %}" class="btn btn-sm btn-primary">
@@ -17,101 +79,18 @@
         </div>
     </div>
     <div class="card-body">
-        {% include 'fleet_app/components/search_box.html' with table='alertes' placeholder='Rechercher une alerte par type, véhicule...' target_div='search-results-alertes' %}
-        
-        <div class="list-group">
-            {% for alerte in alertes %}
-                <div class="list-group-item list-group-item-action">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">
-                            {% if alerte.niveau_urgence == 'Critique' %}
-                                <span class="badge bg-danger me-2">Critique</span>
-                            {% elif alerte.niveau_urgence == 'Élevé' %}
-                                <span class="badge bg-warning me-2">Élevé</span>
-                            {% elif alerte.niveau_urgence == 'Moyen' %}
-                                <span class="badge bg-info me-2">Moyen</span>
-                            {% else %}
-                                <span class="badge bg-secondary me-2">Faible</span>
-                            {% endif %}
-                            {{ alerte.type_alerte }}
-                        </h5>
-                        <small>{{ alerte.date_creation }}</small>
-                    </div>
-                    <p class="mb-1">{% if alerte.description_gnf %}{{ alerte.description_gnf }}{% else %}{{ alerte.description }}{% endif %}</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small>Véhicule: <a href="{% url 'fleet_app:vehicule_detail' alerte.vehicule.id_vehicule %}">{{ alerte.vehicule }}</a></small>
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-success btn-resoudre" data-id="{{ alerte.pk }}" title="Marquer comme résolu">
-                                <i class="fas fa-check"></i> Résolu
-                            </button>
-                            <button class="btn btn-outline-secondary btn-ignorer" data-id="{{ alerte.pk }}" title="Ignorer">
-                                <i class="fas fa-eye-slash"></i> Ignorer
-                            </button>
-                            <button class="btn btn-outline-danger btn-supprimer" data-id="{{ alerte.pk }}" title="Supprimer">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            {% empty %}
-                <div class="text-center py-5">
-                    <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
-                    <h5>Aucune alerte active</h5>
-                    <p class="text-muted">Tous les véhicules fonctionnent normalement.</p>
-                </div>
-            {% endfor %}
+        <div class="list-group" id="alertesActivesContainer">
+            {% include 'fleet_app/alertes/alertes_actives_rows.html' with alertes=alertes %}
         </div>
-        
-        <!-- Pagination -->
-        {% if is_paginated %}
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1" aria-label="First">
-                        <span aria-hidden="true">&laquo;&laquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-                {% endif %}
-                
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                    </li>
-                    {% endif %}
-                {% endfor %}
-                
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
-                        <span aria-hidden="true">&raquo;&raquo;</span>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
     </div>
 </div>
 
 <div class="card mt-4">
-    <div class="card-header">
-        <i class="fas fa-history me-2"></i> Historique des alertes résolues
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-history me-2"></i> Historique des alertes résolues
+            <span class="badge bg-secondary ms-2" id="resoluesCount">{{ resolved_count }}</span>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -126,49 +105,8 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for alerte in alertes_historique %}
-                    <tr>
-                        <td>{{ alerte.date_creation|date:"Y-m-d" }}</td>
-                        <td>{{ alerte.type_alerte }}</td>
-                        <td><a href="{% url 'fleet_app:vehicule_detail' alerte.vehicule.id_vehicule %}">{{ alerte.vehicule }}</a></td>
-                        <td>
-                            {% if alerte.niveau_urgence == 'Critique' %}
-                                <span class="badge bg-danger">Critique</span>
-                            {% elif alerte.niveau_urgence == 'Élevé' %}
-                                <span class="badge bg-warning">Élevé</span>
-                            {% elif alerte.niveau_urgence == 'Moyen' %}
-                                <span class="badge bg-info">Moyen</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Faible</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if alerte.statut == 'Résolue' %}
-                                <span class="badge bg-success">Résolu</span>
-                            {% elif alerte.statut == 'Ignorée' %}
-                                <span class="badge bg-secondary">Ignoré</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-sm btn-outline-secondary btn-details" data-id="{{ alerte.pk }}" title="Voir détails">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger btn-supprimer-historique" data-id="{{ alerte.pk }}" title="Supprimer">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center py-3">
-                            <i class="fas fa-history text-muted fa-2x mb-2"></i>
-                            <p>Aucune alerte dans l'historique</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                <tbody id="alertesResoluesContainer">
+                    {% include 'fleet_app/alertes/alertes_resolues_rows.html' with alertes=alertes_historique %}
                 </tbody>
             </table>
         </div>
@@ -178,132 +116,146 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Fonction de recherche
-        document.getElementById('searchAlerte').addEventListener('keyup', function() {
-            filterAlertes();
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('alertesSearchForm');
+    const searchInputs = searchForm.querySelectorAll('input, select');
+    const loadingSpinner = document.getElementById('alertesLoadingSpinner');
+    const activesContainer = document.getElementById('alertesActivesContainer');
+    const resoluesContainer = document.getElementById('alertesResoluesContainer');
+    const activesCount = document.getElementById('activesCount');
+    const resoluesCount = document.getElementById('resoluesCount');
+    const toggleSearch = document.getElementById('toggleAlertesSearch');
+    const searchPanel = document.getElementById('alertesSearchPanel');
+    const clearSearch = document.getElementById('clearAlertesSearch');
+    
+    let searchTimeout;
+    
+    // Toggle du panneau de recherche
+    toggleSearch.addEventListener('click', function() {
+        if (searchPanel.style.display === 'none') {
+            searchPanel.style.display = 'block';
+            toggleSearch.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        } else {
+            searchPanel.style.display = 'none';
+            toggleSearch.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        }
+    });
+    
+    // Effacer la recherche
+    clearSearch.addEventListener('click', function() {
+        searchInputs.forEach(input => {
+            input.value = '';
+        });
+        performSearch('actives');
+        performSearch('resolues');
+    });
+    
+    // Recherche en temps réel
+    searchInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                performSearch('actives');
+                performSearch('resolues');
+            }, 300);
         });
         
-        // Filtre par niveau d'urgence
-        document.getElementById('filterUrgence').addEventListener('change', function() {
-            filterAlertes();
+        input.addEventListener('change', function() {
+            clearTimeout(searchTimeout);
+            performSearch('actives');
+            performSearch('resolues');
         });
+    });
+    
+    function performSearch(section, page = 1) {
+        loadingSpinner.classList.remove('d-none');
         
-        function filterAlertes() {
-            const searchText = document.getElementById('searchAlerte').value.toLowerCase();
-            const urgenceFilter = document.getElementById('filterUrgence').value;
-            const alerteItems = document.querySelectorAll('.list-group-item');
-            
-            alerteItems.forEach(item => {
-                const itemText = item.textContent.toLowerCase();
-                const urgenceBadge = item.querySelector('.badge');
-                const urgenceValue = urgenceBadge ? urgenceBadge.textContent : '';
-                
-                const matchesSearch = itemText.includes(searchText);
-                const matchesUrgence = urgenceFilter === 'all' || urgenceValue.includes(urgenceFilter);
-                
-                if (matchesSearch && matchesUrgence) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
+        const formData = new FormData(searchForm);
+        const params = new URLSearchParams(formData);
+        params.append('section', section);
+        params.append('page', page);
         
-        // Configuration des boutons d'action
-        
-        // Fonction pour afficher les toasts de notification
-        function showToast(message, type = 'success') {
-            // Utiliser le conteneur de toast global déjà présent dans le template de base
-            const toastContainer = document.getElementById('toastContainer');
-            
-            // Créer un nouvel élément toast
-            const toastId = 'toast-' + Date.now();
-            const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-white bg-${type}" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('toastContainer').innerHTML += toastHtml;
-            const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-            
-            // Supprimer le toast après qu'il soit caché
-            toastElement.addEventListener('hidden.bs.toast', function () {
-                toastElement.remove();
-            });
-        }
-        
-        // Fonction pour envoyer une requête AJAX
-        function sendAjaxRequest(url, method = 'POST', data = {}) {
-            return fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(data)
-        
-        // Fonction pour obtenir le cookie CSRF
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
+        fetch('{% url "fleet_app:alerte_search_ajax" %}?' + params.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
-            return cookieValue;
-        }
-        
-        // Fonction pour afficher un toast
-        function showToast(message, type = 'success') {
-            const toastContainer = document.getElementById('toast-container');
-            if (!toastContainer) {
-                const container = document.createElement('div');
-                container.id = 'toast-container';
-                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-                document.body.appendChild(container);
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (section === 'actives') {
+                activesContainer.innerHTML = data.html;
+                activesCount.textContent = data.count;
+                attachActionButtons();
+            } else {
+                resoluesContainer.innerHTML = data.html;
+                resoluesCount.textContent = data.count;
+                attachHistoryButtons();
             }
             
-            const toastId = 'toast-' + Date.now();
-            const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('toast-container').insertAdjacentHTML('beforeend', toastHtml);
-            const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-            
-            toastElement.addEventListener('hidden.bs.toast', function() {
-                toastElement.remove();
-            });
+            loadingSpinner.classList.add('d-none');
+        })
+        .catch(error => {
+            console.error('Erreur lors de la recherche:', error);
+            loadingSpinner.classList.add('d-none');
+        });
+    }
+    
+    // Fonction pour obtenir le cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
+        return cookieValue;
+    }
+    
+    // Fonction pour afficher un toast
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container') || createToastContainer();
         
-        // Configurer les boutons "Résoudre"
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+        
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+    }
+    
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(container);
+        return container;
+    }
+    
+    // Fonction pour attacher les event listeners aux boutons d'action des alertes actives
+    function attachActionButtons() {
+        // Boutons "Résoudre"
         document.querySelectorAll('.btn-resoudre').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('Bouton Résoudre cliqué');
                 const alerteId = this.getAttribute('data-id');
                 const alerteRow = this.closest('.list-group-item');
                 
@@ -316,19 +268,13 @@
                         },
                         body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Erreur réseau: ' + response.status);
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Supprimer l'alerte de la liste
                             alerteRow.remove();
                             showToast('Alerte marquée comme résolue.', 'success');
-                            // Recharger la page pour mettre à jour l'historique
-                            setTimeout(() => location.reload(), 1000);
+                            performSearch('actives');
+                            performSearch('resolues');
                         } else {
                             throw new Error('Opération échouée');
                         }
@@ -341,11 +287,10 @@
             });
         });
         
-        // Configurer les boutons "Ignorer"
+        // Boutons "Ignorer"
         document.querySelectorAll('.btn-ignorer').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('Bouton Ignorer cliqué');
                 const alerteId = this.getAttribute('data-id');
                 const alerteRow = this.closest('.list-group-item');
                 
@@ -358,19 +303,13 @@
                         },
                         body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Erreur réseau: ' + response.status);
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Supprimer l'alerte de la liste
                             alerteRow.remove();
                             showToast('Alerte ignorée.', 'info');
-                            // Recharger la page pour mettre à jour l'historique
-                            setTimeout(() => location.reload(), 1000);
+                            performSearch('actives');
+                            performSearch('resolues');
                         } else {
                             throw new Error('Opération échouée');
                         }
@@ -383,11 +322,10 @@
             });
         });
         
-        // Configurer les boutons "Supprimer"
+        // Boutons "Supprimer"
         document.querySelectorAll('.btn-supprimer').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('Bouton Supprimer cliqué');
                 const alerteId = this.getAttribute('data-id');
                 const alerteRow = this.closest('.list-group-item');
                 
@@ -400,17 +338,12 @@
                         },
                         body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Erreur réseau: ' + response.status);
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Supprimer l'alerte de la liste
                             alerteRow.remove();
                             showToast('Alerte supprimée.', 'danger');
+                            performSearch('actives');
                         } else {
                             throw new Error('Opération échouée');
                         }
@@ -422,12 +355,14 @@
                 }
             });
         });
-        
-        // Configurer les boutons "Supprimer" dans l'historique
+    }
+    
+    // Fonction pour attacher les event listeners aux boutons de l'historique
+    function attachHistoryButtons() {
+        // Boutons "Supprimer" dans l'historique
         document.querySelectorAll('.btn-supprimer-historique').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('Bouton Supprimer historique cliqué');
                 const alerteId = this.getAttribute('data-id');
                 const alerteRow = this.closest('tr');
                 
@@ -440,17 +375,12 @@
                         },
                         body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Erreur réseau: ' + response.status);
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Supprimer l'alerte de la liste
                             alerteRow.remove();
                             showToast(`L'alerte a été supprimée de l'historique.`, 'danger');
+                            performSearch('resolues');
                         } else {
                             throw new Error('Opération échouée');
                         }
@@ -463,16 +393,16 @@
             });
         });
         
-        // Configurer les boutons "Détails" dans l'historique
+        // Boutons "Détails" dans l'historique
         document.querySelectorAll('.btn-details').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('Bouton Détails cliqué');
                 const alerteId = this.getAttribute('data-id');
                 const alerteRow = this.closest('tr');
                 const alerteType = alerteRow.cells[1].textContent.trim();
                 const vehicule = alerteRow.cells[2].textContent.trim();
                 const niveau = alerteRow.cells[3].textContent.trim();
+                const statut = alerteRow.cells[4].textContent.trim();
                 
                 // Créer une boîte de dialogue modale pour afficher les détails
                 const modalHtml = `
@@ -526,6 +456,11 @@
                 });
             });
         });
-    });
+    }
+    
+    // Attacher les event listeners initiaux
+    attachActionButtons();
+    attachHistoryButtons();
+});
 </script>
 {% endblock %}

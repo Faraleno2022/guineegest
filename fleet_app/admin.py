@@ -21,68 +21,87 @@ from .models_entreprise import (
 
 # Enregistrement des modèles dans l'administration Django
 
+class UserOwnedAdminMixin:
+    """Restreint l'accès aux objets de l'utilisateur et renseigne le champ user à l'enregistrement."""
+    user_field_name = 'user'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Si le modèle a un champ user, filtrer par request.user
+        if hasattr(self.model, self.user_field_name):
+            return qs.filter(**{self.user_field_name: request.user})
+        return qs
+
+    def save_model(self, request, obj, form, change):
+        # Renseigner automatiquement le user s'il existe sur le modèle
+        if hasattr(obj, self.user_field_name) and getattr(obj, self.user_field_name) is None:
+            setattr(obj, self.user_field_name, request.user)
+        super().save_model(request, obj, form, change)
+
 @admin.register(Vehicule)
-class VehiculeAdmin(admin.ModelAdmin):
+class VehiculeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('id_vehicule', 'immatriculation', 'marque', 'modele', 'type_moteur', 'categorie', 'statut_actuel')
     list_filter = ('type_moteur', 'categorie', 'statut_actuel')
     search_fields = ('id_vehicule', 'immatriculation', 'marque', 'modele')
 
 @admin.register(DocumentAdministratif)
-class DocumentAdmin(admin.ModelAdmin):
+class DocumentAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'type_document', 'numero', 'date_emission', 'date_expiration')
     list_filter = ('type_document', 'date_expiration')
     search_fields = ('vehicule__immatriculation', 'type_document', 'numero')
     date_hierarchy = 'date_expiration'
 
 @admin.register(DistanceParcourue)
-class DistanceAdmin(admin.ModelAdmin):
+class DistanceAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'date_debut', 'date_fin', 'km_debut', 'km_fin', 'distance_parcourue')
     list_filter = ('vehicule__type_moteur',)
     search_fields = ('vehicule__immatriculation',)
     date_hierarchy = 'date_fin'
 
 @admin.register(ConsommationCarburant)
-class ConsommationAdmin(admin.ModelAdmin):
+class ConsommationAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'date_plein1', 'date_plein2', 'litres_ajoutes', 'distance_parcourue', 'consommation_100km')
     list_filter = ('vehicule__type_moteur',)
     search_fields = ('vehicule__immatriculation',)
     date_hierarchy = 'date_plein2'
 
 @admin.register(DisponibiliteVehicule)
-class DisponibiliteAdmin(admin.ModelAdmin):
+class DisponibiliteAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'periode', 'jours_total_periode', 'jours_hors_service', 'disponibilite_pourcentage')
     list_filter = ('vehicule__categorie',)
     search_fields = ('vehicule__immatriculation', 'periode')
+    user_field_name = 'vehicule__user'
 
 @admin.register(UtilisationActif)
-class UtilisationAdmin(admin.ModelAdmin):
+class UtilisationAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'periode', 'jours_disponibles', 'jours_utilises')
     list_filter = ('vehicule__categorie',)
     search_fields = ('vehicule__immatriculation', 'periode')
+    user_field_name = 'vehicule__user'
 
 @admin.register(IncidentSecurite)
-class IncidentAdmin(admin.ModelAdmin):
+class IncidentAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'date_incident', 'type_incident', 'gravite')
     list_filter = ('type_incident', 'gravite')
     search_fields = ('vehicule__immatriculation', 'commentaires')
     date_hierarchy = 'date_incident'
 
 @admin.register(CoutFonctionnement)
-class CoutFonctionnementAdmin(admin.ModelAdmin):
-    list_display = ('vehicule', 'date', 'type_cout', 'montant', 'kilometrage', 'cout_par_km')
+class CoutFonctionnementAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('vehicule', 'date', 'type_cout', 'montant', 'km_actuel', 'cout_par_km')
     list_filter = ('type_cout',)
     search_fields = ('vehicule__immatriculation', 'type_cout')
     date_hierarchy = 'date'
 
 @admin.register(CoutFinancier)
-class CoutFinancierAdmin(admin.ModelAdmin):
+class CoutFinancierAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'date', 'type_cout', 'montant', 'kilometrage', 'cout_par_km', 'periode_amortissement')
     list_filter = ('type_cout',)
     search_fields = ('vehicule__immatriculation', 'type_cout')
     date_hierarchy = 'date'
 
 @admin.register(Alerte)
-class AlerteAdmin(admin.ModelAdmin):
+class AlerteAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('vehicule', 'titre', 'date_creation', 'niveau', 'statut')
     list_filter = ('niveau', 'statut')
     search_fields = ('vehicule__immatriculation', 'titre', 'description')
@@ -126,25 +145,6 @@ class PersonnePhysiqueAdmin(admin.ModelAdmin):
 # ==========================
 # Administration Entreprise
 # ==========================
-
-class UserOwnedAdminMixin:
-    """Restreint l'accès aux objets de l'utilisateur et renseigne le champ user à l'enregistrement."""
-    user_field_name = 'user'
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        # Si le modèle a un champ user, filtrer par request.user
-        if hasattr(self.model, self.user_field_name):
-            return qs.filter(**{self.user_field_name: request.user})
-        return qs
-
-    def save_model(self, request, obj, form, change):
-        # Renseigner automatiquement le user s'il existe sur le modèle
-        if hasattr(obj, self.user_field_name) and getattr(obj, self.user_field_name) is None:
-            setattr(obj, self.user_field_name, request.user)
-        super().save_model(request, obj, form, change)
-
-
 @admin.register(Employe)
 class EmployeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = (

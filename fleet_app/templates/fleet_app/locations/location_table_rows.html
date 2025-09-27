@@ -1,0 +1,38 @@
+{% for loc in locations %}
+<tr>
+  <td>
+    <a href="{% url 'fleet_app:location_detail' loc.pk %}" class="text-decoration-none">
+      {{ loc.vehicule }}
+    </a>
+  </td>
+  <td>
+    <span class="badge bg-{% if loc.type_location == 'Interne' %}info{% else %}warning{% endif %}">
+      {{ loc.type_location }}
+    </span>
+  </td>
+  <td>{{ loc.fournisseur|default:'-' }}</td>
+  <td>{{ loc.date_debut }}</td>
+  <td>{{ loc.date_fin|default:'-' }}</td>
+  <td>{{ loc.tarif_journalier|floatformat:0 }} GNF</td>
+  <td>
+    <span class="badge bg-{% if loc.statut == 'Active' %}success{% elif loc.statut == 'Inactive' %}warning{% else %}secondary{% endif %}">
+      {{ loc.statut }}
+    </span>
+  </td>
+  <td>
+    <div class="btn-group btn-group-sm" role="group">
+      <a href="{% url 'fleet_app:location_detail' loc.pk %}" class="btn btn-outline-info" title="Détails">
+        <i class="fas fa-eye"></i>
+      </a>
+      <a href="{% url 'fleet_app:location_update' loc.pk %}" class="btn btn-outline-warning" title="Modifier">
+        <i class="fas fa-edit"></i>
+      </a>
+      <a href="{% url 'fleet_app:location_delete' loc.pk %}" class="btn btn-outline-danger" title="Supprimer">
+        <i class="fas fa-trash"></i>
+      </a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="8" class="text-center text-muted">Aucune location trouvée.</td></tr>
+{% endfor %}

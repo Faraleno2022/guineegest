@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 from django.template.loader import get_template
 from decimal import Decimal
 from django.utils import timezone
+from .utils.decorators import queryset_filter_by_tenant
 
 from .models_inventaire import Produit, EntreeStock, SortieStock, MouvementStock, Commande, LigneCommande
 from .forms_inventaire import ProduitForm, EntreeStockForm, SortieStockForm, RechercheInventaireForm, RechercheCommandeForm, CommandeForm, LigneCommandeForm, DocumentSigneCommandeForm
@@ -62,7 +63,7 @@ WEASYPRINT_AVAILABLE = False
 @login_required
 def inventaire_dashboard(request):
     """Tableau de bord Inventaire avec KPIs clés: stock disponible, alertes, ventes récentes"""
-    produits = Produit.objects.all()
+    produits = queryset_filter_by_tenant(Produit.objects.all(), request)
 
     # KPIs de stock
     total_produits = produits.count()
@@ -112,7 +113,7 @@ def produit_list(request):
     """Liste des produits avec recherche et filtrage"""
     form_recherche = RechercheInventaireForm(request.GET)
     # Récupérer tous les produits
-    produits = Produit.objects.all()
+    produits = Produit.objects.filter(user=request.user)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -161,20 +162,13 @@ def produit_create(request):
     if request.method == 'POST':
         form = ProduitForm(request.POST)
         if form.is_valid():
-            # Associer l'utilisateur connecté avant de sauvegarder
+            # Associer l'utilisateur/entreprise connectés avant de sauvegarder
             produit = form.save(commit=False)
             produit.user = request.user
+            ent = getattr(getattr(request.user, 'profil', None), 'entreprise', None) or getattr(request.user, 'entreprise', None)
+            if hasattr(produit, 'entreprise'):
+                produit.entreprise = ent
             
-            # Récupérer l'entreprise de l'utilisateur si disponible
-            try:
-                from fleet_app.models_accounts import Profil
-                profil = Profil.objects.get(user=request.user)
-                if hasattr(profil, 'entreprise') and profil.entreprise:
-                    produit.entreprise = profil.entreprise
-            except Exception as e:
-                # En cas d'erreur, on continue sans associer d'entreprise
-                pass
-                
             produit.save()
             messages.success(request, "Le produit a été ajouté avec succès.")
             return redirect('fleet_app:produit_list')
@@ -211,14 +205,9 @@ def produit_update(request, pk):
                 
             # Conserver l'entreprise existante si déjà définie, sinon récupérer celle de l'utilisateur connecté
             if not form.instance.entreprise:
-                try:
-                    from fleet_app.models_accounts import Profil
-                    profil = Profil.objects.get(user=request.user)
-                    if hasattr(profil, 'entreprise') and profil.entreprise:
-                        form.instance.entreprise = profil.entreprise
-                except Exception as e:
-                    # En cas d'erreur, on continue sans associer d'entreprise
-                    pass
+                ent = getattr(getattr(request.user, 'profil', None), 'entreprise', None) or getattr(request.user, 'entreprise', None)
+                if ent:
+                    form.instance.entreprise = ent
                     
             form.save()
             messages.success(request, "Le produit a été mis à jour avec succès.")
@@ -288,7 +277,7 @@ def entree_stock_list(request):
     form_recherche = RechercheInventaireForm(request.GET)
     # Filtrer les entrées pour n'afficher que celles de l'utilisateur connecté
     # Nous filtrons sur le produit associé à l'entrée
-    entrees = EntreeStock.objects.all()
+    entrees = queryset_filter_by_tenant(EntreeStock.objects.all(), request)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -469,7 +458,7 @@ def sortie_stock_list(request):
     form_recherche = RechercheInventaireForm(request.GET)
     # Filtrer les sorties pour n'afficher que celles de l'utilisateur connecté
     # Nous filtrons sur le produit associé à la sortie
-    sorties = SortieStock.objects.all()
+    sorties = queryset_filter_by_tenant(SortieStock.objects.all(), request)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -633,7 +622,7 @@ def sortie_stock_delete(request, pk):
 def stock_actuel(request):
     """Affichage du stock actuel pour tous les produits"""
     form_recherche = RechercheInventaireForm(request.GET)
-    produits = Produit.objects.all()
+    produits = Produit.objects.filter(user=request.user)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -690,7 +679,7 @@ def mouvement_stock_list(request):
     """
     form_recherche = RechercheInventaireForm(request.GET)
     # Récupérer tous les mouvements de stock
-    mouvements = MouvementStock.objects.all()
+    mouvements = queryset_filter_by_tenant(MouvementStock.objects.all(), request)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -746,7 +735,7 @@ def mouvement_stock_list(request):
 @login_required
 def get_produits_list(request):
     """API pour récupérer la liste des produits"""
-    produits = Produit.objects.all()
+    produits = Produit.objects.filter(user=request.user)
     produits_list = []
     
     for produit in produits:
@@ -821,7 +810,7 @@ def stock_actuel(request):
     """
     form_recherche = RechercheInventaireForm(request.GET)
     # Récupérer tous les produits
-    produits = Produit.objects.all()
+    produits = Produit.objects.filter(user=request.user)
     
     # Récupérer les catégories uniques pour le filtre
     categories = Produit.objects.values_list('categorie', flat=True).distinct()
@@ -865,7 +854,7 @@ def stock_actuel(request):
     produits_rupture = 0
     produits_normaux = 0
     
-    for produit in Produit.objects.all():
+    for produit in Produit.objects.filter(user=request.user):
         stock = produit.get_stock_actuel()
         if stock == 0:
             produits_rupture += 1
@@ -925,7 +914,7 @@ def commande_list(request):
     form_recherche = RechercheCommandeForm(request.GET or None)
     
     # Récupérer uniquement les commandes de l'utilisateur connecté
-    commandes = Commande.objects.all().order_by('-date_creation')
+    commandes = Commande.objects.filter(lignes__produit__user=request.user).distinct().order_by('-date_creation')
     
     # Statistiques des commandes par statut
     stats_commandes = {
@@ -935,7 +924,7 @@ def commande_list(request):
         'En_cours': Commande.objects.filter(statut='En cours').count(),
         'Livree': Commande.objects.filter(statut='Livrée').count(),
         'Annulee': Commande.objects.filter(statut='Annulée').count(),
-        'total': Commande.objects.all().count()
+        'total': Commande.objects.filter(lignes__produit__user=request.user).distinct().count()
     }
     
     # Filtrage selon les critères de recherche
@@ -974,7 +963,7 @@ def commande_list(request):
 @login_required
 def commande_create(request):
     """Création d'une nouvelle commande avec gestion dynamique des lignes"""
-    produits = Produit.objects.all().order_by('id_produit')
+    produits = Produit.objects.filter(user=request.user).order_by('id_produit')
     
     if request.method == 'POST':
         form = CommandeForm(request.POST, user=request.user)
@@ -1027,7 +1016,7 @@ def commande_create(request):
 def commande_update(request, pk):
     """Mise à jour d'une commande existante avec gestion dynamique des lignes"""
     commande = get_object_or_404(Commande, pk=pk)
-    produits = Produit.objects.all().order_by('id_produit')
+    produits = Produit.objects.filter(user=request.user).order_by('id_produit')
     lignes = commande.lignes.all()
     
     if request.method == 'POST':
@@ -1158,7 +1147,7 @@ def export_commandes_excel(request):
             ws.col(col_num).width = 256 * 20  # 20 caractères de large
         
         # Récupérer toutes les commandes
-        commandes = Commande.objects.all().order_by('-date_creation')
+        commandes = Commande.objects.filter(lignes__produit__user=request.user).distinct().order_by('-date_creation')
         
         # Écrire les données
         row_num = 1
@@ -1271,7 +1260,7 @@ def ajouter_ligne_commande(request, commande_pk):
     """Ajouter une ligne à une commande existante
     Sécurisée pour garantir que l'utilisateur ne peut modifier que ses propres commandes
     """
-    produits = Produit.objects.all().order_by('id_produit')
+    produits = Produit.objects.filter(user=request.user).order_by('id_produit')
     
     if request.method == 'POST':
         form = CommandeForm(request.POST)
@@ -1303,7 +1292,7 @@ def modifier_ligne_commande(request, pk):
     """
     ligne = get_object_or_404(LigneCommande, pk=pk)
     commande = ligne.commande
-    produits = Produit.objects.all().order_by('id_produit')
+    produits = Produit.objects.filter(user=request.user).order_by('id_produit')
     
     if request.method == 'POST':
         form = LigneCommandeForm(request.POST, instance=ligne)

@@ -1,0 +1,127 @@
+{% extends 'fleet_app/base.html' %}
+{% block title %}Fournisseurs de véhicules{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-handshake"></i> Fournisseurs</span>
+      <a href="{% url 'fleet_app:fournisseur_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouveau Fournisseur
+      </a>
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#searchPanel" aria-expanded="false">
+          <i class="fas fa-search"></i> Recherche avancée
+        </button>
+        <span class="ms-2 text-muted" id="resultCount"></span>
+      </div>
+      <div class="collapse mb-3" id="searchPanel">
+        <div class="border rounded p-3 bg-light">
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label">Texte</label>
+              <input type="text" class="form-control form-control-sm" id="searchText" placeholder="Nom, contact, téléphone, email, adresse">
+            </div>
+            <div class="col-md-2 mt-4">
+              <button class="btn btn-sm btn-outline-primary w-100" id="btnClearFilters"><i class="fas fa-eraser"></i> Effacer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Contact</th>
+              <th>Téléphone</th>
+              <th>Email</th>
+              <th>Adresse</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fournisseursBody">
+            {% include 'fleet_app/locations/fournisseur_rows.html' with fournisseurs=fournisseurs %}
+          </tbody>
+        </table>
+        <div class="d-flex justify-content-between align-items-center" id="paginationBar">
+          <button class="btn btn-sm btn-outline-secondary" id="btnPrev" disabled>
+            <i class="fas fa-chevron-left"></i> Précédent
+          </button>
+          <span class="text-muted" id="pageInfo"></span>
+          <button class="btn btn-sm btn-outline-secondary" id="btnNext" disabled>
+            Suivant <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const $text = document.getElementById('searchText');
+    const $clear = document.getElementById('btnClearFilters');
+    const $tbody = document.getElementById('fournisseursBody');
+    const $count = document.getElementById('resultCount');
+    const $btnPrev = document.getElementById('btnPrev');
+    const $btnNext = document.getElementById('btnNext');
+    const $pageInfo = document.getElementById('pageInfo');
+
+    let timer = null;
+    let currentPage = 1;
+    let numPages = 1;
+    function debounceSearch() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => runSearch({ page: 1 }), 300);
+    }
+
+    function buildParams(extra) {
+      const params = new URLSearchParams();
+      if ($text.value.trim()) params.set('search_text', $text.value.trim());
+      if (extra && extra.page) params.set('page', extra.page);
+      return params.toString();
+    }
+
+    async function runSearch(extra) {
+      const qs = buildParams(extra);
+      const url = `{% url 'fleet_app:fournisseur_search_ajax' %}?` + qs;
+      try {
+        const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        $tbody.innerHTML = data.html;
+        if (data.count !== undefined) {
+          $count.textContent = data.count + ' résultat(s)';
+        }
+        // Update pagination
+        currentPage = data.page_number || 1;
+        numPages = data.num_pages || 1;
+        $btnPrev.disabled = !(data.has_previous);
+        $btnNext.disabled = !(data.has_next);
+        $pageInfo.textContent = `Page ${currentPage} / ${numPages}`;
+      } catch (e) { console.error(e); }
+    }
+
+    $text.addEventListener('input', debounceSearch);
+    $clear.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      $text.value = '';
+      runSearch({ page: 1 });
+    });
+
+    $btnPrev.addEventListener('click', function() {
+      if (currentPage > 1) runSearch({ page: currentPage - 1 });
+    });
+    $btnNext.addEventListener('click', function() {
+      if (currentPage < numPages) runSearch({ page: currentPage + 1 });
+    });
+
+    // Initial load
+    runSearch({ page: 1 });
+  })();
+</script>
+{% endblock %}

@@ -1,8 +1,9 @@
 from functools import wraps
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, Http404
 from django.shortcuts import get_object_or_404
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.core.exceptions import PermissionDenied
 
 def user_owns_data(model_class, pk_url_kwarg='pk', owner_field=None, relation_path=None):
     """
@@ -60,6 +61,57 @@ def user_owns_data(model_class, pk_url_kwarg='pk', owner_field=None, relation_pa
             return view_func(request, *args, **kwargs)
         return _wrapped_view
     return decorator
+
+
+def require_user_ownership(model_class, pk_url_kwarg='pk', user_field='user'):
+    """
+    Décorateur strict qui vérifie que l'utilisateur connecté possède l'objet.
+    Lève une exception 404 si l'objet n'appartient pas à l'utilisateur.
+    
+    Paramètres:
+    - model_class: La classe du modèle à vérifier
+    - pk_url_kwarg: Le nom du paramètre d'URL contenant l'ID de l'objet
+    - user_field: Le nom du champ qui relie l'objet à l'utilisateur
+    
+    Exemple d'utilisation:
+    @login_required
+    @require_user_ownership(Vehicule)
+    def vehicule_edit(request, pk):
+        vehicule = get_object_or_404(Vehicule, pk=pk)  # Déjà filtré par utilisateur
+        # ...
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            pk = kwargs.get(pk_url_kwarg)
+            if pk:
+                # Vérifier que l'objet existe ET appartient à l'utilisateur
+                try:
+                    filter_kwargs = {pk_url_kwarg: pk, user_field: request.user}
+                    obj = model_class.objects.get(**filter_kwargs)
+                except model_class.DoesNotExist:
+                    # L'objet n'existe pas ou n'appartient pas à l'utilisateur
+                    raise Http404(f"{model_class.__name__} non trouvé")
+            
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
+
+
+def get_user_object_or_404(model_class, user, **kwargs):
+    """
+    Version sécurisée de get_object_or_404 qui filtre automatiquement par utilisateur.
+    
+    Paramètres:
+    - model_class: La classe du modèle
+    - user: L'utilisateur connecté
+    - **kwargs: Les critères de filtrage supplémentaires
+    
+    Retourne l'objet s'il appartient à l'utilisateur, sinon lève Http404.
+    """
+    kwargs['user'] = user
+    return get_object_or_404(model_class, **kwargs)
+
 
 def user_owns_related_data(model_class, pk_url_kwarg='pk', relation_path=None):
     """

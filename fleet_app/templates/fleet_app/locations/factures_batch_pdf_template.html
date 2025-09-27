@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lot de Factures</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.3;
+            color: #333;
+        }
+        
+        .header {
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #2c5aa0;
+            font-size: 22pt;
+            margin: 0 0 10px 0;
+        }
+        
+        .company-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .company-info h2 {
+            color: #2c5aa0;
+            font-size: 18pt;
+            margin: 0 0 10px 0;
+        }
+        
+        .summary-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #2c5aa0;
+            margin: 20px 0;
+        }
+        
+        .summary-box h3 {
+            margin: 0 0 10px 0;
+            color: #2c5aa0;
+        }
+        
+        .factures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .factures-table th,
+        .factures-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+            font-size: 9pt;
+        }
+        
+        .factures-table th {
+            background-color: #2c5aa0;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .factures-table .number {
+            text-align: right;
+        }
+        
+        .factures-table .center {
+            text-align: center;
+        }
+        
+        .factures-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .totals-section {
+            margin-top: 30px;
+            float: right;
+            width: 350px;
+        }
+        
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .totals-table .label {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            width: 60%;
+        }
+        
+        .totals-table .amount {
+            text-align: right;
+            width: 40%;
+        }
+        
+        .total-final {
+            background-color: #2c5aa0 !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+        
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        .footer-notes {
+            margin-top: 50px;
+            font-size: 9pt;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+            clear: both;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .facture-detail {
+            margin-bottom: 40px;
+            border: 1px solid #ddd;
+            padding: 15px;
+        }
+        
+        .facture-detail h4 {
+            color: #2c5aa0;
+            margin: 0 0 15px 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        
+        .facture-info {
+            display: table;
+            width: 100%;
+        }
+        
+        .facture-info .left,
+        .facture-info .right {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+        
+        .facture-info .right {
+            text-align: right;
+        }
+        
+        .status-brouillon {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        
+        .status-payee {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .status-annulee {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header">
+        <div class="company-info">
+            <h2>{% if entreprise %}{{ entreprise.nom }}{% else %}GuinéeGest{% endif %}</h2>
+            {% if entreprise %}
+                <p>{{ entreprise.adresse|default:"" }}</p>
+                <p>Tél: {{ entreprise.telephone|default:"" }} | Email: {{ entreprise.email|default:"" }}</p>
+            {% endif %}
+        </div>
+        <h1>LOT DE FACTURES</h1>
+        <p><strong>Date de génération:</strong> {{ today|date:"d/m/Y à H:i" }}</p>
+    </div>
+
+    <!-- Résumé -->
+    <div class="summary-box">
+        <h3>Résumé du lot</h3>
+        <p><strong>Nombre de factures:</strong> {{ factures.count }}</p>
+        <p><strong>Période:</strong> 
+            {% for facture in factures %}
+                {% if forloop.first %}{{ facture.date|date:"d/m/Y" }}{% endif %}
+                {% if forloop.last and not forloop.first %} au {{ facture.date|date:"d/m/Y" }}{% endif %}
+            {% endfor %}
+        </p>
+    </div>
+
+    <!-- Tableau récapitulatif -->
+    <table class="factures-table">
+        <thead>
+            <tr>
+                <th>N° Facture</th>
+                <th>Date</th>
+                <th>Véhicule</th>
+                <th>Type</th>
+                <th>Statut</th>
+                <th class="number">Montant HT</th>
+                <th class="number">TVA</th>
+                <th class="number">Montant TTC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for facture in factures %}
+            <tr>
+                <td>{{ facture.numero }}</td>
+                <td class="center">{{ facture.date|date:"d/m/Y" }}</td>
+                <td>{{ facture.location.vehicule.immatriculation }} - {{ facture.location.vehicule.marque }}</td>
+                <td class="center">{{ facture.location.type_location }}</td>
+                <td class="center">
+                    <span class="status-{{ facture.statut|lower }}">{{ facture.statut }}</span>
+                </td>
+                <td class="number">{{ facture.montant_ht|floatformat:0 }}</td>
+                <td class="number">{{ facture.tva|floatformat:0 }}</td>
+                <td class="number">{{ facture.montant_ttc|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totaux -->
+    <div class="clearfix">
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td class="label">Nombre de factures:</td>
+                    <td class="amount">{{ factures.count }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Total HT:</td>
+                    <td class="amount">{{ total_ht|floatformat:0 }} GNF</td>
+                </tr>
+                <tr>
+                    <td class="label">Total TVA:</td>
+                    <td class="amount">{{ total_tva|floatformat:0 }} GNF</td>
+                </tr>
+                <tr class="total-final">
+                    <td class="label">TOTAL TTC:</td>
+                    <td class="amount">{{ total_ttc|floatformat:0 }} GNF</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Détail de chaque facture -->
+    <div class="page-break"></div>
+    <h2 style="color: #2c5aa0; text-align: center; margin-bottom: 30px;">DÉTAIL DES FACTURES</h2>
+
+    {% for facture in factures %}
+    <div class="facture-detail">
+        <h4>Facture {{ facture.numero }} - {{ facture.date|date:"d/m/Y" }}</h4>
+        
+        <div class="facture-info">
+            <div class="left">
+                <p><strong>Véhicule:</strong> {{ facture.location.vehicule.immatriculation }} - {{ facture.location.vehicule.marque }} {{ facture.location.vehicule.modele }}</p>
+                <p><strong>Type de location:</strong> {{ facture.location.type_location }}</p>
+                {% if facture.location.fournisseur %}
+                    <p><strong>Fournisseur:</strong> {{ facture.location.fournisseur.nom }}</p>
+                {% endif %}
+                <p><strong>Période:</strong> {{ facture.location.date_debut|date:"d/m/Y" }}
+                {% if facture.location.date_fin %} au {{ facture.location.date_fin|date:"d/m/Y" }}{% else %} (en cours){% endif %}</p>
+            </div>
+            
+            <div class="right">
+                <p><strong>Statut:</strong> <span class="status-{{ facture.statut|lower }}">{{ facture.statut }}</span></p>
+                <p><strong>Jours travaillés:</strong> {{ facture.jours_travail_mois }} jours</p>
+                <p><strong>Jours non travaillés:</strong> {{ facture.jours_non_travail_mois }} jours</p>
+                <p><strong>Tarif journalier:</strong> {{ facture.location.tarif_journalier|floatformat:0 }} GNF</p>
+            </div>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9pt;">
+            <tr style="background-color: #f8f9fa;">
+                <td style="border: 1px solid #ddd; padding: 5px; font-weight: bold;">Montant HT</td>
+                <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">{{ facture.montant_ht|floatformat:0 }} GNF</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 5px; font-weight: bold;">TVA (18%)</td>
+                <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">{{ facture.tva|floatformat:0 }} GNF</td>
+            </tr>
+            <tr style="background-color: #2c5aa0; color: white; font-weight: bold;">
+                <td style="border: 1px solid #ddd; padding: 5px;">TOTAL TTC</td>
+                <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">{{ facture.montant_ttc|floatformat:0 }} GNF</td>
+            </tr>
+        </table>
+    </div>
+    
+    {% if not forloop.last %}
+        <hr style="margin: 20px 0; border: none; border-top: 1px dashed #ccc;">
+    {% endif %}
+    {% endfor %}
+
+    <!-- Notes de bas de page -->
+    <div class="footer-notes">
+        <p><strong>Conditions générales:</strong></p>
+        <ul>
+            <li>Paiement à 30 jours à compter de la date de facture</li>
+            <li>Mode de paiement: Virement bancaire ou espèces</li>
+            <li>Toute réclamation doit être formulée dans les 8 jours suivant la réception</li>
+        </ul>
+        <p><strong>Note:</strong> Ce document est généré automatiquement par le système GuinéeGest.</p>
+        <p style="text-align: center; margin-top: 20px; font-style: italic;">
+            Document généré le {{ today|date:"d/m/Y à H:i" }}
+        </p>
+    </div>
+</body>
+</html>

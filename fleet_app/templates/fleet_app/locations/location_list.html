@@ -1,0 +1,294 @@
+{% extends 'fleet_app/base.html' %}
+{% block title %}Locations - Liste{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-car"></i> Locations (Interne/Externe)</span>
+      <a href="{% url 'fleet_app:location_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouvelle Location
+      </a>
+    </div>
+    <div class="card-body">
+      <!-- Zone de recherche dynamique -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card border-info">
+            <div class="card-header bg-info text-white">
+              <i class="fas fa-search"></i> Recherche Dynamique
+              <button class="btn btn-sm btn-light float-end" type="button" id="toggleSearch">
+                <i class="fas fa-chevron-up"></i>
+              </button>
+            </div>
+            <div class="card-body" id="searchPanel">
+              <form id="searchForm">
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="form-label">Véhicule</label>
+                    <input type="text" class="form-control" id="search_vehicule" name="search_vehicule" 
+                           placeholder="Immatriculation, marque, modèle..." value="{{ search_vehicule }}">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Fournisseur</label>
+                    <input type="text" class="form-control" id="search_fournisseur" name="search_fournisseur" 
+                           placeholder="Nom du fournisseur..." value="{{ search_fournisseur }}">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" id="search_type" name="search_type">
+                      <option value="">Tous</option>
+                      {% for value, label in types_location %}
+                      <option value="{{ value }}" {% if search_type == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="search_statut" name="search_statut">
+                      <option value="">Tous</option>
+                      {% for value, label in statuts_location %}
+                      <option value="{{ value }}" {% if search_statut == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Actions</label>
+                    <div class="d-grid gap-2">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearch">
+                        <i class="fas fa-times"></i> Effacer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="row g-3 mt-2">
+                  <div class="col-md-3">
+                    <label class="form-label">Date début (min)</label>
+                    <input type="date" class="form-control" id="date_debut_min" name="date_debut_min" value="{{ date_debut_min }}">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Date début (max)</label>
+                    <input type="date" class="form-control" id="date_debut_max" name="date_debut_max" value="{{ date_debut_max }}">
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-end h-100">
+                      <div class="alert alert-info mb-0 flex-grow-1">
+                        <small><i class="fas fa-info-circle"></i> La recherche se fait automatiquement pendant la saisie</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Résultats et pagination -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <span class="text-muted" id="resultsCount">
+            {% if locations.paginator.count %}
+              {{ locations.paginator.count }} résultat{{ locations.paginator.count|pluralize }}
+            {% endif %}
+          </span>
+        </div>
+        <div id="loadingSpinner" class="d-none">
+          <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Recherche...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Véhicule</th>
+              <th>Type</th>
+              <th>Fournisseur</th>
+              <th>Début</th>
+              <th>Fin</th>
+              <th>Tarif/Jour</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="locationsTableBody">
+            {% include 'fleet_app/locations/location_table_rows.html' %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if locations.has_other_pages %}
+      <nav aria-label="Navigation des pages" id="paginationNav">
+        <ul class="pagination justify-content-center">
+          {% if locations.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="#" data-page="1">«« Premier</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" data-page="{{ locations.previous_page_number }}">‹ Précédent</a>
+            </li>
+          {% endif %}
+          
+          {% for num in locations.paginator.page_range %}
+            {% if locations.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > locations.number|add:'-3' and num < locations.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="#" data-page="{{ num }}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+          
+          {% if locations.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="#" data-page="{{ locations.next_page_number }}">Suivant ›</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" data-page="{{ locations.paginator.num_pages }}">Dernier »»</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('searchForm');
+    const searchInputs = searchForm.querySelectorAll('input, select');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const tableBody = document.getElementById('locationsTableBody');
+    const resultsCount = document.getElementById('resultsCount');
+    const paginationNav = document.getElementById('paginationNav');
+    const toggleSearch = document.getElementById('toggleSearch');
+    const searchPanel = document.getElementById('searchPanel');
+    const clearSearch = document.getElementById('clearSearch');
+    
+    let searchTimeout;
+    
+    // Toggle du panneau de recherche
+    toggleSearch.addEventListener('click', function() {
+        if (searchPanel.style.display === 'none') {
+            searchPanel.style.display = 'block';
+            toggleSearch.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        } else {
+            searchPanel.style.display = 'none';
+            toggleSearch.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        }
+    });
+    
+    // Effacer la recherche
+    clearSearch.addEventListener('click', function() {
+        searchInputs.forEach(input => {
+            input.value = '';
+        });
+        performSearch();
+    });
+    
+    // Recherche en temps réel
+    searchInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 300);
+        });
+        
+        input.addEventListener('change', function() {
+            clearTimeout(searchTimeout);
+            performSearch();
+        });
+    });
+    
+    // Gestion de la pagination
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('.page-link[data-page]')) {
+            e.preventDefault();
+            const page = e.target.getAttribute('data-page');
+            performSearch(page);
+        }
+    });
+    
+    function performSearch(page = 1) {
+        loadingSpinner.classList.remove('d-none');
+        
+        const formData = new FormData(searchForm);
+        const params = new URLSearchParams(formData);
+        params.append('page', page);
+        
+        fetch('{% url "fleet_app:location_search_ajax" %}?' + params.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            tableBody.innerHTML = data.html;
+            
+            // Mettre à jour le compteur
+            resultsCount.textContent = data.count + ' résultat' + (data.count > 1 ? 's' : '');
+            
+            // Mettre à jour la pagination
+            updatePagination(data);
+            
+            loadingSpinner.classList.add('d-none');
+        })
+        .catch(error => {
+            console.error('Erreur lors de la recherche:', error);
+            loadingSpinner.classList.add('d-none');
+        });
+    }
+    
+    function updatePagination(data) {
+        if (data.num_pages <= 1) {
+            if (paginationNav) paginationNav.style.display = 'none';
+            return;
+        }
+        
+        let paginationHtml = '<ul class="pagination justify-content-center">';
+        
+        // Bouton Premier/Précédent
+        if (data.has_previous) {
+            paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="1">«« Premier</a></li>';
+            paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="' + (data.page_number - 1) + '">‹ Précédent</a></li>';
+        }
+        
+        // Pages
+        const startPage = Math.max(1, data.page_number - 2);
+        const endPage = Math.min(data.num_pages, data.page_number + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            if (i === data.page_number) {
+                paginationHtml += '<li class="page-item active"><span class="page-link">' + i + '</span></li>';
+            } else {
+                paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>';
+            }
+        }
+        
+        // Bouton Suivant/Dernier
+        if (data.has_next) {
+            paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="' + (data.page_number + 1) + '">Suivant ›</a></li>';
+            paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="' + data.num_pages + '">Dernier »»</a></li>';
+        }
+        
+        paginationHtml += '</ul>';
+        
+        if (!paginationNav) {
+            const nav = document.createElement('nav');
+            nav.id = 'paginationNav';
+            nav.setAttribute('aria-label', 'Navigation des pages');
+            nav.innerHTML = paginationHtml;
+            document.querySelector('.table-responsive').parentNode.appendChild(nav);
+        } else {
+            paginationNav.innerHTML = paginationHtml;
+            paginationNav.style.display = 'block';
+        }
+    }
+});
+</script>
+{% endblock %}

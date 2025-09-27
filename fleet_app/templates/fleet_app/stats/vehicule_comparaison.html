@@ -1,0 +1,691 @@
+{% extends 'fleet_app/base.html' %}
+{% load fleet_filters %}
+
+{% block title %}Comparaison des Véhicules - Statistiques{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-filter"></i> Sélection et Filtres</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="vehicules" class="form-label">Véhicules à comparer</label>
+                            <select multiple class="form-select" id="vehicules" name="vehicules" size="5">
+                                {% for vehicule in tous_vehicules %}
+                                <option value="{{ vehicule.pk }}" {% if vehicule.pk|stringformat:"s" in vehicules_selectionnes %}selected{% endif %}>
+                                    {{ vehicule.immatriculation }} - {{ vehicule.marque }} {{ vehicule.modele }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Maintenez Ctrl pour sélectionner plusieurs véhicules</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Date de début</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">Date de fin</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-chart-bar"></i> Comparer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if vehicules_stats %}
+    <!-- Graphique de comparaison -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Comparaison Visuelle</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="comparaisonChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau de comparaison détaillé -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-table"></i> Comparaison Détaillée</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#comparisonFilters" aria-expanded="false">
+                            <i class="fas fa-filter"></i> Filtres
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetComparisonFilters()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtres de comparaison -->
+                <div class="collapse" id="comparisonFilters">
+                    <div class="card-body border-bottom">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="comparisonSearch" class="form-label">Recherche</label>
+                                <input type="text" class="form-control" id="comparisonSearch" placeholder="Immatriculation...">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="minActivityFilter" class="form-label">Activité min (%)</label>
+                                <input type="number" class="form-control" id="minActivityFilter" placeholder="0" min="0" max="100">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="maxCostPerDayFilter" class="form-label">Coût/jour max</label>
+                                <input type="number" class="form-control" id="maxCostPerDayFilter" placeholder="100000">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="rentabilityFilter" class="form-label">Rentabilité</label>
+                                <select class="form-select" id="rentabilityFilter">
+                                    <option value="">Toutes</option>
+                                    <option value="positive">Positive</option>
+                                    <option value="negative">Négative</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="sortByFilter" class="form-label">Trier par</label>
+                                <select class="form-select" id="sortByFilter">
+                                    <option value="">Défaut</option>
+                                    <option value="activity">Activité</option>
+                                    <option value="cost">Coût/jour</option>
+                                    <option value="rentability">Rentabilité</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" onclick="applyComparisonFilters()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Compteur et actions -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <small class="text-muted">
+                            <span id="comparisonResultCount">{{ vehicules_stats|length }}</span> véhicule(s) comparé(s)
+                        </small>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-info" onclick="showBestPerformer()">
+                                <i class="fas fa-trophy"></i> Meilleur
+                            </button>
+                            <button type="button" class="btn btn-outline-warning" onclick="showWorstPerformer()">
+                                <i class="fas fa-exclamation-triangle"></i> À améliorer
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="comparisonTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="sortable-comp" data-column="vehicule">
+                                        Véhicule <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-comp" data-column="jours_actifs">
+                                        Jours Actifs <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-comp" data-column="activite">
+                                        % Activité <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-comp" data-column="jours_entretien">
+                                        Jours Entretien <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-comp" data-column="cout_entretien">
+                                        Coût Entretien <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-comp" data-column="consommation">
+                                        Consommation <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-comp" data-column="cout_jour">
+                                        Coût/Jour <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-comp" data-column="rentabilite">
+                                        Rentabilité <i class="fas fa-sort"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in vehicules_stats %}
+                                <tr data-immatriculation="{{ item.vehicule.immatriculation }}"
+                                    data-jours-actifs="{{ item.stats.jours_actifs }}"
+                                    data-activite="{{ item.stats.pourcentage_actif }}"
+                                    data-jours-entretien="{{ item.stats.jours_entretien }}"
+                                    data-cout-entretien="{{ item.stats.cout_entretien|add:item.stats.valeur_pieces }}"
+                                    data-consommation="{{ item.stats.consommation_moyenne }}"
+                                    data-cout-jour="{{ item.stats.cout_par_jour }}"
+                                    data-rentabilite="{{ item.stats.rentabilite }}">
+                                    <td>
+                                        <strong>{{ item.vehicule.immatriculation }}</strong><br>
+                                        <small class="text-muted">{{ item.vehicule.marque }} {{ item.vehicule.modele }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ item.stats.jours_actifs }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {{ item.stats.pourcentage_actif }}%"
+                                                 aria-valuenow="{{ item.stats.pourcentage_actif }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                                {{ item.stats.pourcentage_actif }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">{{ item.stats.jours_entretien }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ item.stats.cout_entretien|add:item.stats.valeur_pieces|floatformat:0 }}</strong> GNF
+                                    </td>
+                                    <td>
+                                        {{ item.stats.consommation_moyenne|floatformat:1 }} L/jour<br>
+                                        <small class="text-muted">{{ item.stats.consommation_litres|floatformat:0 }} L total</small>
+                                    </td>
+                                    <td>
+                                        <strong class="{% if item.stats.cout_par_jour < 50000 %}text-success{% elif item.stats.cout_par_jour < 100000 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ item.stats.cout_par_jour|floatformat:0 }}
+                                        </strong> GNF
+                                    </td>
+                                    <td>
+                                        <strong class="{% if item.stats.frais_location.total > item.stats.cout_total %}text-success{% else %}text-danger{% endif %}">
+                                            {{ item.stats.rentabilite|floatformat:0 }}
+                                        </strong> GNF
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analyse comparative -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-trophy"></i> Meilleur Performant</h5>
+                </div>
+                <div class="card-body">
+                    {% with meilleur=vehicules_stats|first %}
+                    <h4>{{ meilleur.vehicule.immatriculation }}</h4>
+                    <p><strong>{{ meilleur.vehicule.marque }} {{ meilleur.vehicule.modele }}</strong></p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> {{ meilleur.stats.pourcentage_actif }}% d'activité</li>
+                        <li><i class="fas fa-check text-success"></i> {{ meilleur.stats.cout_par_jour|floatformat:0 }} GNF/jour</li>
+                        <li><i class="fas fa-check text-success"></i> {{ meilleur.stats.consommation_moyenne|floatformat:1 }} L/jour</li>
+                    </ul>
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Statistiques Moyennes</h5>
+                </div>
+                <div class="card-body">
+                    {% with total_vehicules=vehicules_stats|length %}
+                    {% with total_jours_actifs=vehicules_stats|sum_attr:"stats.jours_actifs" %}
+                    {% with total_cout=vehicules_stats|sum_attr:"stats.cout_total" %}
+                    <ul class="list-unstyled">
+                        <li><strong>Activité moyenne :</strong> 
+                            {{ total_jours_actifs|div:total_vehicules|floatformat:0 }} jours/véhicule
+                        </li>
+                        <li><strong>Coût moyen :</strong> 
+                            {{ total_cout|div:total_vehicules|floatformat:0 }} GNF/véhicule
+                        </li>
+                        <li><strong>Véhicules comparés :</strong> {{ total_vehicules }}</li>
+                        <li><strong>Période :</strong> {{ start_date }} au {{ end_date }}</li>
+                    </ul>
+                    {% endwith %}
+                    {% endwith %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                <h4>Sélectionnez des véhicules à comparer</h4>
+                <p>Utilisez les filtres ci-dessus pour sélectionner les véhicules que vous souhaitez comparer.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+{% if vehicules_stats %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Données pour le graphique de comparaison
+    const vehicules = [
+        {% for item in vehicules_stats %}
+        {
+            nom: '{{ item.vehicule.immatriculation }}',
+            joursActifs: {{ item.stats.jours_actifs }},
+            joursEntretien: {{ item.stats.jours_entretien }},
+            coutTotal: {{ item.stats.cout_total }},
+            coutParJour: {{ item.stats.cout_par_jour }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Configuration du graphique
+    const ctx = document.getElementById('comparaisonChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: vehicules.map(v => v.nom),
+            datasets: [
+                {
+                    label: 'Jours Actifs',
+                    data: vehicules.map(v => v.joursActifs),
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Jours Entretien',
+                    data: vehicules.map(v => v.joursEntretien),
+                    backgroundColor: 'rgba(255, 205, 86, 0.6)',
+                    borderColor: 'rgba(255, 205, 86, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Coût par Jour (GNF)',
+                    data: vehicules.map(v => v.coutParJour),
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                    type: 'line',
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Véhicules'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Jours'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Coût (GNF)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+});
+
+// Filtres dynamiques pour la comparaison
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('comparisonTable')) {
+        initializeComparisonFilters();
+    }
+});
+
+function initializeComparisonFilters() {
+    // Événements pour les filtres de comparaison
+    document.getElementById('comparisonSearch')?.addEventListener('input', applyComparisonFilters);
+    document.getElementById('minActivityFilter')?.addEventListener('input', debounceComparison(applyComparisonFilters, 300));
+    document.getElementById('maxCostPerDayFilter')?.addEventListener('input', debounceComparison(applyComparisonFilters, 300));
+    document.getElementById('rentabilityFilter')?.addEventListener('change', applyComparisonFilters);
+    document.getElementById('sortByFilter')?.addEventListener('change', applySortComparison);
+    
+    // Tri des colonnes
+    document.querySelectorAll('.sortable-comp').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            sortComparisonTable(column);
+        });
+    });
+}
+
+function applyComparisonFilters() {
+    const searchTerm = document.getElementById('comparisonSearch')?.value.toLowerCase() || '';
+    const minActivity = parseFloat(document.getElementById('minActivityFilter')?.value) || 0;
+    const maxCostPerDay = parseFloat(document.getElementById('maxCostPerDayFilter')?.value) || Infinity;
+    const rentabilityFilter = document.getElementById('rentabilityFilter')?.value || '';
+    
+    const tbody = document.querySelector('#comparisonTable tbody');
+    if (!tbody) return;
+    
+    const rows = tbody.querySelectorAll('tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const immatriculation = row.dataset.immatriculation?.toLowerCase() || '';
+        const activite = parseFloat(row.dataset.activite) || 0;
+        const coutJour = parseFloat(row.dataset.coutJour) || 0;
+        const rentabilite = parseFloat(row.dataset.rentabilite) || 0;
+        
+        // Critères de filtrage
+        const matchesSearch = !searchTerm || immatriculation.includes(searchTerm);
+        const matchesActivity = activite >= minActivity;
+        const matchesCost = coutJour <= maxCostPerDay;
+        const matchesRentability = !rentabilityFilter || 
+            (rentabilityFilter === 'positive' && rentabilite > 0) ||
+            (rentabilityFilter === 'negative' && rentabilite <= 0);
+        
+        // Afficher/masquer la ligne
+        if (matchesSearch && matchesActivity && matchesCost && matchesRentability) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Mettre à jour le compteur
+    const countElement = document.getElementById('comparisonResultCount');
+    if (countElement) {
+        countElement.textContent = visibleCount;
+    }
+}
+
+function applySortComparison() {
+    const sortBy = document.getElementById('sortByFilter')?.value;
+    if (sortBy) {
+        sortComparisonTable(sortBy);
+    }
+}
+
+let comparisonSort = { column: null, direction: 'asc' };
+
+function sortComparisonTable(column, toggleDirection = true) {
+    const tbody = document.querySelector('#comparisonTable tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => row.style.display !== 'none');
+    
+    // Déterminer la direction du tri
+    if (toggleDirection) {
+        if (comparisonSort.column === column) {
+            comparisonSort.direction = comparisonSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            comparisonSort.direction = 'desc'; // Par défaut desc pour les métriques
+        }
+        comparisonSort.column = column;
+    }
+    
+    // Fonction de tri
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (column) {
+            case 'vehicule':
+                aValue = a.dataset.immatriculation;
+                bValue = b.dataset.immatriculation;
+                break;
+            case 'jours_actifs':
+                aValue = parseInt(a.dataset.joursActifs) || 0;
+                bValue = parseInt(b.dataset.joursActifs) || 0;
+                break;
+            case 'activite':
+            case 'activity':
+                aValue = parseFloat(a.dataset.activite) || 0;
+                bValue = parseFloat(b.dataset.activite) || 0;
+                break;
+            case 'jours_entretien':
+                aValue = parseInt(a.dataset.joursEntretien) || 0;
+                bValue = parseInt(b.dataset.joursEntretien) || 0;
+                break;
+            case 'cout_entretien':
+                aValue = parseFloat(a.dataset.coutEntretien) || 0;
+                bValue = parseFloat(b.dataset.coutEntretien) || 0;
+                break;
+            case 'consommation':
+                aValue = parseFloat(a.dataset.consommation) || 0;
+                bValue = parseFloat(b.dataset.consommation) || 0;
+                break;
+            case 'cout_jour':
+            case 'cost':
+                aValue = parseFloat(a.dataset.coutJour) || 0;
+                bValue = parseFloat(b.dataset.coutJour) || 0;
+                break;
+            case 'rentabilite':
+            case 'rentability':
+                aValue = parseFloat(a.dataset.rentabilite) || 0;
+                bValue = parseFloat(b.dataset.rentabilite) || 0;
+                break;
+            default:
+                return 0;
+        }
+        
+        // Comparaison
+        if (typeof aValue === 'string') {
+            aValue = aValue.toLowerCase();
+            bValue = bValue.toLowerCase();
+        }
+        
+        if (aValue < bValue) return comparisonSort.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return comparisonSort.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    // Réorganiser les lignes
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Mettre à jour les icônes de tri
+    updateComparisonSortIcons(column, comparisonSort.direction);
+}
+
+function updateComparisonSortIcons(activeColumn, direction) {
+    document.querySelectorAll('.sortable-comp').forEach(header => {
+        header.classList.remove('sort-asc', 'sort-desc');
+        if (header.dataset.column === activeColumn) {
+            header.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+}
+
+function resetComparisonFilters() {
+    document.getElementById('comparisonSearch').value = '';
+    document.getElementById('minActivityFilter').value = '';
+    document.getElementById('maxCostPerDayFilter').value = '';
+    document.getElementById('rentabilityFilter').value = '';
+    document.getElementById('sortByFilter').value = '';
+    
+    // Réinitialiser le tri
+    comparisonSort = { column: null, direction: 'asc' };
+    document.querySelectorAll('.sortable-comp').forEach(header => {
+        header.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    // Afficher toutes les lignes
+    const tbody = document.querySelector('#comparisonTable tbody');
+    if (tbody) {
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => row.style.display = '');
+        
+        const countElement = document.getElementById('comparisonResultCount');
+        if (countElement) {
+            countElement.textContent = rows.length;
+        }
+    }
+}
+
+function showBestPerformer() {
+    const tbody = document.querySelector('#comparisonTable tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    let bestRow = null;
+    let bestScore = -Infinity;
+    
+    // Calculer un score composite pour chaque véhicule
+    rows.forEach(row => {
+        const activite = parseFloat(row.dataset.activite) || 0;
+        const rentabilite = parseFloat(row.dataset.rentabilite) || 0;
+        const coutJour = parseFloat(row.dataset.coutJour) || Infinity;
+        
+        // Score composite : activité + rentabilité - coût normalisé
+        const score = activite + (rentabilite / 1000) - (coutJour / 10000);
+        
+        if (score > bestScore) {
+            bestScore = score;
+            bestRow = row;
+        }
+    });
+    
+    // Mettre en évidence le meilleur performant
+    rows.forEach(row => row.classList.remove('table-success'));
+    if (bestRow) {
+        bestRow.classList.add('table-success');
+        bestRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Afficher une notification
+        showNotification('Meilleur performant mis en évidence', 'success');
+    }
+}
+
+function showWorstPerformer() {
+    const tbody = document.querySelector('#comparisonTable tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    let worstRow = null;
+    let worstScore = Infinity;
+    
+    // Calculer un score composite pour chaque véhicule
+    rows.forEach(row => {
+        const activite = parseFloat(row.dataset.activite) || 0;
+        const rentabilite = parseFloat(row.dataset.rentabilite) || 0;
+        const coutJour = parseFloat(row.dataset.coutJour) || 0;
+        
+        // Score composite : activité + rentabilité - coût normalisé
+        const score = activite + (rentabilite / 1000) - (coutJour / 10000);
+        
+        if (score < worstScore) {
+            worstScore = score;
+            worstRow = row;
+        }
+    });
+    
+    // Mettre en évidence le moins performant
+    rows.forEach(row => row.classList.remove('table-warning'));
+    if (worstRow) {
+        worstRow.classList.add('table-warning');
+        worstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Afficher une notification
+        showNotification('Véhicule à améliorer mis en évidence', 'warning');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Créer une notification toast
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Supprimer automatiquement après 3 secondes
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+
+function debounceComparison(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+{% endif %}
+</script>
+
+<style>
+.sortable-comp {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable-comp:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.sortable-comp i {
+    margin-left: 5px;
+    opacity: 0.5;
+}
+.sortable-comp.sort-asc i:before {
+    content: "\f0de";
+    opacity: 1;
+}
+.sortable-comp.sort-desc i:before {
+    content: "\f0dd";
+    opacity: 1;
+}
+.table-success {
+    background-color: rgba(40, 167, 69, 0.2) !important;
+}
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.2) !important;
+}
+</style>
+{% endblock %}

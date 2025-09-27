@@ -39,7 +39,7 @@
                             {{ form.km_actuel }}
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="{{ form.cout_par_km.id_for_label }}" class="form-label">Coût par km (€/km / GNF/km)</label>
+                            <label for="{{ form.cout_par_km.id_for_label }}" class="form-label">Coût par km (€/km / GNF/km) <small class="text-muted">(calculé automatiquement)</small></label>
                             {{ form.cout_par_km }}
                         </div>
                     </div>
@@ -68,13 +68,14 @@
                 <div>
                     <i class="fas fa-chart-bar me-2"></i> Coût moyen par km par véhicule
                 </div>
-                <div>
+                <div class="d-flex gap-2 align-items-center">
                     <select id="periodeSelect" class="form-select form-select-sm">
                         <option value="all">Toutes les périodes</option>
                         <option value="month">Dernier mois</option>
                         <option value="quarter">Dernier trimestre</option>
                         <option value="year">Dernière année</option>
                     </select>
+                    {% include 'fleet_app/includes/period_filter.html' %}
                 </div>
             </div>
             <div class="card-body" style="height: 250px;">
@@ -108,6 +109,9 @@
                     <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('coutsFonctionnementTable', 'Couts_Fonctionnement')">
                         <i class="fas fa-file-excel me-1"></i> Excel
                     </button>
+                    <a href="{% url 'fleet_app:export_kpi_couts_fonctionnement_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}" class="btn btn-sm btn-danger">
+                        <i class="fas fa-file-pdf me-1"></i> PDF (serveur)
+                    </a>
                     <button type="button" class="btn btn-sm btn-danger" onclick="exportTableToPDF('coutsFonctionnementTable', 'Couts_Fonctionnement')">
                         <i class="fas fa-file-pdf me-1"></i> PDF
                     </button>
@@ -305,6 +309,73 @@
                 row.style.display = text.indexOf(value) > -1 ? '' : 'none';
             });
         });
+    });
+    
+    // Calcul automatique du coût par km
+    function calculateCostPerKm() {
+        const montantField = document.querySelector('#id_montant');
+        const kmActuelField = document.querySelector('#id_km_actuel');
+        const coutParKmField = document.querySelector('#id_cout_par_km');
+        const vehiculeField = document.querySelector('#id_vehicule');
+        
+        if (montantField && kmActuelField && coutParKmField && vehiculeField) {
+            const montant = parseFloat(montantField.value) || 0;
+            const kmActuel = parseFloat(kmActuelField.value) || 0;
+            
+            if (montant > 0 && kmActuel > 0 && vehiculeField.value) {
+                // Récupérer le kilométrage précédent via AJAX
+                fetch(`/api/vehicule/${vehiculeField.value}/last-km/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let distanceParcourue = 1000; // Valeur par défaut
+                        
+                        if (data.last_km && data.last_km > 0) {
+                            distanceParcourue = kmActuel - data.last_km;
+                            if (distanceParcourue <= 0) {
+                                distanceParcourue = 1000; // Fallback si distance négative
+                            }
+                        }
+                        
+                        const coutParKm = montant / distanceParcourue;
+                        coutParKmField.value = coutParKm.toFixed(4);
+                    })
+                    .catch(error => {
+                        // En cas d'erreur, utiliser estimation par défaut
+                        const coutParKm = montant / 1000;
+                        coutParKmField.value = coutParKm.toFixed(4);
+                    });
+            } else {
+                coutParKmField.value = '';
+            }
+        }
+    }
+    
+    // Ajouter les événements pour le calcul automatique
+    document.addEventListener('DOMContentLoaded', function() {
+        const montantField = document.querySelector('#id_montant');
+        const kmActuelField = document.querySelector('#id_km_actuel');
+        const vehiculeField = document.querySelector('#id_vehicule');
+        
+        if (montantField) {
+            montantField.addEventListener('input', calculateCostPerKm);
+            montantField.addEventListener('blur', calculateCostPerKm);
+        }
+        
+        if (kmActuelField) {
+            kmActuelField.addEventListener('input', calculateCostPerKm);
+            kmActuelField.addEventListener('blur', calculateCostPerKm);
+        }
+        
+        if (vehiculeField) {
+            vehiculeField.addEventListener('change', calculateCostPerKm);
+        }
+        
+        // Rendre le champ coût par km en lecture seule
+        const coutParKmField = document.querySelector('#id_cout_par_km');
+        if (coutParKmField) {
+            coutParKmField.setAttribute('readonly', 'readonly');
+            coutParKmField.style.backgroundColor = '#f8f9fa';
+        }
     });
 </script>
 {% endblock %}

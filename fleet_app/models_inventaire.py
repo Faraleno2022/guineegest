@@ -2,6 +2,8 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.db.models import Sum
+from django.contrib.auth.models import User
+from .models_accounts import Entreprise
 import os
 
 class Produit(models.Model):
@@ -33,6 +35,8 @@ class Produit(models.Model):
     prix_unitaire = models.DecimalField(max_digits=12, decimal_places=0, validators=[MinValueValidator(0)], verbose_name="Prix unitaire (GNF)")
     fournisseur = models.CharField(max_length=100, verbose_name="Fournisseur")
     date_ajout = models.DateField(default=timezone.now, verbose_name="Date d'ajout")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
     def __str__(self):
         return f"{self.id_produit} - {self.nom}"
@@ -67,6 +71,7 @@ class EntreeStock(models.Model):
     reference_facture = models.CharField(max_length=20, verbose_name="Référence facture")
     stock_avant = models.PositiveIntegerField(default=0, verbose_name="Stock avant")
     stock_apres = models.PositiveIntegerField(default=0, verbose_name="Stock après")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
     def __str__(self):
         return f"{self.id_entree} - {self.produit.nom} ({self.quantite})"
@@ -95,7 +100,8 @@ class EntreeStock(models.Model):
             quantite=self.quantite,
             stock_avant=self.stock_avant,
             stock_apres=self.stock_apres,
-            observations=f"Entrée {self.id_entree} - Fournisseur: {self.fournisseur}"
+            observations=f"Entrée {self.id_entree} - Fournisseur: {self.fournisseur}",
+            entreprise=getattr(self.produit, 'entreprise', None),
         )
     
     class Meta:
@@ -114,6 +120,7 @@ class SortieStock(models.Model):
     motif = models.CharField(max_length=100, verbose_name="Motif")
     stock_avant = models.PositiveIntegerField(default=0, verbose_name="Stock avant")
     stock_apres = models.PositiveIntegerField(default=0, verbose_name="Stock après")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
     def __str__(self):
         return f"{self.id_sortie} - {self.produit.nom} ({self.quantite})"
@@ -160,7 +167,8 @@ class SortieStock(models.Model):
             quantite=self.quantite,
             stock_avant=self.stock_avant,
             stock_apres=self.stock_apres,
-            observations=f"Sortie {self.id_sortie} - Destination: {self.destination}, Motif: {self.motif}"
+            observations=f"Sortie {self.id_sortie} - Destination: {self.destination}, Motif: {self.motif}",
+            entreprise=getattr(self.produit, 'entreprise', None),
         )
     
     class Meta:
@@ -184,6 +192,7 @@ class MouvementStock(models.Model):
     stock_avant = models.PositiveIntegerField(default=0, verbose_name="Stock avant")
     stock_apres = models.PositiveIntegerField(default=0, verbose_name="Stock après")
     observations = models.TextField(blank=True, null=True, verbose_name="Observations")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
     def __str__(self):
         return f"{self.date} - {self.produit.nom} - {self.type_mouvement} ({self.quantite})"
@@ -230,6 +239,7 @@ class Commande(models.Model):
         return os.path.join('commandes', instance.numero, filename)
         
     document_signe = models.FileField(upload_to=get_commande_upload_path, null=True, blank=True, verbose_name="Document signé")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
     def __str__(self):
         return f"{self.numero} - {self.fournisseur} ({self.montant_final} GNF)"
@@ -282,6 +292,7 @@ class LigneCommande(models.Model):
     quantite = models.PositiveIntegerField(validators=[MinValueValidator(1)], verbose_name="Quantité")
     prix_unitaire = models.DecimalField(max_digits=12, decimal_places=0, validators=[MinValueValidator(0)], verbose_name="Prix unitaire (GNF)")
     prix_total = models.DecimalField(max_digits=15, decimal_places=0, verbose_name="Prix total (GNF)")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
     def __str__(self):
         return f"{self.produit.nom} - {self.quantite} x {self.prix_unitaire} = {self.prix_total}"

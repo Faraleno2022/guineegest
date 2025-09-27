@@ -1,0 +1,122 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>KPI Consommation</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 10.5pt; color: #222; }
+    h1 { font-size: 16pt; margin: 0 0 8px 0; }
+    .meta { font-size: 9pt; color: #666; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #999; padding: 6px; }
+    th { background: #f0f0f0; }
+    .nowrap { white-space: nowrap; }
+    .right { text-align: right; }
+    .summary { margin: 8px 0 12px 0; }
+    .summary td { border: none; }
+  </style>
+</head>
+<body>
+  <pdf:footer>
+    <div style="font-size:9pt; color:#666; text-align: right;">
+      Page <pdf:pagenumber/> / <pdf:pagecount/>
+    </div>
+  </pdf:footer>
+  {% include 'fleet_app/pdf/includes/header.html' with title='KPI Consommation' %}
+  <div class="meta">
+    Généré le: {{ generated_at|date:"d/m/Y H:i" }}<br/>
+    {% if start or end or period %}
+      Période: {% if start %}du {{ start }}{% endif %}{% if end %} au {{ end }}{% endif %}{% if period and not start and not end %} ({{ period }}){% endif %}
+    {% else %}Période: Toutes{% endif %}
+  </div>
+  {% if summary %}
+  <div class="summary">
+    <table>
+      <tr>
+        <td><strong>Litres totaux</strong></td>
+        <td class="right">{{ summary.total_litres|floatformat:2 }}</td>
+        <td><strong>Distance totale</strong></td>
+        <td class="right">{{ summary.total_distance|intcomma }} km</td>
+        <td><strong>Conso moyenne</strong></td>
+        <td class="right">{{ summary.avg_conso|floatformat:2 }} L/100km</td>
+        <td><strong>Lignes</strong></td>
+        <td class="right">{{ summary.rows_count }}</td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+  {% if global_summary %}
+  <div class="summary">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Mois</th>
+          <th>Trimestre</th>
+          <th>Année</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Litres totaux</strong></td>
+          <td class="right">{{ global_summary.month.total_litres|floatformat:2 }}</td>
+          <td class="right">{{ global_summary.quarter.total_litres|floatformat:2 }}</td>
+          <td class="right">{{ global_summary.year.total_litres|floatformat:2 }}</td>
+        </tr>
+        <tr>
+          <td><strong>Distance totale</strong></td>
+          <td class="right">{{ global_summary.month.total_distance|intcomma }} km</td>
+          <td class="right">{{ global_summary.quarter.total_distance|intcomma }} km</td>
+          <td class="right">{{ global_summary.year.total_distance|intcomma }} km</td>
+        </tr>
+        <tr>
+          <td><strong>Conso moyenne</strong></td>
+          <td class="right">{{ global_summary.month.avg_conso|floatformat:2 }} L/100km</td>
+          <td class="right">{{ global_summary.quarter.avg_conso|floatformat:2 }} L/100km</td>
+          <td class="right">{{ global_summary.year.avg_conso|floatformat:2 }} L/100km</td>
+        </tr>
+        <tr>
+          <td><strong>Lignes</strong></td>
+          <td class="right">{{ global_summary.month.rows_count }}</td>
+          <td class="right">{{ global_summary.quarter.rows_count }}</td>
+          <td class="right">{{ global_summary.year.rows_count }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  <table>
+    <thead>
+      <tr>
+        <th>Véhicule</th>
+        <th>Date plein 1</th>
+        <th>Km plein 1</th>
+        <th>Date plein 2</th>
+        <th>Km plein 2</th>
+        <th>Litres</th>
+        <th>Distance (km)</th>
+        <th>Conso (L/100km)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.vehicule.marque }} {{ r.vehicule.modele }} ({{ r.vehicule.immatriculation }})</td>
+        <td class="nowrap">{{ r.date_plein1|date:"d/m/Y H:i" }}</td>
+        <td class="right">{{ r.km_plein1|intcomma }}</td>
+        <td class="nowrap">{{ r.date_plein2|date:"d/m/Y H:i" }}</td>
+        <td class="right">{{ r.km_plein2|intcomma }}</td>
+        <td class="right">{{ r.litres_ajoutes|floatformat:2 }}</td>
+        <td class="right">{{ r.distance_parcourue|intcomma }}</td>
+        <td class="right">{{ r.consommation_100km|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8">Aucune donnée pour cette période.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

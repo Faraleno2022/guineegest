@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture {{ facture.numero }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @frame header_frame {
+                -pdf-frame-content: header_content;
+                left: 50pt; width: 512pt; top: 50pt; height: 40pt;
+            }
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                left: 50pt; width: 512pt; top: 772pt; height: 40pt;
+            }
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .company-info {
+            float: left;
+            width: 50%;
+        }
+        
+        .company-info h1 {
+            color: #2c5aa0;
+            font-size: 24pt;
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+        
+        .company-info p {
+            margin: 2px 0;
+            font-size: 10pt;
+        }
+        
+        .invoice-info {
+            float: right;
+            width: 45%;
+            text-align: right;
+        }
+        
+        .invoice-info h2 {
+            color: #2c5aa0;
+            font-size: 20pt;
+            margin: 0 0 10px 0;
+        }
+        
+        .invoice-number {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        .client-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #2c5aa0;
+            margin: 20px 0;
+        }
+        
+        .client-info h3 {
+            margin: 0 0 10px 0;
+            color: #2c5aa0;
+        }
+        
+        .invoice-details {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .invoice-details th,
+        .invoice-details td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .invoice-details th {
+            background-color: #2c5aa0;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .invoice-details .number {
+            text-align: right;
+        }
+        
+        .invoice-details .center {
+            text-align: center;
+        }
+        
+        .totals-section {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+        }
+        
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .totals-table .label {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            width: 60%;
+        }
+        
+        .totals-table .amount {
+            text-align: right;
+            width: 40%;
+        }
+        
+        .total-final {
+            background-color: #2c5aa0 !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+        
+        .period-info {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .period-info h4 {
+            margin: 0 0 10px 0;
+            color: #2c5aa0;
+        }
+        
+        .work-days-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 9pt;
+        }
+        
+        .work-days-table th,
+        .work-days-table td {
+            border: 1px solid #ddd;
+            padding: 4px;
+            text-align: center;
+        }
+        
+        .work-days-table th {
+            background-color: #34495e;
+            color: white;
+        }
+        
+        .work-day {
+            background-color: #d4edda;
+        }
+        
+        .non-work-day {
+            background-color: #f8d7da;
+        }
+        
+        .footer-notes {
+            margin-top: 40px;
+            font-size: 9pt;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        
+        .signature-section {
+            margin-top: 50px;
+        }
+        
+        .signature-box {
+            float: right;
+            width: 200px;
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header clearfix">
+        <div class="company-info">
+            <h1>{% if entreprise %}{{ entreprise.nom }}{% else %}GuinéeGest{% endif %}</h1>
+            {% if entreprise %}
+                <p><strong>Adresse:</strong> {{ entreprise.adresse|default:"" }}</p>
+                <p><strong>Téléphone:</strong> {{ entreprise.telephone|default:"" }}</p>
+                <p><strong>Email:</strong> {{ entreprise.email|default:"" }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="invoice-info">
+            <h2>FACTURE</h2>
+            <div class="invoice-number">N° {{ facture.numero }}</div>
+            <p><strong>Date:</strong> {{ facture.date|date:"d/m/Y" }}</p>
+            <p><strong>Statut:</strong> {{ facture.statut }}</p>
+        </div>
+    </div>
+
+    <!-- Informations client/fournisseur -->
+    <div class="client-info">
+        <h3>Informations de location</h3>
+        <p><strong>Véhicule:</strong> {{ vehicule.immatriculation }} - {{ vehicule.marque }} {{ vehicule.modele }}</p>
+        <p><strong>Type de location:</strong> {{ location.type_location }}</p>
+        {% if fournisseur %}
+            <p><strong>Fournisseur:</strong> {{ fournisseur.nom }}</p>
+            {% if fournisseur.contact %}<p><strong>Contact:</strong> {{ fournisseur.contact }}</p>{% endif %}
+            {% if fournisseur.telephone %}<p><strong>Téléphone:</strong> {{ fournisseur.telephone }}</p>{% endif %}
+        {% endif %}
+        <p><strong>Période de location:</strong> {{ location.date_debut|date:"d/m/Y" }} 
+        {% if location.date_fin %} au {{ location.date_fin|date:"d/m/Y" }}{% else %} (en cours){% endif %}</p>
+    </div>
+
+    <!-- Période de facturation -->
+    <div class="period-info">
+        <h4>Période de facturation: {{ periode_debut|date:"d/m/Y" }} au {{ periode_fin|date:"d/m/Y" }}</h4>
+        <p><strong>Tarif journalier:</strong> {{ location.tarif_journalier|floatformat:0 }} GNF</p>
+        <p><strong>Jours travaillés:</strong> {{ jours_travail }} jours</p>
+        <p><strong>Jours non travaillés:</strong> {{ jours_autres }} jours</p>
+    </div>
+
+    <!-- Détail des jours de travail -->
+    {% if feuilles_travail %}
+    <h4>Détail des jours de travail</h4>
+    <table class="work-days-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Statut</th>
+                <th>Commentaire</th>
+                <th>Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for feuille in feuilles_travail %}
+            <tr class="work-day">
+                <td>{{ feuille.date|date:"d/m/Y" }}</td>
+                <td>{{ feuille.statut }}</td>
+                <td>{{ feuille.commentaire|default:"-" }}</td>
+                <td class="number">{{ location.tarif_journalier|floatformat:0 }} GNF</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Jours non travaillés -->
+    {% if feuilles_autres %}
+    <h4>Jours non travaillés (non facturés)</h4>
+    <table class="work-days-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Statut</th>
+                <th>Commentaire</th>
+                <th>Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for feuille in feuilles_autres %}
+            <tr class="non-work-day">
+                <td>{{ feuille.date|date:"d/m/Y" }}</td>
+                <td>{{ feuille.statut }}</td>
+                <td>{{ feuille.commentaire|default:"-" }}</td>
+                <td class="number">0 GNF</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Récapitulatif des montants -->
+    <div class="clearfix">
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td class="label">Jours facturés:</td>
+                    <td class="amount">{{ jours_travail }} jours</td>
+                </tr>
+                <tr>
+                    <td class="label">Tarif journalier:</td>
+                    <td class="amount">{{ location.tarif_journalier|floatformat:0 }} GNF</td>
+                </tr>
+                <tr>
+                    <td class="label">Montant HT:</td>
+                    <td class="amount">{{ facture.montant_ht|floatformat:0 }} GNF</td>
+                </tr>
+                <tr>
+                    <td class="label">TVA (18%):</td>
+                    <td class="amount">{{ facture.tva|floatformat:0 }} GNF</td>
+                </tr>
+                <tr class="total-final">
+                    <td class="label">TOTAL TTC:</td>
+                    <td class="amount">{{ facture.montant_ttc|floatformat:0 }} GNF</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Notes de bas de page -->
+    <div class="footer-notes">
+        <p><strong>Conditions de paiement:</strong> Paiement à 30 jours</p>
+        <p><strong>Mode de paiement:</strong> Virement bancaire ou espèces</p>
+        <p><strong>Note:</strong> Cette facture est générée automatiquement par le système GuinéeGest.</p>
+        <p><strong>Date de génération:</strong> {{ today|date:"d/m/Y à H:i" }}</p>
+    </div>
+
+    <!-- Section signature -->
+    <div class="signature-section clearfix">
+        <div class="signature-box">
+            <p>Signature et cachet</p>
+            <br><br><br>
+        </div>
+    </div>
+
+    <!-- Contenu du pied de page -->
+    <div id="footer_content">
+        <p style="text-align: center; font-size: 8pt; color: #666;">
+            Facture {{ facture.numero }} - Page <pdf:pagenumber> sur <pdf:pagecount>
+        </p>
+    </div>
+</body>
+</html>

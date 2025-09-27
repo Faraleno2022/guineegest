@@ -1,0 +1,49 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Supprimer Location{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trash"></i> Confirmer la suppression
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Êtes-vous sûr de vouloir supprimer cette location ?
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Véhicule :</strong> {{ location.vehicule }}<br>
+                        <strong>Type :</strong> {{ location.type_location }}<br>
+                        <strong>Fournisseur :</strong> {{ location.fournisseur|default:'-' }}<br>
+                        <strong>Période :</strong> {{ location.date_debut }} - {{ location.date_fin|default:'En cours' }}<br>
+                        <strong>Statut :</strong> {{ location.statut }}
+                    </div>
+                    
+                    <p class="text-muted">
+                        <small>Cette action est irréversible. Toutes les feuilles de pontage et factures associées seront également supprimées.</small>
+                    </p>
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'fleet_app:location_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Supprimer définitivement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Détail Location - {{ location.vehicule }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec informations principales -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-car"></i> Location - {{ location.vehicule }}
+                    </h5>
+                    <div>
+                        <a href="{% url 'fleet_app:location_update' location.pk %}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-edit"></i> Modifier
+                        </a>
+                        <a href="{% url 'fleet_app:location_delete' location.pk %}" class="btn btn-sm btn-danger">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Véhicule :</strong></td>
+                                    <td>{{ location.vehicule }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Type :</strong></td>
+                                    <td><span class="badge bg-info">{{ location.type_location }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Fournisseur :</strong></td>
+                                    <td>{{ location.fournisseur|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tarif journalier :</strong></td>
+                                    <td>{{ location.tarif_journalier }} GNF</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Date début :</strong></td>
+                                    <td>{{ location.date_debut }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Date fin :</strong></td>
+                                    <td>{{ location.date_fin|default:'En cours' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Statut :</strong></td>
+                                    <td>
+                                        <span class="badge bg-{% if location.statut == 'Active' %}success{% elif location.statut == 'Inactive' %}warning{% else %}secondary{% endif %}">
+                                            {{ location.statut }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Motif :</strong></td>
+                                    <td>{{ location.motif|default:'-' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-briefcase text-success"></i>
+                    <div class="stat-value">{{ stats.jours_travail }}</div>
+                    <div class="stat-label">Jours travaillés</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-tools text-warning"></i>
+                    <div class="stat-value">{{ stats.jours_entretien }}</div>
+                    <div class="stat-label">Jours entretien</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-times-circle text-danger"></i>
+                    <div class="stat-value">{{ stats.jours_hs }}</div>
+                    <div class="stat-label">Jours hors service</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill text-info"></i>
+                    <div class="stat-value">{{ stats.total_factures|floatformat:0 }}</div>
+                    <div class="stat-label">Total facturé (GNF)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feuilles de pontage récentes -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-calendar-check"></i> Feuilles de pontage récentes</span>
+                    <a href="{% url 'fleet_app:feuille_pontage_create' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> Nouveau
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if feuilles %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Statut</th>
+                                        <th>Commentaire</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feuille in feuilles %}
+                                    <tr>
+                                        <td>{{ feuille.date }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if feuille.statut == 'Travail' %}success{% elif feuille.statut == 'Entretien' %}warning{% else %}danger{% endif %}">
+                                                {{ feuille.statut }}
+                                            </span>
+                                        </td>
+                                        <td>{{ feuille.commentaire|default:'-' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucune feuille de pontage</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Factures -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-file-invoice"></i> Factures</span>
+                    <div>
+                        <button class="btn btn-sm btn-success" onclick="genererFactureAuto({{ location.pk }})">
+                            <i class="fas fa-magic"></i> Auto
+                        </button>
+                        <a href="{% url 'fleet_app:facture_location_create' %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> Nouveau
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if factures %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Numéro</th>
+                                        <th>Date</th>
+                                        <th>Montant TTC</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for facture in factures %}
+                                    <tr>
+                                        <td>{{ facture.numero }}</td>
+                                        <td>{{ facture.date }}</td>
+                                        <td>{{ facture.montant_ttc|floatformat:0 }} GNF</td>
+                                        <td>
+                                            <span class="badge bg-{% if facture.statut == 'Payée' %}success{% elif facture.statut == 'Brouillon' %}warning{% else %}danger{% endif %}">
+                                                {{ facture.statut }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucune facture</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bouton retour -->
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'fleet_app:location_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function genererFactureAuto(locationId) {
+    if (confirm('Générer automatiquement une facture basée sur les feuilles de pontage ?')) {
+        fetch(`/locations/${locationId}/generer-facture/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la génération de la facture');
+        });
+    }
+}
+</script>
+{% endblock %}

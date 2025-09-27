@@ -1,0 +1,48 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Supprimer Feuille de Pontage{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trash"></i> Confirmer la suppression
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Êtes-vous sûr de vouloir supprimer cette feuille de pontage ?
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Location :</strong> {{ feuille.location }}<br>
+                        <strong>Date :</strong> {{ feuille.date }}<br>
+                        <strong>Statut :</strong> {{ feuille.statut }}<br>
+                        <strong>Commentaire :</strong> {{ feuille.commentaire|default:'-' }}
+                    </div>
+                    
+                    <p class="text-muted">
+                        <small>Cette action est irréversible.</small>
+                    </p>
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'fleet_app:feuille_pontage_location_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Supprimer définitivement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

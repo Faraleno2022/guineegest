@@ -5,6 +5,27 @@
 {% block page_title %}Détails du véhicule: {{ vehicule.marque }} {{ vehicule.modele }}{% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-end align-items-center mb-3">
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <select name="period" class="form-select form-select-sm">
+            <option value="" {% if not period %}selected{% endif %}>Toutes</option>
+            <option value="month" {% if period == 'month' %}selected{% endif %}>Dernier mois</option>
+            <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
+            <option value="year" {% if period == 'year' %}selected{% endif %}>Dernière année</option>
+        </select>
+        <input type="date" name="start" class="form-control form-control-sm" value="{{ request.GET.start }}" placeholder="Du">
+        <input type="date" name="end" class="form-control form-control-sm" value="{{ request.GET.end }}" placeholder="Au">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i></button>
+    </form>
+    {% if period or request.GET.start or request.GET.end %}
+    <span class="ms-3 text-muted small">
+        Filtre appliqué
+        {% if request.GET.start %}du {{ request.GET.start }}{% endif %}
+        {% if request.GET.end %} au {{ request.GET.end }}{% endif %}
+        {% if period and not request.GET.start and not request.GET.end %} ({{ period }}){% endif %}
+    </span>
+    {% endif %}
+</div>
 <div class="row">
     <!-- Informations générales -->
     <div class="col-md-4">
@@ -94,12 +115,19 @@
     <!-- Documents administratifs -->
     <div class="col-md-8">
         <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-file-alt me-2"></i> Documents administratifs
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-file-alt me-2"></i> Documents administratifs
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'fleet_app:export_vehicule_documents_csv' vehicule.id_vehicule %}"><i class="fas fa-file-csv"></i> CSV</a>
+                    <button class="btn btn-sm btn-primary" type="button" onclick="exportTableToExcel('documentsTable', 'Documents_{{ vehicule.immatriculation }}')"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button class="btn btn-sm btn-danger" type="button" onclick="exportTableToPDF('documentsTable', 'Documents_{{ vehicule.immatriculation }}')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped">
+                    <table id="documentsTable" class="table table-striped">
                         <thead>
                             <tr>
                                 <th>Type</th>
@@ -188,7 +216,7 @@
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                    <button type="submit" name="add_document" class="btn btn-primary">Enregistrer</button>
                                 </div>
                             </form>
                         </div>
@@ -203,12 +231,19 @@
     <!-- Distances parcourues -->
     <div class="col-md-6">
         <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-road me-2"></i> Distances parcourues
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-road me-2"></i> Distances parcourues
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'fleet_app:export_vehicule_distances_csv' vehicule.id_vehicule %}"><i class="fas fa-file-csv"></i> CSV</a>
+                    <button class="btn btn-sm btn-primary" type="button" onclick="exportTableToExcel('distancesTable', 'Distances_{{ vehicule.immatriculation }}')"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button class="btn btn-sm btn-danger" type="button" onclick="exportTableToPDF('distancesTable', 'Distances_{{ vehicule.immatriculation }}')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-sm">
+                    <table id="distancesTable" class="table table-sm">
                         <thead>
                             <tr>
                                 <th>Période</th>
@@ -243,12 +278,55 @@
                     </table>
                 </div>
                 <div class="text-end mt-3">
-                    <a href="#" class="btn btn-sm btn-outline-primary">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#distanceModal">
                         <i class="fas fa-plus"></i> Ajouter
-                    </a>
+                    </button>
                     <a href="{% url 'fleet_app:kpi_distance' %}" class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-chart-line"></i> Voir KPI
                     </a>
+                </div>
+                <!-- Modal ajout distance -->
+                <div class="modal fade" id="distanceModal" tabindex="-1" aria-labelledby="distanceModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="distanceModalLabel">Ajouter une distance parcourue</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post">
+                                <div class="modal-body">
+                                    {% csrf_token %}
+                                    {{ distance_form.vehicule }}
+                                    <div class="mb-3">
+                                        <label for="{{ distance_form.date_debut.id_for_label }}" class="form-label">Date début</label>
+                                        {{ distance_form.date_debut }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ distance_form.date_fin.id_for_label }}" class="form-label">Date fin</label>
+                                        {{ distance_form.date_fin }}
+                                    </div>
+                                    <div class="row">
+                                        <div class="col">
+                                            <label for="{{ distance_form.km_debut.id_for_label }}" class="form-label">Km début</label>
+                                            {{ distance_form.km_debut }}
+                                        </div>
+                                        <div class="col">
+                                            <label for="{{ distance_form.km_fin.id_for_label }}" class="form-label">Km fin</label>
+                                            {{ distance_form.km_fin }}
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label for="{{ distance_form.distance_parcourue.id_for_label }}" class="form-label">Distance (km)</label>
+                                        {{ distance_form.distance_parcourue }}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" name="add_distance" class="btn btn-primary">Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -257,12 +335,19 @@
     <!-- Consommation de carburant -->
     <div class="col-md-6">
         <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-gas-pump me-2"></i> Consommation de carburant
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-gas-pump me-2"></i> Consommation de carburant
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'fleet_app:export_vehicule_consommations_csv' vehicule.id_vehicule %}"><i class="fas fa-file-csv"></i> CSV</a>
+                    <button class="btn btn-sm btn-primary" type="button" onclick="exportTableToExcel('consommationsTable', 'Consommations_{{ vehicule.immatriculation }}')"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button class="btn btn-sm btn-danger" type="button" onclick="exportTableToPDF('consommationsTable', 'Consommations_{{ vehicule.immatriculation }}')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-sm">
+                    <table id="consommationsTable" class="table table-sm">
                         <thead>
                             <tr>
                                 <th>Période</th>
@@ -283,8 +368,8 @@
                                 {% for consommation in consommations %}
                                 <tr>
                                     <td>{{ consommation.date_plein1 }} - {{ consommation.date_plein2 }}</td>
-                                    <td>{{ consommation.litres_consommes }} L</td>
                                     <td>{{ consommation.distance_parcourue }} km</td>
+                                    <td>{{ consommation.litres_consommes }} L</td>
                                     <td>{{ consommation.consommation_calculee|floatformat:1 }} L/100km</td>
                                 </tr>
                                 {% empty %}
@@ -297,12 +382,67 @@
                     </table>
                 </div>
                 <div class="text-end mt-3">
-                    <a href="#" class="btn btn-sm btn-outline-primary">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#consommationModal">
                         <i class="fas fa-plus"></i> Ajouter
-                    </a>
+                    </button>
                     <a href="{% url 'fleet_app:kpi_consommation' %}" class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-chart-line"></i> Voir KPI
                     </a>
+                </div>
+                <!-- Modal ajout consommation -->
+                <div class="modal fade" id="consommationModal" tabindex="-1" aria-labelledby="consommationModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="consommationModalLabel">Ajouter une consommation de carburant</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post">
+                                <div class="modal-body">
+                                    {% csrf_token %}
+                                    {{ consommation_form.vehicule }}
+                                    <div class="row">
+                                        <div class="col">
+                                            <label for="{{ consommation_form.date_plein1.id_for_label }}" class="form-label">Date plein 1</label>
+                                            {{ consommation_form.date_plein1 }}
+                                        </div>
+                                        <div class="col">
+                                            <label for="{{ consommation_form.km_plein1.id_for_label }}" class="form-label">Km plein 1</label>
+                                            {{ consommation_form.km_plein1 }}
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col">
+                                            <label for="{{ consommation_form.date_plein2.id_for_label }}" class="form-label">Date plein 2</label>
+                                            {{ consommation_form.date_plein2 }}
+                                        </div>
+                                        <div class="col">
+                                            <label for="{{ consommation_form.km_plein2.id_for_label }}" class="form-label">Km plein 2</label>
+                                            {{ consommation_form.km_plein2 }}
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col">
+                                            <label for="{{ consommation_form.litres_ajoutes.id_for_label }}" class="form-label">Litres ajoutés</label>
+                                            {{ consommation_form.litres_ajoutes }}
+                                        </div>
+                                        <div class="col">
+                                            <label for="{{ consommation_form.distance_parcourue.id_for_label }}" class="form-label">Distance (km)</label>
+                                            {{ consommation_form.distance_parcourue }}
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <label for="{{ consommation_form.consommation_100km.id_for_label }}" class="form-label">Conso. aux 100km</label>
+                                        {{ consommation_form.consommation_100km }}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" name="add_consommation" class="btn btn-primary">Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -313,12 +453,19 @@
     <!-- Coûts de fonctionnement -->
     <div class="col-md-6">
         <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-money-bill-wave me-2"></i> Coûts de fonctionnement
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-money-bill-wave me-2"></i> Coûts de fonctionnement
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'fleet_app:export_vehicule_couts_csv' vehicule.id_vehicule %}"><i class="fas fa-file-csv"></i> CSV</a>
+                    <button class="btn btn-sm btn-primary" type="button" onclick="exportTableToExcel('coutsTable', 'Couts_{{ vehicule.immatriculation }}')"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button class="btn btn-sm btn-danger" type="button" onclick="exportTableToPDF('coutsTable', 'Couts_{{ vehicule.immatriculation }}')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-sm">
+                    <table id="coutsTable" class="table table-sm">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -353,9 +500,56 @@
                     </table>
                 </div>
                 <div class="text-end mt-3">
-                    <a href="#" class="btn btn-sm btn-outline-primary">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#coutModal">
                         <i class="fas fa-plus"></i> Ajouter
-                    </a>
+                    </button>
+                </div>
+                <!-- Modal ajout coût de fonctionnement -->
+                <div class="modal fade" id="coutModal" tabindex="-1" aria-labelledby="coutModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="coutModalLabel">Ajouter un coût de fonctionnement</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post">
+                                <div class="modal-body">
+                                    {% csrf_token %}
+                                    {{ cout_form.vehicule }}
+                                    <div class="mb-3">
+                                        <label for="{{ cout_form.date.id_for_label }}" class="form-label">Date</label>
+                                        {{ cout_form.date }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ cout_form.type_cout.id_for_label }}" class="form-label">Type</label>
+                                        {{ cout_form.type_cout }}
+                                    </div>
+                                    <div class="row">
+                                        <div class="col">
+                                            <label for="{{ cout_form.montant.id_for_label }}" class="form-label">Montant</label>
+                                            {{ cout_form.montant }}
+                                        </div>
+                                        <div class="col">
+                                            <label for="{{ cout_form.kilometrage.id_for_label }}" class="form-label">Kilométrage</label>
+                                            {{ cout_form.kilometrage }}
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label for="{{ cout_form.cout_par_km.id_for_label }}" class="form-label">Coût/km</label>
+                                        {{ cout_form.cout_par_km }}
+                                    </div>
+                                    <div class="mt-3">
+                                        <label for="{{ cout_form.description.id_for_label }}" class="form-label">Description</label>
+                                        {{ cout_form.description }}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" name="add_cout" class="btn btn-primary">Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -363,9 +557,15 @@
     
     <!-- Alertes -->
     <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-bell me-2"></i> Alertes actives
+        <div class="card mb-4" id="alertesContainer">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-bell me-2"></i> Alertes actives
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'fleet_app:export_vehicule_alertes_csv' vehicule.id_vehicule %}"><i class="fas fa-file-csv"></i> CSV</a>
+                    <button class="btn btn-sm btn-danger" type="button" onclick="exportTableToPDF('alertesContainer', 'Alertes_{{ vehicule.immatriculation }}')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
             </div>
             <div class="card-body">
                 {% if alertes_error %}
@@ -395,14 +595,16 @@
                                                 <span class="badge bg-secondary">Faible</span>
                                             {% endif %}
                                         </small>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-success" title="Marquer comme résolu">
+                                        <form method="post" class="d-flex gap-2">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="alerte_id" value="{{ alerte.id }}">
+                                            <button type="submit" name="resolve_alerte" class="btn btn-outline-success btn-sm" title="Marquer comme résolu">
                                                 <i class="fas fa-check"></i>
                                             </button>
-                                            <button class="btn btn-outline-secondary" title="Ignorer">
+                                            <button type="submit" name="ignore_alerte" class="btn btn-outline-secondary btn-sm" title="Ignorer">
                                                 <i class="fas fa-eye-slash"></i>
                                             </button>
-                                        </div>
+                                        </form>
                                     </div>
                                 </div>
                             {% endfor %}
@@ -412,9 +614,42 @@
                     {% endif %}
                 {% endif %}
                 <div class="text-end mt-3">
-                    <a href="#" class="btn btn-sm btn-outline-primary">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#alerteModal">
                         <i class="fas fa-plus"></i> Créer une alerte
-                    </a>
+                    </button>
+                </div>
+                <!-- Modal création alerte -->
+                <div class="modal fade" id="alerteModal" tabindex="-1" aria-labelledby="alerteModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="alerteModalLabel">Créer une alerte</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post">
+                                <div class="modal-body">
+                                    {% csrf_token %}
+                                    {{ alerte_form.vehicule }}
+                                    <div class="mb-3">
+                                        <label for="{{ alerte_form.titre.id_for_label }}" class="form-label">Titre</label>
+                                        {{ alerte_form.titre }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ alerte_form.description.id_for_label }}" class="form-label">Description</label>
+                                        {{ alerte_form.description }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ alerte_form.niveau.id_for_label }}" class="form-label">Niveau</label>
+                                        {{ alerte_form.niveau }}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" name="add_alerte" class="btn btn-primary">Créer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

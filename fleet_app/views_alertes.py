@@ -3,23 +3,117 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
 from .models_alertes import Alerte
 from .models import Vehicule, DistanceParcourue, ConsommationCarburant, DisponibiliteVehicule, UtilisationVehicule, IncidentSecurite, CoutFonctionnement, CoutFinancier
 
 @login_required
 def alerte_list(request):
     """
-    Vue pour afficher la liste des alertes actives et résolues
+    Vue pour afficher la liste des alertes actives et résolues avec recherche
     """
-    alertes_actives = Alerte.objects.filter(statut='Active').order_by('-date_creation')
-    alertes_resolues = Alerte.objects.filter(statut='Résolue').order_by('-date_resolution')
+    user = request.user
+    
+    # Filtres de recherche
+    search_text = request.GET.get('search_text', '').strip()
+    search_niveau = request.GET.get('search_niveau', '').strip()
+    search_statut = request.GET.get('search_statut', '').strip()
+    search_vehicule = request.GET.get('search_vehicule', '').strip()
+    date_creation_min = request.GET.get('date_creation_min', '').strip()
+    date_creation_max = request.GET.get('date_creation_max', '').strip()
+    
+    # Requête de base avec filtrage par utilisateur
+    qs_actives = Alerte.objects.filter(user=user, statut='Active').select_related('vehicule')
+    qs_resolues = Alerte.objects.filter(user=user, statut__in=['Résolue', 'Ignorée']).select_related('vehicule')
+    
+    # Application des filtres pour les alertes actives
+    if search_text:
+        qs_actives = qs_actives.filter(
+            Q(titre__icontains=search_text) |
+            Q(description__icontains=search_text) |
+            Q(type_alerte__icontains=search_text)
+        )
+    
+    if search_niveau:
+        qs_actives = qs_actives.filter(niveau_urgence=search_niveau)
+    
+    if search_vehicule:
+        qs_actives = qs_actives.filter(
+            Q(vehicule__immatriculation__icontains=search_vehicule) |
+            Q(vehicule__marque__icontains=search_vehicule) |
+            Q(vehicule__modele__icontains=search_vehicule)
+        )
+    
+    if date_creation_min:
+        qs_actives = qs_actives.filter(date_creation__gte=date_creation_min)
+    
+    if date_creation_max:
+        qs_actives = qs_actives.filter(date_creation__lte=date_creation_max)
+    
+    # Application des mêmes filtres pour les alertes résolues
+    if search_text:
+        qs_resolues = qs_resolues.filter(
+            Q(titre__icontains=search_text) |
+            Q(description__icontains=search_text) |
+            Q(type_alerte__icontains=search_text)
+        )
+    
+    if search_niveau:
+        qs_resolues = qs_resolues.filter(niveau_urgence=search_niveau)
+    
+    if search_vehicule:
+        qs_resolues = qs_resolues.filter(
+            Q(vehicule__immatriculation__icontains=search_vehicule) |
+            Q(vehicule__marque__icontains=search_vehicule) |
+            Q(vehicule__modele__icontains=search_vehicule)
+        )
+    
+    if date_creation_min:
+        qs_resolues = qs_resolues.filter(date_creation__gte=date_creation_min)
+    
+    if date_creation_max:
+        qs_resolues = qs_resolues.filter(date_creation__lte=date_creation_max)
+    
+    # Tri
+    alertes_actives = qs_actives.order_by('-date_creation')
+    alertes_resolues = qs_resolues.order_by('-date_creation')
+    
+    # Pagination
+    paginator_actives = Paginator(alertes_actives, 10)
+    page_number_actives = request.GET.get('page_actives', 1)
+    alertes_actives_page = paginator_actives.get_page(page_number_actives)
+    
+    paginator_resolues = Paginator(alertes_resolues, 10)
+    page_number_resolues = request.GET.get('page_resolues', 1)
+    alertes_resolues_page = paginator_resolues.get_page(page_number_resolues)
+    
+    # Données pour les filtres
+    vehicules = Vehicule.objects.filter(user=user).values_list('immatriculation', flat=True).distinct()
+    niveaux_urgence = Alerte.NIVEAU_CHOICES if hasattr(Alerte, 'NIVEAU_CHOICES') else [
+        ('Critique', 'Critique'),
+        ('Élevé', 'Élevé'),
+        ('Moyen', 'Moyen'),
+        ('Faible', 'Faible')
+    ]
     
     context = {
-        'alertes_actives': alertes_actives,
-        'alertes_resolues': alertes_resolues,
+        'alertes': alertes_actives_page,  # Pour compatibilité avec le template existant
+        'alertes_historique': alertes_resolues_page,  # Pour compatibilité avec le template existant
+        'alertes_actives': alertes_actives_page,
+        'alertes_resolues': alertes_resolues_page,
         'active_count': alertes_actives.count(),
         'resolved_count': alertes_resolues.count(),
+        'vehicules': vehicules,
+        'niveaux_urgence': niveaux_urgence,
+        'search_text': search_text,
+        'search_niveau': search_niveau,
+        'search_statut': search_statut,
+        'search_vehicule': search_vehicule,
+        'date_creation_min': date_creation_min,
+        'date_creation_max': date_creation_max,
     }
     
     return render(request, 'fleet_app/alerte_list.html', context)
@@ -153,3 +247,84 @@ def get_alertes_kpi(request):
     }
     
     return JsonResponse(data)
+
+
+@login_required
+def alerte_search_ajax(request):
+    """Vue AJAX pour la recherche dynamique des alertes"""
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Requête non autorisée'}, status=400)
+    
+    user = request.user
+    
+    # Récupération des paramètres de recherche
+    search_text = request.GET.get('search_text', '').strip()
+    search_niveau = request.GET.get('search_niveau', '').strip()
+    search_statut = request.GET.get('search_statut', '').strip()
+    search_vehicule = request.GET.get('search_vehicule', '').strip()
+    date_creation_min = request.GET.get('date_creation_min', '').strip()
+    date_creation_max = request.GET.get('date_creation_max', '').strip()
+    section = request.GET.get('section', 'actives')  # 'actives' ou 'resolues'
+    
+    # Requête de base selon la section
+    if section == 'actives':
+        qs = Alerte.objects.filter(user=user, statut='Active').select_related('vehicule')
+    else:
+        qs = Alerte.objects.filter(user=user, statut__in=['Résolue', 'Ignorée']).select_related('vehicule')
+    
+    # Application des filtres
+    if search_text:
+        qs = qs.filter(
+            Q(titre__icontains=search_text) |
+            Q(description__icontains=search_text) |
+            Q(type_alerte__icontains=search_text)
+        )
+    
+    if search_niveau:
+        qs = qs.filter(niveau_urgence=search_niveau)
+    
+    if search_vehicule:
+        qs = qs.filter(
+            Q(vehicule__immatriculation__icontains=search_vehicule) |
+            Q(vehicule__marque__icontains=search_vehicule) |
+            Q(vehicule__modele__icontains=search_vehicule)
+        )
+    
+    if date_creation_min:
+        try:
+            qs = qs.filter(date_creation__gte=date_creation_min)
+        except:
+            pass
+    
+    if date_creation_max:
+        try:
+            qs = qs.filter(date_creation__lte=date_creation_max)
+        except:
+            pass
+    
+    # Tri
+    qs = qs.order_by('-date_creation')
+    
+    # Pagination
+    paginator = Paginator(qs, 10)
+    page_number = request.GET.get('page', 1)
+    alertes = paginator.get_page(page_number)
+    
+    # Rendu du template partiel selon la section
+    if section == 'actives':
+        template_name = 'fleet_app/alertes/alertes_actives_rows.html'
+    else:
+        template_name = 'fleet_app/alertes/alertes_resolues_rows.html'
+    
+    html = render_to_string(template_name, {
+        'alertes': alertes
+    }, request=request)
+    
+    return JsonResponse({
+        'html': html,
+        'has_next': alertes.has_next(),
+        'has_previous': alertes.has_previous(),
+        'page_number': alertes.number,
+        'num_pages': alertes.paginator.num_pages,
+        'count': alertes.paginator.count
+    })

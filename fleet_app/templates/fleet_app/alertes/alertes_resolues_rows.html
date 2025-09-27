@@ -1,0 +1,50 @@
+{% for alerte in alertes %}
+<tr>
+    <td>{{ alerte.date_creation|date:"Y-m-d" }}</td>
+    <td>{{ alerte.type_alerte|default:alerte.titre }}</td>
+    <td>
+        {% if alerte.vehicule %}
+            <a href="{% url 'fleet_app:vehicule_detail' alerte.vehicule.id_vehicule %}" class="text-decoration-none">
+                {{ alerte.vehicule }}
+            </a>
+        {% else %}
+            <span class="text-muted">Non spécifié</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alerte.niveau_urgence == 'Critique' %}
+            <span class="badge bg-danger">Critique</span>
+        {% elif alerte.niveau_urgence == 'Élevé' %}
+            <span class="badge bg-warning">Élevé</span>
+        {% elif alerte.niveau_urgence == 'Moyen' %}
+            <span class="badge bg-info">Moyen</span>
+        {% else %}
+            <span class="badge bg-secondary">Faible</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alerte.statut == 'Résolue' %}
+            <span class="badge bg-success">Résolu</span>
+        {% elif alerte.statut == 'Ignorée' %}
+            <span class="badge bg-secondary">Ignoré</span>
+        {% endif %}
+    </td>
+    <td>
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-sm btn-outline-secondary btn-details" data-id="{{ alerte.pk }}" title="Voir détails">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger btn-supprimer-historique" data-id="{{ alerte.pk }}" title="Supprimer">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="6" class="text-center py-3">
+        <i class="fas fa-search text-muted fa-2x mb-2"></i>
+        <p>Aucune alerte trouvée dans l'historique</p>
+    </td>
+</tr>
+{% endfor %}

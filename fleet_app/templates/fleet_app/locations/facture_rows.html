@@ -1,0 +1,36 @@
+{% for fac in factures %}
+<tr>
+  <td>
+    <input type="checkbox" class="form-check-input facture-checkbox" value="{{ fac.pk }}" data-numero="{{ fac.numero }}">
+  </td>
+  <td><strong>{{ fac.numero }}</strong></td>
+  <td>{{ fac.date }}</td>
+  <td>{{ fac.location.vehicule }}</td>
+  <td>{{ fac.montant_ttc|floatformat:0 }} GNF</td>
+  <td>{{ fac.jours_travail_mois }}</td>
+  <td>{{ fac.jours_non_travail_mois }}</td>
+  <td>
+    <span class="badge bg-{% if fac.statut == 'Payée' %}success{% elif fac.statut == 'Brouillon' %}warning text-dark{% else %}danger{% endif %}">
+      {{ fac.statut }}
+    </span>
+  </td>
+  <td>
+    <div class="btn-group btn-group-sm" role="group">
+      <a href="{% url 'fleet_app:facture_location_detail' fac.pk %}" class="btn btn-outline-info" title="Voir">
+        <i class="fas fa-eye"></i>
+      </a>
+      <a href="{% url 'fleet_app:facture_location_pdf' fac.pk %}" class="btn btn-outline-success" title="Télécharger PDF">
+        <i class="fas fa-file-pdf"></i>
+      </a>
+      <a href="{% url 'fleet_app:facture_location_update' fac.pk %}" class="btn btn-outline-warning" title="Modifier">
+        <i class="fas fa-edit"></i>
+      </a>
+      <a href="{% url 'fleet_app:facture_location_delete' fac.pk %}" class="btn btn-outline-danger" title="Supprimer">
+        <i class="fas fa-trash"></i>
+      </a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="9" class="text-center text-muted">Aucune facture trouvée.</td></tr>
+{% endfor %}

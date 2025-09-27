@@ -125,6 +125,19 @@
                             <i class="fas fa-edit"></i> Compléter maintenant
                         </a>
                     </div>
+                    <!-- Affichage en lecture seule des informations de départ pour cohérence -->
+                    <div class="table-responsive mt-3">
+                        <table class="table table-bordered">
+                            <tr>
+                                <th style="width: 30%">Kilométrage au départ</th>
+                                <td>{{ feuille_route.km_depart }} km</td>
+                            </tr>
+                            <tr>
+                                <th>Carburant au départ</th>
+                                <td>{{ feuille_route.carburant_depart }} L</td>
+                            </tr>
+                        </table>
+                    </div>
                     {% endif %}
                 </div>
             </div>
