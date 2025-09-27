@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import os
 from dotenv import load_dotenv
 
@@ -33,20 +33,20 @@ INSTALLED_APPS = [
     'widget_tweaks',
 ]
 
-# Add SSL server for development HTTPS
 # DISABLED FOR DEVELOPMENT - Remove sslserver to avoid HTTPS confusion
 # if DEBUG:
 #     INSTALLED_APPS.append('sslserver')
 
 MIDDLEWARE = [
-    # 'django.middleware.security.SecurityMiddleware',  # DISABLED - Security protection
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',  # ENABLED - Required for form submissions
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',  # DISABLED - Clickjacking protection
-    'fleet_app.middleware.synchronisation_middleware.SynchronisationMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'fleet_app.middleware.TenantMiddleware',
+    'fleet_app.middleware.SynchronisationMiddleware',
 ]
 
 ROOT_URLCONF = 'fleet_management.urls'

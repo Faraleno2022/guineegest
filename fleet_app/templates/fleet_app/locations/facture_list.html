@@ -1,0 +1,328 @@
+{% extends 'fleet_app/base.html' %}
+{% block title %}Factures - Locations{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-file-invoice"></i> Factures</span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary me-2" id="badgeTotal">Total: {{ total|floatformat:0 }} GNF</span>
+        <div class="input-group input-group-sm" style="width: auto;">
+          <select class="form-select" id="genMonth" title="Mois">
+            <option value="1">Jan</option>
+            <option value="2">Fév</option>
+            <option value="3">Mar</option>
+            <option value="4">Avr</option>
+            <option value="5">Mai</option>
+            <option value="6">Juin</option>
+            <option value="7">Juil</option>
+            <option value="8">Août</option>
+            <option value="9">Sep</option>
+            <option value="10">Oct</option>
+            <option value="11">Nov</option>
+            <option value="12">Déc</option>
+          </select>
+          <input type="number" class="form-control" id="genYear" placeholder="Année" min="2000" max="2100" style="width: 90px;">
+          <button class="btn btn-outline-success" id="btnGenMonthly" title="Générer/mettre à jour les factures du mois sélectionné">
+            <i class="fas fa-cogs"></i>
+          </button>
+        </div>
+        <button class="btn btn-success btn-sm" id="btnBatchPdf" disabled title="Générer PDF des factures sélectionnées">
+          <i class="fas fa-file-pdf"></i> PDF Lot
+        </button>
+        <a href="{% url 'fleet_app:facture_location_create' %}" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus"></i> Nouvelle Facture
+        </a>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#searchPanel" aria-expanded="false">
+          <i class="fas fa-search"></i> Recherche avancée
+        </button>
+        <span class="ms-2 text-muted" id="resultCount"></span>
+      </div>
+      <div class="collapse mb-3" id="searchPanel">
+        <div class="border rounded p-3 bg-light">
+          <div class="row g-2">
+            <div class="col-md-3">
+              <label class="form-label">Numéro</label>
+              <input type="text" class="form-control form-control-sm" id="searchNumero" placeholder="Numéro de facture">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Statut</label>
+              <select class="form-select form-select-sm" id="searchStatut">
+                <option value="">Tous</option>
+                <option value="Brouillon">Brouillon</option>
+                <option value="Payée">Payée</option>
+                <option value="Annulée">Annulée</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Véhicule</label>
+              <input type="text" class="form-control form-control-sm" id="searchVehicule" placeholder="Immatriculation, marque, modèle">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Date min</label>
+              <input type="date" class="form-control form-control-sm" id="dateMin">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Date max</label>
+              <input type="date" class="form-control form-control-sm" id="dateMax">
+            </div>
+            <div class="col-md-2 mt-4">
+              <button class="btn btn-sm btn-outline-primary w-100" id="btnClearFilters"><i class="fas fa-eraser"></i> Effacer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th width="30">
+                <input type="checkbox" id="selectAll" class="form-check-input" title="Tout sélectionner">
+              </th>
+              <th>Numéro</th>
+              <th>Date</th>
+              <th>Véhicule</th>
+              <th>Montant TTC</th>
+              <th>Jours (trav.)</th>
+              <th>Jours (non trav.)</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="facturesBody">
+            {% include 'fleet_app/locations/facture_rows.html' with factures=factures %}
+          </tbody>
+        </table>
+        <div class="d-flex justify-content-between align-items-center" id="paginationBar">
+          <button class="btn btn-sm btn-outline-secondary" id="btnPrev" disabled>
+            <i class="fas fa-chevron-left"></i> Précédent
+          </button>
+          <span class="text-muted" id="pageInfo"></span>
+          <button class="btn btn-sm btn-outline-secondary" id="btnNext" disabled>
+            Suivant <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const $numero = document.getElementById('searchNumero');
+    const $statut = document.getElementById('searchStatut');
+    const $veh = document.getElementById('searchVehicule');
+    const $dmin = document.getElementById('dateMin');
+    const $dmax = document.getElementById('dateMax');
+    const $clear = document.getElementById('btnClearFilters');
+    const $tbody = document.getElementById('facturesBody');
+    const $count = document.getElementById('resultCount');
+    const $badgeTotal = document.getElementById('badgeTotal');
+    const $btnPrev = document.getElementById('btnPrev');
+    const $btnNext = document.getElementById('btnNext');
+    const $pageInfo = document.getElementById('pageInfo');
+    const $genMonth = document.getElementById('genMonth');
+    const $genYear = document.getElementById('genYear');
+    const $btnGenMonthly = document.getElementById('btnGenMonthly');
+
+    let timer = null;
+    let currentPage = 1;
+    let numPages = 1;
+    function debounceSearch() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => runSearch({ page: 1 }), 300);
+    }
+
+    function buildParams(extra) {
+      const params = new URLSearchParams();
+      if ($numero.value.trim()) params.set('search_numero', $numero.value.trim());
+      if ($statut.value) params.set('search_statut', $statut.value);
+      if ($veh.value.trim()) params.set('search_vehicule', $veh.value.trim());
+      if ($dmin.value) params.set('date_min', $dmin.value);
+      if ($dmax.value) params.set('date_max', $dmax.value);
+      if (extra && extra.page) params.set('page', extra.page);
+      return params.toString();
+    }
+
+    async function runSearch(extra) {
+      const qs = buildParams(extra);
+      const url = `{% url 'fleet_app:facture_search_ajax' %}?` + qs;
+      try {
+        const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        $tbody.innerHTML = data.html;
+        if (data.count !== undefined) {
+          $count.textContent = data.count + ' résultat(s)';
+        }
+        if (data.total !== undefined) {
+          $badgeTotal.textContent = 'Total: ' + Math.round(data.total).toLocaleString('fr-FR') + ' GNF';
+        }
+        // Update pagination
+        currentPage = data.page_number || 1;
+        numPages = data.num_pages || 1;
+        $btnPrev.disabled = !(data.has_previous);
+        $btnNext.disabled = !(data.has_next);
+        $pageInfo.textContent = `Page ${currentPage} / ${numPages}`;
+      } catch (e) { console.error(e); }
+    }
+
+    // Prefill current month/year
+    (function initMonthYear() {
+      const now = new Date();
+      $genMonth.value = (now.getMonth() + 1).toString();
+      $genYear.value = now.getFullYear().toString();
+    })();
+
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    $btnGenMonthly.addEventListener('click', async function() {
+      const month = parseInt($genMonth.value || '0', 10);
+      const year = parseInt($genYear.value || '0', 10);
+      if (!month || !year) { alert('Veuillez choisir un mois et une année valides.'); return; }
+      try {
+        const resp = await fetch(`{% url 'fleet_app:generer_factures_mensuelles' %}`, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+          },
+          body: new URLSearchParams({ month: month.toString(), year: year.toString() })
+        });
+        const data = await resp.json();
+        if (data && data.success) {
+          // Rafraîchir la liste et le total
+          await runSearch({ page: 1 });
+          alert(data.message + `\nTotal du mois: ${Math.round(data.total_mois).toLocaleString('fr-FR')} GNF`);
+        } else {
+          alert((data && data.message) || 'Erreur lors de la génération des factures.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Erreur réseau lors de la génération des factures.');
+      }
+    });
+
+    [$numero, $statut, $veh, $dmin, $dmax].forEach(el => {
+      if (!el) return;
+      const evt = (el.tagName === 'INPUT') ? 'input' : 'change';
+      el.addEventListener(evt, debounceSearch);
+    });
+
+    $clear.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      [$numero, $statut, $veh, $dmin, $dmax].forEach(el => { if (el) el.value = ''; });
+      runSearch({ page: 1 });
+    });
+
+    $btnPrev.addEventListener('click', function() {
+      if (currentPage > 1) runSearch({ page: currentPage - 1 });
+    });
+    $btnNext.addEventListener('click', function() {
+      if (currentPage < numPages) runSearch({ page: currentPage + 1 });
+    });
+
+    // Gestion des cases à cocher et PDF en lot
+    const $selectAll = document.getElementById('selectAll');
+    const $btnBatchPdf = document.getElementById('btnBatchPdf');
+    
+    function updateBatchPdfButton() {
+      const checkedBoxes = document.querySelectorAll('.facture-checkbox:checked');
+      $btnBatchPdf.disabled = checkedBoxes.length === 0;
+      $btnBatchPdf.textContent = checkedBoxes.length > 0 ? 
+        `PDF Lot (${checkedBoxes.length})` : 'PDF Lot';
+    }
+    
+    // Gestion du "Tout sélectionner"
+    $selectAll.addEventListener('change', function() {
+      const checkboxes = document.querySelectorAll('.facture-checkbox');
+      checkboxes.forEach(cb => cb.checked = this.checked);
+      updateBatchPdfButton();
+    });
+    
+    // Gestion des cases individuelles
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('facture-checkbox')) {
+        updateBatchPdfButton();
+        
+        // Mettre à jour la case "Tout sélectionner"
+        const allCheckboxes = document.querySelectorAll('.facture-checkbox');
+        const checkedCheckboxes = document.querySelectorAll('.facture-checkbox:checked');
+        $selectAll.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+        $selectAll.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+      }
+    });
+    
+    // Génération PDF en lot
+    $btnBatchPdf.addEventListener('click', async function() {
+      const checkedBoxes = document.querySelectorAll('.facture-checkbox:checked');
+      if (checkedBoxes.length === 0) {
+        alert('Veuillez sélectionner au moins une facture.');
+        return;
+      }
+      
+      const factureIds = Array.from(checkedBoxes).map(cb => cb.value);
+      const numeros = Array.from(checkedBoxes).map(cb => cb.dataset.numero);
+      
+      if (!confirm(`Générer un PDF pour ${factureIds.length} facture(s) ?\n${numeros.join(', ')}`)) {
+        return;
+      }
+      
+      try {
+        // Créer un formulaire pour envoyer les IDs
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "fleet_app:factures_batch_pdf" %}';
+        form.style.display = 'none';
+        
+        // Ajouter le token CSRF
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCookie('csrftoken');
+        form.appendChild(csrfInput);
+        
+        // Ajouter les IDs des factures
+        factureIds.forEach(id => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'facture_ids[]';
+          input.value = id;
+          form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+        
+      } catch (e) {
+        console.error(e);
+        alert('Erreur lors de la génération du PDF.');
+      }
+    });
+
+    // Initial load
+    runSearch({ page: 1 });
+  })();
+</script>
+{% endblock %}

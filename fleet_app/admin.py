@@ -21,6 +21,23 @@ from .models_entreprise import (
 
 # Enregistrement des modèles dans l'administration Django
 
+class UserOwnedAdminMixin:
+    """Restreint l'accès aux objets de l'utilisateur et renseigne le champ user à l'enregistrement."""
+    user_field_name = 'user'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Si le modèle a un champ user, filtrer par request.user
+        if hasattr(self.model, self.user_field_name):
+            return qs.filter(**{self.user_field_name: request.user})
+        return qs
+
+    def save_model(self, request, obj, form, change):
+        # Renseigner automatiquement le user s'il existe sur le modèle
+        if hasattr(obj, self.user_field_name) and getattr(obj, self.user_field_name) is None:
+            setattr(obj, self.user_field_name, request.user)
+        super().save_model(request, obj, form, change)
+
 @admin.register(Vehicule)
 class VehiculeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = ('id_vehicule', 'immatriculation', 'marque', 'modele', 'type_moteur', 'categorie', 'statut_actuel')
@@ -128,25 +145,6 @@ class PersonnePhysiqueAdmin(admin.ModelAdmin):
 # ==========================
 # Administration Entreprise
 # ==========================
-
-class UserOwnedAdminMixin:
-    """Restreint l'accès aux objets de l'utilisateur et renseigne le champ user à l'enregistrement."""
-    user_field_name = 'user'
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        # Si le modèle a un champ user, filtrer par request.user
-        if hasattr(self.model, self.user_field_name):
-            return qs.filter(**{self.user_field_name: request.user})
-        return qs
-
-    def save_model(self, request, obj, form, change):
-        # Renseigner automatiquement le user s'il existe sur le modèle
-        if hasattr(obj, self.user_field_name) and getattr(obj, self.user_field_name) is None:
-            setattr(obj, self.user_field_name, request.user)
-        super().save_model(request, obj, form, change)
-
-
 @admin.register(Employe)
 class EmployeAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_display = (

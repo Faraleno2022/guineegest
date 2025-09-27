@@ -1,0 +1,696 @@
+{% extends 'fleet_app/base.html' %}
+
+{% block title %}Statistiques Détaillées - {{ vehicule.immatriculation }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-car"></i> {{ vehicule.immatriculation }} - {{ vehicule.marque }} {{ vehicule.modele }}
+                    </h4>
+                    <div>
+                        <a href="{% url 'fleet_app:vehicule_stats_dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Période :</strong> {{ start_date }} au {{ end_date }} ({{ stats.total_jours }} jours)</p>
+                            <p><strong>Statut :</strong> 
+                                <span class="badge bg-{% if vehicule.statut == 'Actif' %}success{% elif vehicule.statut == 'En entretien' %}warning{% else %}danger{% endif %}">
+                                    {{ vehicule.statut }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Type :</strong> {{ vehicule.type_vehicule }}</p>
+                            <p><strong>Année :</strong> {{ vehicule.annee_fabrication|default:'-' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques principales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                    <h3>{{ stats.jours_actifs }}</h3>
+                    <p>Jours Actifs</p>
+                    <small>{{ stats.pourcentage_actif }}% du temps</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning text-dark">
+                <div class="card-body">
+                    <i class="fas fa-tools fa-2x mb-2"></i>
+                    <h3>{{ stats.jours_entretien }}</h3>
+                    <p>Jours Entretien</p>
+                    <small>{{ stats.pourcentage_entretien }}% du temps</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <i class="fas fa-times-circle fa-2x mb-2"></i>
+                    <h3>{{ stats.jours_hors_service }}</h3>
+                    <p>Jours H.S.</p>
+                    <small>{{ stats.pourcentage_hs }}% du temps</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <i class="fas fa-money-bill fa-2x mb-2"></i>
+                    <h3>{{ stats.cout_par_jour|floatformat:0 }}</h3>
+                    <p>Coût/Jour (GNF)</p>
+                    <small>Coût d'exploitation</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détails financiers -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="fas fa-wrench"></i> Coûts d'Entretien</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-warning">{{ stats.cout_entretien|floatformat:0 }}</h4>
+                                <small>Entretien Direct (GNF)</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-info">{{ stats.valeur_pieces|floatformat:0 }}</h4>
+                                <small>Pièces Détachées (GNF)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{ stats.pieces_utilisees }} pièces utilisées</h5>
+                                <p class="mb-0">
+                                    <strong>Total Entretien : {{ stats.cout_entretien|add:stats.valeur_pieces|floatformat:0 }} GNF</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-gas-pump"></i> Consommation Carburant</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ stats.consommation_litres|floatformat:1 }}</h4>
+                                <small>Litres Consommés</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-success">{{ stats.cout_carburant|floatformat:0 }}</h4>
+                                <small>Coût Total (GNF)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{ stats.consommation_moyenne|floatformat:2 }} L/jour</h5>
+                                <p class="mb-0">Consommation moyenne</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frais de location -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-money-check"></i> Frais de Location</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">{{ stats.frais_location.journalier|floatformat:0 }}</h4>
+                                <small>Frais Journaliers (GNF)</small>
+                                <p class="text-muted">{{ stats.frais_location.jours_factures }} jours facturés</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info">{{ stats.frais_location.mensuel|floatformat:0 }}</h4>
+                                <small>Estimation Mensuelle (GNF)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">{{ stats.frais_location.annuel|floatformat:0 }}</h4>
+                                <small>Estimation Annuelle (GNF)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ stats.cout_total|floatformat:0 }}</h4>
+                                <small>Coût Total Période (GNF)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique des statistiques mensuelles -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Évolution Mensuelle</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau récapitulatif mensuel -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-table"></i> Détail Mensuel</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#monthlyFilters" aria-expanded="false">
+                            <i class="fas fa-filter"></i> Filtres
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="exportMonthlyData()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtres mensuels -->
+                <div class="collapse" id="monthlyFilters">
+                    <div class="card-body border-bottom">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="monthFilter" class="form-label">Mois</label>
+                                <input type="text" class="form-control" id="monthFilter" placeholder="Rechercher un mois...">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="minDaysFilter" class="form-label">Jours min</label>
+                                <input type="number" class="form-control" id="minDaysFilter" placeholder="0" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="maxCostFilter" class="form-label">Coût max</label>
+                                <input type="number" class="form-control" id="maxCostFilter" placeholder="500000">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="sortMonthlyBy" class="form-label">Trier par</label>
+                                <select class="form-select" id="sortMonthlyBy">
+                                    <option value="">Chronologique</option>
+                                    <option value="jours_actifs">Jours Actifs</option>
+                                    <option value="cout_total">Coût Total</option>
+                                    <option value="frais_location">Frais Location</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="showOnlyActive" class="form-label">Affichage</label>
+                                <select class="form-select" id="showOnlyActive">
+                                    <option value="">Tous les mois</option>
+                                    <option value="active">Mois actifs seulement</option>
+                                    <option value="costly">Mois coûteux</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" onclick="applyMonthlyFilters()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Résumé des données filtrées -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-muted">Mois affichés</h6>
+                                <span class="h5" id="monthlyCount">{{ stats_mensuelles|length }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-muted">Total Jours Actifs</h6>
+                                <span class="h5 text-success" id="totalActiveDays">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-muted">Total Coûts</h6>
+                                <span class="h5 text-danger" id="totalCosts">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-muted">Moyenne/Mois</h6>
+                                <span class="h5 text-info" id="averageCost">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="monthlyTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="sortable-monthly" data-column="mois">
+                                        Mois <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-monthly" data-column="jours_actifs">
+                                        Jours Actifs <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-monthly" data-column="jours_entretien">
+                                        Jours Entretien <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-monthly" data-column="cout_entretien">
+                                        Coût Entretien <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-monthly" data-column="cout_carburant">
+                                        Coût Carburant <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-monthly" data-column="frais_location">
+                                        Frais Location <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-monthly" data-column="total">
+                                        Total <i class="fas fa-sort"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mois, data in stats_mensuelles.items %}
+                                <tr data-mois="{{ data.mois }}"
+                                    data-jours-actifs="{{ data.jours_actifs }}"
+                                    data-jours-entretien="{{ data.jours_entretien }}"
+                                    data-cout-entretien="{{ data.cout_entretien }}"
+                                    data-cout-carburant="{{ data.cout_carburant }}"
+                                    data-frais-location="{{ data.frais_location }}"
+                                    data-total="{{ data.cout_entretien|add:data.cout_carburant|add:data.frais_location }}">
+                                    <td><strong>{{ data.mois }}</strong></td>
+                                    <td><span class="badge bg-success">{{ data.jours_actifs }}</span></td>
+                                    <td><span class="badge bg-warning text-dark">{{ data.jours_entretien }}</span></td>
+                                    <td>{{ data.cout_entretien|floatformat:0 }} GNF</td>
+                                    <td>{{ data.cout_carburant|floatformat:0 }} GNF</td>
+                                    <td>{{ data.frais_location|floatformat:0 }} GNF</td>
+                                    <td><strong>{{ data.cout_entretien|add:data.cout_carburant|add:data.frais_location|floatformat:0 }} GNF</strong></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">Aucune donnée disponible pour cette période</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Données pour le graphique
+    const statsData = {{ stats_mensuelles|safe }};
+    const labels = [];
+    const joursActifs = [];
+    const joursEntretien = [];
+    const coutEntretien = [];
+    const coutCarburant = [];
+    const fraisLocation = [];
+
+    // Préparer les données
+    Object.keys(statsData).forEach(function(mois) {
+        const data = statsData[mois];
+        labels.push(data.mois);
+        joursActifs.push(data.jours_actifs);
+        joursEntretien.push(data.jours_entretien);
+        coutEntretien.push(data.cout_entretien);
+        coutCarburant.push(data.cout_carburant);
+        fraisLocation.push(data.frais_location);
+    });
+
+    // Configuration du graphique
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Jours Actifs',
+                    data: joursActifs,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Jours Entretien',
+                    data: joursEntretien,
+                    borderColor: 'rgb(255, 205, 86)',
+                    backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Coût Entretien (GNF)',
+                    data: coutEntretien,
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Mois'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Jours'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Coût (GNF)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+    
+    // Initialiser les filtres mensuels
+    initializeMonthlyFilters();
+    calculateMonthlySummary();
+});
+
+// Filtres pour le tableau mensuel
+function initializeMonthlyFilters() {
+    // Événements pour les filtres mensuels
+    document.getElementById('monthFilter')?.addEventListener('input', applyMonthlyFilters);
+    document.getElementById('minDaysFilter')?.addEventListener('input', debounceMonthly(applyMonthlyFilters, 300));
+    document.getElementById('maxCostFilter')?.addEventListener('input', debounceMonthly(applyMonthlyFilters, 300));
+    document.getElementById('sortMonthlyBy')?.addEventListener('change', applyMonthlySorting);
+    document.getElementById('showOnlyActive')?.addEventListener('change', applyMonthlyFilters);
+    
+    // Tri des colonnes mensuelles
+    document.querySelectorAll('.sortable-monthly').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            sortMonthlyTable(column);
+        });
+    });
+}
+
+function applyMonthlyFilters() {
+    const monthFilter = document.getElementById('monthFilter')?.value.toLowerCase() || '';
+    const minDays = parseInt(document.getElementById('minDaysFilter')?.value) || 0;
+    const maxCost = parseFloat(document.getElementById('maxCostFilter')?.value) || Infinity;
+    const showOnly = document.getElementById('showOnlyActive')?.value || '';
+    
+    const tbody = document.querySelector('#monthlyTable tbody');
+    if (!tbody) return;
+    
+    const rows = tbody.querySelectorAll('tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        if (!row.dataset.mois) return; // Skip empty rows
+        
+        const mois = row.dataset.mois.toLowerCase();
+        const joursActifs = parseInt(row.dataset.joursActifs) || 0;
+        const total = parseFloat(row.dataset.total) || 0;
+        
+        // Critères de filtrage
+        const matchesMonth = !monthFilter || mois.includes(monthFilter);
+        const matchesDays = joursActifs >= minDays;
+        const matchesCost = total <= maxCost;
+        
+        let matchesShow = true;
+        if (showOnly === 'active') {
+            matchesShow = joursActifs > 0;
+        } else if (showOnly === 'costly') {
+            matchesShow = total > 100000; // Seuil configurable
+        }
+        
+        // Afficher/masquer la ligne
+        if (matchesMonth && matchesDays && matchesCost && matchesShow) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Mettre à jour le compteur et les résumés
+    document.getElementById('monthlyCount').textContent = visibleCount;
+    calculateMonthlySummary();
+}
+
+function applyMonthlySorting() {
+    const sortBy = document.getElementById('sortMonthlyBy')?.value;
+    if (sortBy) {
+        sortMonthlyTable(sortBy);
+    }
+}
+
+let monthlySort = { column: null, direction: 'asc' };
+
+function sortMonthlyTable(column, toggleDirection = true) {
+    const tbody = document.querySelector('#monthlyTable tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => 
+        row.style.display !== 'none' && row.dataset.mois
+    );
+    
+    // Déterminer la direction du tri
+    if (toggleDirection) {
+        if (monthlySort.column === column) {
+            monthlySort.direction = monthlySort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            monthlySort.direction = column === 'mois' ? 'asc' : 'desc';
+        }
+        monthlySort.column = column;
+    }
+    
+    // Fonction de tri
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (column) {
+            case 'mois':
+                aValue = a.dataset.mois;
+                bValue = b.dataset.mois;
+                break;
+            case 'jours_actifs':
+                aValue = parseInt(a.dataset.joursActifs) || 0;
+                bValue = parseInt(b.dataset.joursActifs) || 0;
+                break;
+            case 'jours_entretien':
+                aValue = parseInt(a.dataset.joursEntretien) || 0;
+                bValue = parseInt(b.dataset.joursEntretien) || 0;
+                break;
+            case 'cout_entretien':
+                aValue = parseFloat(a.dataset.coutEntretien) || 0;
+                bValue = parseFloat(b.dataset.coutEntretien) || 0;
+                break;
+            case 'cout_carburant':
+                aValue = parseFloat(a.dataset.coutCarburant) || 0;
+                bValue = parseFloat(b.dataset.coutCarburant) || 0;
+                break;
+            case 'frais_location':
+                aValue = parseFloat(a.dataset.fraisLocation) || 0;
+                bValue = parseFloat(b.dataset.fraisLocation) || 0;
+                break;
+            case 'total':
+                aValue = parseFloat(a.dataset.total) || 0;
+                bValue = parseFloat(b.dataset.total) || 0;
+                break;
+            default:
+                return 0;
+        }
+        
+        // Comparaison
+        if (typeof aValue === 'string') {
+            aValue = aValue.toLowerCase();
+            bValue = bValue.toLowerCase();
+        }
+        
+        if (aValue < bValue) return monthlySort.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return monthlySort.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    // Réorganiser les lignes
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Mettre à jour les icônes de tri
+    updateMonthlySortIcons(column, monthlySort.direction);
+}
+
+function updateMonthlySortIcons(activeColumn, direction) {
+    document.querySelectorAll('.sortable-monthly').forEach(header => {
+        header.classList.remove('sort-asc', 'sort-desc');
+        if (header.dataset.column === activeColumn) {
+            header.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+}
+
+function calculateMonthlySummary() {
+    const tbody = document.querySelector('#monthlyTable tbody');
+    if (!tbody) return;
+    
+    const visibleRows = Array.from(tbody.querySelectorAll('tr')).filter(row => 
+        row.style.display !== 'none' && row.dataset.mois
+    );
+    
+    let totalActiveDays = 0;
+    let totalCosts = 0;
+    
+    visibleRows.forEach(row => {
+        totalActiveDays += parseInt(row.dataset.joursActifs) || 0;
+        totalCosts += parseFloat(row.dataset.total) || 0;
+    });
+    
+    const averageCost = visibleRows.length > 0 ? totalCosts / visibleRows.length : 0;
+    
+    // Mettre à jour l'affichage
+    document.getElementById('totalActiveDays').textContent = totalActiveDays;
+    document.getElementById('totalCosts').textContent = totalCosts.toLocaleString() + ' GNF';
+    document.getElementById('averageCost').textContent = averageCost.toLocaleString() + ' GNF';
+}
+
+function exportMonthlyData() {
+    const table = document.getElementById('monthlyTable');
+    const rows = Array.from(table.querySelectorAll('tr')).filter(row => 
+        row.style.display !== 'none' || row.parentElement.tagName === 'THEAD'
+    );
+    
+    let csv = [];
+    
+    rows.forEach(row => {
+        const cols = Array.from(row.querySelectorAll('th, td'));
+        const rowData = cols.map(col => {
+            let text = col.textContent.trim();
+            text = text.replace(/\s+/g, ' ').replace(/"/g, '""');
+            return `"${text}"`;
+        });
+        csv.push(rowData.join(','));
+    });
+    
+    // Télécharger le fichier
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'donnees_mensuelles_vehicule.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function debounceMonthly(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+});
+</script>
+
+<style>
+.sortable-monthly {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable-monthly:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.sortable-monthly i {
+    margin-left: 5px;
+    opacity: 0.5;
+}
+.sortable-monthly.sort-asc i:before {
+    content: "\f0de";
+    opacity: 1;
+}
+.sortable-monthly.sort-desc i:before {
+    content: "\f0dd";
+    opacity: 1;
+}
+</style>
+{% endblock %}

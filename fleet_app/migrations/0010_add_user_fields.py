@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('fleet_app', '0009_alter_configurationsalaire_unique_together_and_more'),
+        ('fleet_app', '0009_auto_20250909_1105'),
     ]
 
     operations = [
@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
         
         # Add user field to FeuilleDeRoute if it doesn't exist
         migrations.AddField(
-            model_name='feuillederroute',
+            model_name='feuillederoute',
             name='user',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL, verbose_name='Utilisateur'),
         ),

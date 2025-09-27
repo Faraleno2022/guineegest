@@ -15,3 +15,4 @@ xhtml2pdf==0.2.10
 reportlab==3.5.67
 # PostgreSQL driver
 psycopg2-binary==2.9.10
+mysqlclient==2.2.4

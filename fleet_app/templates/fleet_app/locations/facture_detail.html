@@ -1,0 +1,42 @@
+{% extends 'fleet_app/base.html' %}
+{% block title %}Facture {{ facture.numero }}{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10 mx-auto">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Facture {{ facture.numero }}</h5>
+          <a href="{% url 'fleet_app:facture_location_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Retour
+          </a>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="mb-2"><strong>Véhicule:</strong> {{ facture.location.vehicule }}</div>
+              <div class="mb-2"><strong>Location:</strong> {{ facture.location }}</div>
+              <div class="mb-2"><strong>Date:</strong> {{ facture.date }}</div>
+              <div class="mb-2"><strong>Statut:</strong> <span class="badge bg-{% if facture.statut == 'Payée' %}success{% elif facture.statut == 'Brouillon' %}warning text-dark{% else %}danger{% endif %}">{{ facture.statut }}</span></div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-2"><strong>Montant HT:</strong> {{ facture.montant_ht|floatformat:0 }} GNF</div>
+              <div class="mb-2"><strong>TVA:</strong> {{ facture.tva|floatformat:0 }} GNF</div>
+              <div class="mb-2"><strong>Montant TTC:</strong> {{ facture.montant_ttc|floatformat:0 }} GNF</div>
+            </div>
+          </div>
+          <hr>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-2"><strong>Jours de travail (mois):</strong> {{ facture.jours_travail_mois }}</div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-2"><strong>Jours non travaillés (mois):</strong> {{ facture.jours_non_travail_mois }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

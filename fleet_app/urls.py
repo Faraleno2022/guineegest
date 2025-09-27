@@ -17,6 +17,8 @@ from . import views_synchronization
 from . import views_pointage
 from . import views_presence_sync
 from . import views_paie_enhanced
+from . import views_location
+from . import views_vehicule_stats
 
 app_name = 'fleet_app'
 
@@ -231,6 +233,56 @@ urlpatterns = [
     path('inventaire/factures/<str:pk>/supprimer/', views_facturation.facture_delete, name='facture_delete'),
     path('inventaire/factures/<str:pk>/pdf/', views_facturation.export_facture_pdf, name='export_facture_pdf'),
     path('inventaire/factures/export/', views_facturation.export_factures_excel, name='export_factures_excel'),
+    
+    # URLs pour le menu Locations (Locations de véhicules)
+    path('locations/', views_location.locations_dashboard, name='locations_dashboard'),
+    path('locations/list/', views_location.location_list, name='location_list'),
+    path('locations/nouvelle/', views_location.location_create, name='location_create'),
+    path('locations/<int:pk>/', views_location.location_detail, name='location_detail'),
+    path('locations/<int:pk>/modifier/', views_location.location_update, name='location_update'),
+    path('locations/<int:pk>/supprimer/', views_location.location_delete, name='location_delete'),
+    
+    # Feuilles de pontage
+    path('locations/feuilles-pontage/', views_location.feuille_pontage_list, name='feuille_pontage_location_list'),
+    path('locations/feuilles-pontage/nouvelle/', views_location.feuille_pontage_create, name='feuille_pontage_create'),
+    path('locations/feuilles-pontage/<int:pk>/modifier/', views_location.feuille_pontage_update, name='feuille_pontage_update'),
+    path('locations/feuilles-pontage/<int:pk>/supprimer/', views_location.feuille_pontage_delete, name='feuille_pontage_delete'),
+    
+    # Fournisseurs
+    path('locations/fournisseurs/', views_location.fournisseur_list, name='fournisseur_location_list'),
+    path('locations/fournisseurs/nouveau/', views_location.fournisseur_create, name='fournisseur_create'),
+    path('locations/fournisseurs/<int:pk>/modifier/', views_location.fournisseur_update, name='fournisseur_update'),
+    path('locations/fournisseurs/<int:pk>/supprimer/', views_location.fournisseur_delete, name='fournisseur_delete'),
+    
+    # Factures
+    path('locations/factures/', views_location.facture_list, name='facture_location_list'),
+    path('locations/factures/nouvelle/', views_location.facture_create, name='facture_location_create'),
+    path('locations/factures/<int:pk>/modifier/', views_location.facture_update, name='facture_location_update'),
+    path('locations/factures/<int:pk>/supprimer/', views_location.facture_delete, name='facture_location_delete'),
+    path('locations/factures/<int:pk>/', views_location.facture_detail, name='facture_location_detail'),
+    path('locations/factures/<int:pk>/pdf/', views_location.facture_pdf, name='facture_location_pdf'),
+    path('locations/factures/batch-pdf/', views_location.factures_batch_pdf, name='factures_batch_pdf'),
+    path('locations/factures/generation-mensuelle/', views_location.generer_factures_mensuelles, name='generer_factures_mensuelles'),
+    
+    # AJAX
+    path('locations/<int:location_pk>/generer-facture/', views_location.generer_facture_automatique, name='generer_facture_automatique'),
+    path('locations/search-ajax/', views_location.location_search_ajax, name='location_search_ajax'),
+    path('locations/dashboard-metrics/', views_location.locations_dashboard_metrics_ajax, name='locations_dashboard_metrics_ajax'),
+    path('locations/feuilles/search-ajax/', views_location.feuille_pontage_search_ajax, name='feuille_pontage_search_ajax'),
+    path('locations/fournisseurs/search-ajax/', views_location.fournisseur_search_ajax, name='fournisseur_search_ajax'),
+    path('locations/factures/search-ajax/', views_location.facture_search_ajax, name='facture_search_ajax'),
+    path('alertes/search-ajax/', views_alertes.alerte_search_ajax, name='alerte_search_ajax'),
+    # AJAX for selects in location form
+    path('ajax/search-vehicules/', views_location.search_vehicules_ajax, name='search_vehicules_ajax'),
+    path('ajax/search-fournisseurs/', views_location.search_fournisseurs_ajax, name='search_fournisseurs_ajax'),
+    path('ajax/fournisseur/quick-create/', views_location.fournisseur_quick_create_ajax, name='fournisseur_quick_create_ajax'),
+    path('ajax/vehicule/quick-create/', views_location.vehicule_quick_create_ajax, name='vehicule_quick_create_ajax'),
+    
+    # URLs pour les statistiques des véhicules
+    path('stats/vehicules/', views_vehicule_stats.vehicule_stats_dashboard, name='vehicule_stats_dashboard'),
+    path('stats/vehicules/comparaison/', views_vehicule_stats.vehicule_comparaison_stats, name='vehicule_comparaison_stats'),
+    path('stats/vehicules/export/', views_vehicule_stats.vehicule_stats_export, name='vehicule_stats_export'),
+    path('stats/vehicules/<str:vehicule_id>/', views_vehicule_stats.vehicule_stats_detail, name='vehicule_stats_detail'),
     
     # Debug
     path('debug/vehicule/<str:id_vehicule>/', views_debug.debug_vehicle_relations, name='debug_vehicle_relations'),

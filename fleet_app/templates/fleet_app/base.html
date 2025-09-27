@@ -284,14 +284,15 @@
             
             <div class="collapse navbar-collapse" id="topNavbar">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <!-- Menu Accueil - Accessible à tous -->
                     <li class="nav-item">
                         <a href="{% url 'fleet_app:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
                             <i class="fas fa-home"></i> Accueil
                         </a>
                     </li>
 
-
-
+                    {% if user.is_authenticated %}
+                    <!-- Menus réservés aux utilisateurs connectés -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="kpiDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-chart-line"></i> KPIs
@@ -353,6 +354,17 @@
                             <li>
                                 <a href="{% url 'fleet_app:kpi_couts_financiers' %}" class="dropdown-item {% if request.resolver_match.url_name == 'kpi_couts_financiers' %}active{% endif %}">
                                     <i class="fas fa-money-bill-wave"></i> Coûts Financiers
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:vehicule_stats_dashboard' %}" class="dropdown-item {% if request.resolver_match.url_name == 'vehicule_stats_dashboard' %}active{% endif %}">
+                                    <i class="fas fa-chart-bar"></i> Statistiques Véhicules
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:vehicule_comparaison_stats' %}" class="dropdown-item {% if request.resolver_match.url_name == 'vehicule_comparaison_stats' %}active{% endif %}">
+                                    <i class="fas fa-balance-scale"></i> Comparaison Véhicules
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
@@ -493,10 +505,46 @@
                             </li>
                         </ul>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'locations' in request.path %}active{% endif %}" href="#" id="locationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-car-side"></i> Locations
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="locationsDropdown">
+                            <li>
+                                <a href="{% url 'fleet_app:locations_dashboard' %}" class="dropdown-item {% if request.resolver_match.url_name == 'locations_dashboard' %}active{% endif %}">
+                                    <i class="fas fa-tachometer-alt"></i> Tableau de bord
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'fleet_app:location_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'location_list' %}active{% endif %}">
+                                    <i class="fas fa-car"></i> Locations
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:feuille_pontage_location_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'feuille_pontage_location_list' %}active{% endif %}">
+                                    <i class="fas fa-calendar-check"></i> Feuilles de pontage
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:fournisseur_location_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'fournisseur_location_list' %}active{% endif %}">
+                                    <i class="fas fa-handshake"></i> Fournisseurs
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'fleet_app:facture_location_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'facture_location_list' %}active{% endif %}">
+                                    <i class="fas fa-file-invoice"></i> Factures
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                 </ul>
+                {% endif %}
                 
-                
+                <!-- Section utilisateur -->
                 <div class="d-flex">
+                    {% if user.is_authenticated %}
+                    <!-- Menu utilisateur connecté -->
                     <div class="dropdown">
                         <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-user-circle"></i> {{ user.username|default:"Utilisateur" }}
@@ -526,6 +574,17 @@
                             </li>
                         </ul>
                     </div>
+                    {% else %}
+                    <!-- Boutons pour utilisateurs non connectés -->
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'login' %}" class="btn btn-outline-light">
+                            <i class="fas fa-sign-in-alt"></i> Connexion
+                        </a>
+                        <a href="{% url 'fleet_app:creation_compte' %}" class="btn btn-light">
+                            <i class="fas fa-user-plus"></i> Inscription
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

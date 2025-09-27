@@ -8,7 +8,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db import transaction
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.views.decorators.http import require_http_methods
@@ -40,17 +40,19 @@ from .forms_document import DocumentAdministratifForm
 
 # Import des utilitaires
 from .utils import convertir_en_gnf, formater_montant_gnf, formater_cout_par_km_gnf, TAUX_CONVERSION_EUR_GNF
+from .utils.decorators import queryset_filter_by_tenant
 
 # Vue de la page d'accueil
-@login_required
 def home(request):
     """
     Vue de la page d'accueil qui affiche une présentation de l'entreprise
+    Accessible à tous, même sans authentification
     """
-    # Vérifier si l'utilisateur a complété son profil
-    profile_check = check_profile_completion(request)
-    if profile_check:
-        return profile_check
+    # Vérifier si l'utilisateur a complété son profil (seulement si connecté)
+    if request.user.is_authenticated:
+        profile_check = check_profile_completion(request)
+        if profile_check:
+            return profile_check
     
     from django.conf import settings
     
@@ -182,22 +184,23 @@ def dashboard(request):
     if profile_check:
         return profile_check
         
-    # Statistiques globales
-    total_vehicules = Vehicule.objects.count()
-    vehicules_actifs = Vehicule.objects.filter(statut_actuel='Actif').count()
-    vehicules_maintenance = Vehicule.objects.filter(statut_actuel='Maintenance').count()
-    vehicules_hors_service = Vehicule.objects.filter(statut_actuel='Hors Service').count()
+    # Statistiques globales (filtrées par tenant)
+    vehicules_qs = queryset_filter_by_tenant(Vehicule.objects.all(), request)
+    total_vehicules = vehicules_qs.count()
+    vehicules_actifs = vehicules_qs.filter(statut_actuel='Actif').count()
+    vehicules_maintenance = vehicules_qs.filter(statut_actuel='Maintenance').count()
+    vehicules_hors_service = vehicules_qs.filter(statut_actuel='Hors Service').count()
     
     # Calcul des 7 KPI
     
     # 1. Distance parcourue - Moyenne par véhicule
-    distances = DistanceParcourue.objects.values('vehicule').annotate(
+    distances = DistanceParcourue.objects.filter(vehicule__in=vehicules_qs).values('vehicule').annotate(
         distance_totale=Sum('distance_parcourue')
     ).order_by('-distance_totale')[:5]  # Top 5 des véhicules par distance
     
     # Enrichir avec les détails du véhicule
     for d in distances:
-        vehicule = Vehicule.objects.get(id_vehicule=d['vehicule'])
+        vehicule = vehicules_qs.get(id_vehicule=d['vehicule'])
         d['immatriculation'] = vehicule.immatriculation
         d['marque'] = vehicule.marque
         d['modele'] = vehicule.modele
@@ -214,13 +217,13 @@ def dashboard(request):
             d['pourcentage'] = min(100, (d['distance_totale'] / 10000) * 100)
     
     # 2. Consommation de carburant - Moyenne par véhicule
-    consommations = ConsommationCarburant.objects.values('vehicule').annotate(
+    consommations = ConsommationCarburant.objects.filter(vehicule__in=vehicules_qs).values('vehicule').annotate(
         consommation_moyenne=Avg('consommation_100km')
     ).order_by('-consommation_moyenne')[:5]  # Top 5 des véhicules par consommation
     
     # Enrichir avec les détails du véhicule
     for c in consommations:
-        vehicule = Vehicule.objects.get(id_vehicule=c['vehicule'])
+        vehicule = vehicules_qs.get(id_vehicule=c['vehicule'])
         c['immatriculation'] = vehicule.immatriculation
         c['marque'] = vehicule.marque
         c['modele'] = vehicule.modele
@@ -237,13 +240,13 @@ def dashboard(request):
         c['alerte'] = c['consommation_moyenne'] > c['cible'] * 1.2  # Alerte si 20% au-dessus de la cible
     
     # 3. Disponibilité des véhicules
-    disponibilites = DisponibiliteVehicule.objects.values('vehicule').annotate(
+    disponibilites = DisponibiliteVehicule.objects.filter(vehicule__in=vehicules_qs).values('vehicule').annotate(
         disponibilite_moyenne=Avg('disponibilite_pourcentage')
     ).order_by('disponibilite_moyenne')[:5]  # 5 véhicules les moins disponibles
     
     # Enrichir avec les détails du véhicule
     for d in disponibilites:
-        vehicule = Vehicule.objects.get(id_vehicule=d['vehicule'])
+        vehicule = vehicules_qs.get(id_vehicule=d['vehicule'])
         d['immatriculation'] = vehicule.immatriculation
         d['marque'] = vehicule.marque
         d['modele'] = vehicule.modele
@@ -257,7 +260,7 @@ def dashboard(request):
     
     # Enrichir avec les détails du véhicule et calculer le taux d'utilisation
     for u in utilisations:
-        vehicule = Vehicule.objects.get(id_vehicule=u['vehicule'])
+        vehicule = vehicules_qs.get(id_vehicule=u['vehicule'])
         u['immatriculation'] = vehicule.immatriculation
         u['marque'] = vehicule.marque
         u['modele'] = vehicule.modele
@@ -269,26 +272,26 @@ def dashboard(request):
         u['alerte'] = u['utilisation_moyenne'] < 70  # Alerte si utilisation < 70%
     
     # 5. Sécurité - Incidents par véhicule
-    incidents = IncidentSecurite.objects.values('vehicule').annotate(
+    incidents = IncidentSecurite.objects.filter(vehicule__in=vehicules_qs).values('vehicule').annotate(
         total_incidents=Count('id')
     ).order_by('-total_incidents')[:5]  # Top 5 des véhicules avec le plus d'incidents
     
     # Enrichir avec les détails du véhicule
     for i in incidents:
-        vehicule = Vehicule.objects.get(id_vehicule=i['vehicule'])
+        vehicule = vehicules_qs.get(id_vehicule=i['vehicule'])
         i['immatriculation'] = vehicule.immatriculation
         i['marque'] = vehicule.marque
         i['modele'] = vehicule.modele
         i['alerte'] = i['total_incidents'] > 0  # Alerte si au moins un incident
     
     # 6 & 7. Coûts de fonctionnement et financiers par km
-    couts_fonctionnement = CoutFonctionnement.objects.values('vehicule').annotate(
+    couts_fonctionnement = CoutFonctionnement.objects.filter(vehicule__in=vehicules_qs).values('vehicule').annotate(
         cout_moyen=Avg('cout_par_km')
     ).order_by('-cout_moyen')[:5]  # Top 5 des véhicules les plus coûteux
     
     # Enrichir avec les détails du véhicule
     for c in couts_fonctionnement:
-        vehicule = Vehicule.objects.get(id_vehicule=c['vehicule'])
+        vehicule = vehicules_qs.get(id_vehicule=c['vehicule'])
         c['immatriculation'] = vehicule.immatriculation
         c['marque'] = vehicule.marque
         c['modele'] = vehicule.modele
@@ -302,13 +305,13 @@ def dashboard(request):
             c['seuil'] = 0.10  # €/km
         c['alerte'] = c['cout_moyen'] > c['seuil']  # Alerte si coût > seuil
     
-    couts_financiers = CoutFinancier.objects.values('vehicule').annotate(
+    couts_financiers = CoutFinancier.objects.filter(vehicule__in=vehicules_qs).values('vehicule').annotate(
         cout_moyen=Avg('cout_par_km')
     ).order_by('-cout_moyen')[:5]  # Top 5 des véhicules les plus coûteux
     
     # Enrichir avec les détails du véhicule
     for c in couts_financiers:
-        vehicule = Vehicule.objects.get(id_vehicule=c['vehicule'])
+        vehicule = vehicules_qs.get(id_vehicule=c['vehicule'])
         c['immatriculation'] = vehicule.immatriculation
         c['marque'] = vehicule.marque
         c['modele'] = vehicule.modele
@@ -643,7 +646,7 @@ def dashboard(request):
     alertes_kpi = []
 
     # Récupérer les véhicules avec leurs dernières mesures de KPI
-    vehicules = Vehicule.objects.filter(statut_actuel='Actif')
+    vehicules = vehicules_qs.filter(statut_actuel='Actif')
     
     for vehicule in vehicules:
         # Vérifier la consommation
@@ -741,7 +744,7 @@ def dashboard(request):
     # Améliorer l'identification des véhicules à remplacer avec un score et des raisons détaillées
     for vehicule_id, data in vehicules_problematiques.items():
         if data['points'] >= 5:
-            vehicule = Vehicule.objects.get(id_vehicule=vehicule_id)
+            vehicule = vehicules_qs.get(id_vehicule=vehicule_id)
             raisons = []
             
             # Ajouter des raisons plus détaillées avec des recommandations
@@ -783,6 +786,7 @@ def dashboard(request):
     
     # Évolution mensuelle de la consommation
     evolution_consommation = ConsommationCarburant.objects.filter(
+        vehicule__in=vehicules_qs,
         date_plein2__gte=date_debut
     ).annotate(
         mois=TruncMonth('date_plein2')
@@ -792,6 +796,7 @@ def dashboard(request):
     
     # Évolution mensuelle de la disponibilité
     evolution_disponibilite = DisponibiliteVehicule.objects.filter(
+        vehicule__in=vehicules_qs,
         date_fin__gte=date_debut
     ).annotate(
         mois=TruncMonth('date_fin')
@@ -801,6 +806,7 @@ def dashboard(request):
     
     # Évolution mensuelle des coûts
     evolution_couts = CoutFonctionnement.objects.filter(
+        vehicule__in=vehicules_qs,
         date__gte=date_debut
     ).annotate(
         mois=TruncMonth('date')
@@ -810,17 +816,17 @@ def dashboard(request):
     
     # Récupérer les données des feuilles de route pour le tableau de bord
     # 1. Feuilles de route récentes (5 dernières)
-    feuilles_route_recentes = FeuilleDeRoute.objects.filter(vehicule__user=request.user).order_by('-date_depart')[:5]
+    feuilles_route_recentes = FeuilleDeRoute.objects.filter(vehicule__in=vehicules_qs).order_by('-date_depart')[:5]
     
     # 2. Feuilles de route avec surconsommation (consommation > 8 L/100km)
-    feuilles_route_surconsommation = FeuilleDeRoute.objects.filter(vehicule__user=request.user, consommation__gt=8).order_by('-consommation')[:5]
+    feuilles_route_surconsommation = FeuilleDeRoute.objects.filter(vehicule__in=vehicules_qs, consommation__gt=8).order_by('-consommation')[:5]
     
     # 3. Feuilles de route en attente (non complétées par les chauffeurs)
     feuilles_route_attente = FeuilleDeRoute.objects.filter(
         Q(km_retour__isnull=True) | 
         Q(carburant_utilise__isnull=True) | 
         Q(signature_chauffeur=False)
-    ).filter(vehicule__user=request.user).order_by('-date_depart')[:5]
+    ).filter(vehicule__in=vehicules_qs).order_by('-date_depart')[:5]
     
     # Préparer les données pour les graphiques
     labels_mois = []
@@ -845,22 +851,23 @@ def dashboard(request):
         'couts': [round(item['moyenne'], 3) if item['moyenne'] else 0 for item in evolution_couts]
     }
     
-    # Calculer les coûts moyens par catégorie de véhicule
-    couts_moyens_fonctionnement = CoutFonctionnement.objects.values('vehicule__categorie').annotate(
+    # Calculer les coûts moyens par catégorie de véhicule (tenant)
+    couts_moyens_fonctionnement = CoutFonctionnement.objects.filter(vehicule__in=vehicules_qs).values('vehicule__categorie').annotate(
         moyenne=Avg('cout_par_km')
     ).order_by('vehicule__categorie')
     
-    couts_moyens_financiers = CoutFinancier.objects.values('vehicule__categorie').annotate(
+    couts_moyens_financiers = CoutFinancier.objects.filter(vehicule__in=vehicules_qs).values('vehicule__categorie').annotate(
         moyenne=Avg('cout_par_km')
     ).order_by('vehicule__categorie')
     
-    # Statistiques sur les chauffeurs
-    total_chauffeurs = Chauffeur.objects.count()
-    chauffeurs_actifs = Chauffeur.objects.filter(statut='Actif').count()
-    chauffeurs_inactifs = Chauffeur.objects.filter(statut='Inactif').count()
+    # Statistiques sur les chauffeurs (tenant-aware)
+    chauffeurs_qs = queryset_filter_by_tenant(Chauffeur.objects.all(), request)
+    total_chauffeurs = chauffeurs_qs.count()
+    chauffeurs_actifs = chauffeurs_qs.filter(statut='Actif').count()
+    chauffeurs_inactifs = chauffeurs_qs.filter(statut='Inactif').count()
     
-    # Liste de tous les chauffeurs
-    tous_chauffeurs = Chauffeur.objects.filter(user=request.user).order_by('nom', 'prenom')
+    # Liste de tous les chauffeurs (tenant-aware)
+    tous_chauffeurs = chauffeurs_qs.order_by('nom', 'prenom')
     
     # Dates pour la gestion des expirations de permis
     today = timezone.now().date()
@@ -872,12 +879,13 @@ def dashboard(request):
     ).order_by('-nb_feuilles')[:5]
     
     # Statistiques sur les feuilles de route
-    total_feuilles_route = FeuilleDeRoute.objects.count()
-    feuilles_route_completees = FeuilleDeRoute.objects.filter(km_retour__isnull=False).count()
-    feuilles_route_en_attente = FeuilleDeRoute.objects.filter(km_retour__isnull=True).count()
+    total_feuilles_route = FeuilleDeRoute.objects.filter(vehicule__in=vehicules_qs).count()
+    feuilles_route_completees = FeuilleDeRoute.objects.filter(vehicule__in=vehicules_qs, km_retour__isnull=False).count()
+    feuilles_route_en_attente = FeuilleDeRoute.objects.filter(vehicule__in=vehicules_qs, km_retour__isnull=True).count()
     
     # Statistiques de consommation moyenne par chauffeur
     consommation_par_chauffeur = FeuilleDeRoute.objects.filter(
+        vehicule__in=vehicules_qs,
         consommation__isnull=False
     ).values('chauffeur__nom', 'chauffeur__prenom').annotate(
         consommation_moyenne=Avg('consommation'),
@@ -1484,11 +1492,12 @@ class VehiculeDeleteView(LoginRequiredMixin, DeleteView):
             with transaction.atomic():
                 from django.db import connection
                 
-                # 1. Désactiver temporairement les contraintes de clé étrangère
-                with connection.cursor() as cursor:
-                    # Pour SQLite, désactiver les contraintes de clé étrangère
-                    cursor.execute('PRAGMA foreign_keys = OFF;')
-                    print("Contraintes de clé étrangère désactivées temporairement")
+                # 1. Désactiver temporairement les contraintes de clé étrangère (SQLite uniquement)
+                from django.db import connection as _conn
+                if _conn.vendor == 'sqlite':
+                    with _conn.cursor() as cursor:
+                        cursor.execute('PRAGMA foreign_keys = OFF;')
+                        print("Contraintes de clé étrangère désactivées temporairement (SQLite)")
                 
                 # 2. Supprimer explicitement les enregistrements liés via l'API Django
                 from fleet_app.models import (
@@ -1514,15 +1523,15 @@ class VehiculeDeleteView(LoginRequiredMixin, DeleteView):
                 IncidentSecurite.objects.filter(vehicule=vehicule).delete()
                 Alerte.objects.filter(vehicule=vehicule).delete()
                 
-                # 3. Supprimer directement le véhicule via SQL
-                with connection.cursor() as cursor:
-                    print(f"Suppression directe du véhicule {vehicule.pk} via SQL")
-                    cursor.execute("DELETE FROM fleet_app_vehicule WHERE id_vehicule = ?", [vehicule.pk])
+                # 3. Supprimer le véhicule via l'ORM (compatible MySQL/PostgreSQL/SQLite)
+                print(f"Suppression du véhicule {vehicule.pk} via l'ORM")
+                vehicule.delete()
                 
-                # 4. Réactiver les contraintes de clé étrangère
-                with connection.cursor() as cursor:
-                    cursor.execute('PRAGMA foreign_keys = ON;')
-                    print("Contraintes de clé étrangère réactivées")
+                # 4. Réactiver les contraintes de clé étrangère (SQLite uniquement)
+                if _conn.vendor == 'sqlite':
+                    with _conn.cursor() as cursor:
+                        cursor.execute('PRAGMA foreign_keys = ON;')
+                        print("Contraintes de clé étrangère réactivées (SQLite)")
                 
                 messages.success(self.request, 'Véhicule supprimé avec succès.')
                 return redirect('fleet_app:vehicule_list')

@@ -125,3 +125,29 @@ def get_status_display(statut):
         'OFF': 'Repos',
     }
     return status_display.get(statut, statut)
+
+@register.filter
+def sum_attr(objects, attr_path):
+    """Somme une propriété imbriquée d'une liste d'objets"""
+    total = 0
+    for obj in objects:
+        try:
+            # Naviguer dans les attributs imbriqués (ex: "stats.jours_actifs")
+            value = obj
+            for attr in attr_path.split('.'):
+                if isinstance(value, dict):
+                    value = value.get(attr, 0)
+                else:
+                    value = getattr(value, attr, 0)
+            
+            # Convertir en nombre
+            if value is not None:
+                total += float(value)
+        except (AttributeError, ValueError, TypeError):
+            continue
+    return total
+
+@register.filter
+def div(value, arg):
+    """Alias pour divide - divise la valeur par l'argument"""
+    return divide(value, arg)

@@ -12,13 +12,14 @@ from .models_entreprise import (
 )
 from django.forms import modelform_factory
 from .forms_entreprise import EmployeForm
+from .utils.decorators import queryset_filter_by_tenant
 
 @login_required
 def employe_list(request):
     """
     Vue pour afficher la liste des employés
     """
-    queryset = Employe.objects.filter(user=request.user).order_by('nom', 'prenom')
+    queryset = queryset_filter_by_tenant(Employe.objects.all(), request).order_by('nom', 'prenom')
     paginator = Paginator(queryset, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)

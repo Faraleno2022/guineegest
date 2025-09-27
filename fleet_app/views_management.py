@@ -20,9 +20,10 @@ import json
 
 from .models import ArchiveMensuelle
 from .models_entreprise import (
-    Employe, PaieEmploye, HeureSupplementaire
+    Employe, PaieEmploye, HeureSupplementaire, ConfigurationHeureSupplementaire
 )
 from .forms import EmployeForm
+from .utils.decorators import queryset_filter_by_tenant
 
 @login_required
 def temp_redirect_view(request, *args, **kwargs):
@@ -37,7 +38,7 @@ def employe_list(request):
     """
     Liste des employés
     """
-    employes = Employe.objects.filter(user=request.user).order_by('matricule')
+    employes = queryset_filter_by_tenant(Employe.objects.all(), request).order_by('matricule')
     
     context = {
         'employes': employes,
@@ -51,7 +52,7 @@ def paie_employe_list(request):
     """
     Liste des paies des employés
     """
-    paies = PaieEmploye.objects.filter(employe__user=request.user).order_by('-date_paie')
+    paies = queryset_filter_by_tenant(PaieEmploye.objects.all(), request).order_by('-date_paie')
     
     # Pagination
     paginator = Paginator(paies, 20)
@@ -70,9 +71,7 @@ def heure_supplementaire_list(request):
     """
     Liste des heures supplémentaires
     """
-    heures_sup = HeureSupplementaire.objects.filter(
-        employe__user=request.user
-    ).order_by('-date')
+    heures_sup = queryset_filter_by_tenant(HeureSupplementaire.objects.all(), request).order_by('-date')
     
     # Filtrage par employé si spécifié
     employe_id = request.GET.get('employe_id')
@@ -111,7 +110,7 @@ def parametre_paie_list(request):
         if 'supprimer_avance' in request.POST and 'employe_id' in request.POST:
             employe_id = request.POST.get('employe_id')
             try:
-                employe = Employe.objects.get(id=employe_id, user=request.user)
+                employe = queryset_filter_by_tenant(Employe.objects.all(), request).get(id=employe_id)
                 # Réinitialiser l'avance à 0
                 employe.avances = 0
                 employe.save()
@@ -126,7 +125,7 @@ def parametre_paie_list(request):
         elif 'modifier_employe' in request.POST and 'employe_id' in request.POST:
             employe_id = request.POST.get('employe_id')
             try:
-                employe = Employe.objects.get(id=employe_id, user=request.user)
+                employe = queryset_filter_by_tenant(Employe.objects.all(), request).get(id=employe_id)
                 
                 # Mise à jour des paramètres
                 taux_jour_ouvrable = request.POST.get('taux_jour_ouvrable_employe')

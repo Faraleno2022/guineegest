@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+from .models_accounts import Entreprise
 
 # Import des modèles d'entreprise
 from .models_entreprise import (
@@ -49,6 +50,7 @@ class Vehicule(models.Model):
     observations = models.TextField(blank=True, verbose_name="Observations")
     chauffeur_principal = models.ForeignKey('Chauffeur', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules_assignes', verbose_name="Chauffeur principal")
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
     def __str__(self):
         return f"{self.marque} {self.modele} ({self.immatriculation})"

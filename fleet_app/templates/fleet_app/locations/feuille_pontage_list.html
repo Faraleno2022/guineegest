@@ -1,0 +1,174 @@
+{% extends 'fleet_app/base.html' %}
+{% block title %}Feuilles de pontage - Locations{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-calendar-check"></i> Feuilles de pontage</span>
+      <a href="{% url 'fleet_app:feuille_pontage_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouvelle Feuille
+      </a>
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#searchPanel" aria-expanded="false">
+          <i class="fas fa-search"></i> Recherche avancée
+        </button>
+        <span class="ms-2 text-muted" id="resultCount"></span>
+      </div>
+      <div class="collapse mb-3" id="searchPanel">
+        <div class="border rounded p-3 bg-light">
+          <div class="row g-2">
+            <div class="col-md-3">
+              <label class="form-label">Véhicule</label>
+              <input type="text" class="form-control form-control-sm" id="searchVehicule" placeholder="Immatriculation, marque, modèle">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Statut</label>
+              <select class="form-select form-select-sm" id="searchStatut">
+                <option value="">Tous</option>
+                <option value="Travail">Travail</option>
+                <option value="Entretien">Entretien</option>
+                <option value="Hors service">Hors service</option>
+                <option value="Inactif">Inactif</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Type location</label>
+              <select class="form-select form-select-sm" id="searchType">
+                <option value="">Tous</option>
+                <option value="Interne">Interne</option>
+                <option value="Externe">Externe</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Date min</label>
+              <input type="date" class="form-control form-control-sm" id="dateMin">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Date max</label>
+              <input type="date" class="form-control form-control-sm" id="dateMax">
+            </div>
+            <div class="col-md-3 mt-2">
+              <label class="form-label">Commentaire</label>
+              <input type="text" class="form-control form-control-sm" id="searchComment" placeholder="Contenu du commentaire">
+            </div>
+            <div class="col-md-2 mt-4">
+              <button class="btn btn-sm btn-outline-primary w-100" id="btnClearFilters"><i class="fas fa-eraser"></i> Effacer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Véhicule</th>
+              <th>Type</th>
+              <th>Statut</th>
+              <th>Commentaire</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="feuillesBody">
+            {% include 'fleet_app/locations/feuille_pontage_rows.html' with feuilles=feuilles %}
+          </tbody>
+        </table>
+        <div class="d-flex justify-content-between align-items-center" id="paginationBar">
+          <button class="btn btn-sm btn-outline-secondary" id="btnPrev" disabled>
+            <i class="fas fa-chevron-left"></i> Précédent
+          </button>
+          <span class="text-muted" id="pageInfo"></span>
+          <button class="btn btn-sm btn-outline-secondary" id="btnNext" disabled>
+            Suivant <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const $veh = document.getElementById('searchVehicule');
+    const $statut = document.getElementById('searchStatut');
+    const $type = document.getElementById('searchType');
+    const $dmin = document.getElementById('dateMin');
+    const $dmax = document.getElementById('dateMax');
+    const $comment = document.getElementById('searchComment');
+    const $clear = document.getElementById('btnClearFilters');
+    const $tbody = document.getElementById('feuillesBody');
+    const $count = document.getElementById('resultCount');
+    const $btnPrev = document.getElementById('btnPrev');
+    const $btnNext = document.getElementById('btnNext');
+    const $pageInfo = document.getElementById('pageInfo');
+
+    let timer = null;
+    let currentPage = 1;
+    let numPages = 1;
+    function debounceSearch() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => runSearch({ page: 1 }), 300);
+    }
+
+    function buildParams(extra) {
+      const params = new URLSearchParams();
+      if ($veh.value.trim()) params.set('search_vehicule', $veh.value.trim());
+      if ($statut.value) params.set('search_statut', $statut.value);
+      if ($type.value) params.set('search_type', $type.value);
+      if ($dmin.value) params.set('date_min', $dmin.value);
+      if ($dmax.value) params.set('date_max', $dmax.value);
+      if ($comment.value.trim()) params.set('search_comment', $comment.value.trim());
+      if (extra && extra.page) params.set('page', extra.page);
+      return params.toString();
+    }
+
+    async function runSearch(extra) {
+      const qs = buildParams(extra);
+      const url = `{% url 'fleet_app:feuille_pontage_search_ajax' %}?` + qs;
+      try {
+        const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        $tbody.innerHTML = data.html;
+        if (data.count !== undefined) {
+          $count.textContent = data.count + ' résultat(s)';
+        }
+        // Update pagination
+        currentPage = data.page_number || 1;
+        numPages = data.num_pages || 1;
+        $btnPrev.disabled = !(data.has_previous);
+        $btnNext.disabled = !(data.has_next);
+        $pageInfo.textContent = `Page ${currentPage} / ${numPages}`;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    [$veh, $statut, $type, $dmin, $dmax, $comment].forEach(el => {
+      if (!el) return;
+      const evt = (el.tagName === 'INPUT') ? 'input' : 'change';
+      el.addEventListener(evt, debounceSearch);
+    });
+
+    $clear.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      [$veh, $statut, $type, $dmin, $dmax, $comment].forEach(el => { if (el) el.value = ''; });
+      runSearch({ page: 1 });
+    });
+
+    $btnPrev.addEventListener('click', function() {
+      if (currentPage > 1) runSearch({ page: currentPage - 1 });
+    });
+    $btnNext.addEventListener('click', function() {
+      if (currentPage < numPages) runSearch({ page: currentPage + 1 });
+    });
+
+    // Initial load to set pagination info
+    runSearch({ page: 1 });
+  })();
+</script>
+{% endblock %}

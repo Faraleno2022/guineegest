@@ -82,6 +82,51 @@
         <div class="list-group" id="alertesActivesContainer">
             {% include 'fleet_app/alertes/alertes_actives_rows.html' with alertes=alertes %}
         </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
@@ -185,10 +230,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (section === 'actives') {
                 activesContainer.innerHTML = data.html;
                 activesCount.textContent = data.count;
+                // Réattacher les event listeners pour les nouveaux boutons
                 attachActionButtons();
             } else {
                 resoluesContainer.innerHTML = data.html;
                 resoluesCount.textContent = data.count;
+                // Réattacher les event listeners pour les nouveaux boutons
                 attachHistoryButtons();
             }
             
@@ -462,5 +509,319 @@ document.addEventListener('DOMContentLoaded', function() {
     attachActionButtons();
     attachHistoryButtons();
 });
+</script>
+{% endblock %}
+            const toastContainer = document.getElementById('toastContainer');
+            
+            // Créer un nouvel élément toast
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('toastContainer').innerHTML += toastHtml;
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+            
+            // Supprimer le toast après qu'il soit caché
+            toastElement.addEventListener('hidden.bs.toast', function () {
+                toastElement.remove();
+            });
+        }
+        
+        // Fonction pour envoyer une requête AJAX
+        function sendAjaxRequest(url, method = 'POST', data = {}) {
+            return fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+        
+        // Fonction pour obtenir le cookie CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Fonction pour afficher un toast
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                const container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(container);
+            }
+            
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('toast-container').insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
+        
+        // Configurer les boutons "Résoudre"
+        document.querySelectorAll('.btn-resoudre').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Bouton Résoudre cliqué');
+                const alerteId = this.getAttribute('data-id');
+                const alerteRow = this.closest('.list-group-item');
+                
+                if (confirm('Marquer cette alerte comme résolue ?')) {
+                    fetch(`{% url 'fleet_app:alerte_resoudre' 0 %}`.replace('0', alerteId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur réseau: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Supprimer l'alerte de la liste
+                            alerteRow.remove();
+                            showToast('Alerte marquée comme résolue.', 'success');
+                            // Recharger la page pour mettre à jour l'historique
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            throw new Error('Opération échouée');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showToast(`Erreur: ${error.message}`, 'danger');
+                    });
+                }
+            });
+        });
+        
+        // Configurer les boutons "Ignorer"
+        document.querySelectorAll('.btn-ignorer').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Bouton Ignorer cliqué');
+                const alerteId = this.getAttribute('data-id');
+                const alerteRow = this.closest('.list-group-item');
+                
+                if (confirm('Ignorer cette alerte ?')) {
+                    fetch(`{% url 'fleet_app:alerte_ignorer' 0 %}`.replace('0', alerteId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur réseau: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Supprimer l'alerte de la liste
+                            alerteRow.remove();
+                            showToast('Alerte ignorée.', 'info');
+                            // Recharger la page pour mettre à jour l'historique
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            throw new Error('Opération échouée');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showToast(`Erreur: ${error.message}`, 'danger');
+                    });
+                }
+            });
+        });
+        
+        // Configurer les boutons "Supprimer"
+        document.querySelectorAll('.btn-supprimer').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Bouton Supprimer cliqué');
+                const alerteId = this.getAttribute('data-id');
+                const alerteRow = this.closest('.list-group-item');
+                
+                if (confirm('Êtes-vous sûr de vouloir supprimer cette alerte ?')) {
+                    fetch(`{% url 'fleet_app:alerte_supprimer' 0 %}`.replace('0', alerteId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur réseau: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Supprimer l'alerte de la liste
+                            alerteRow.remove();
+                            showToast('Alerte supprimée.', 'danger');
+                        } else {
+                            throw new Error('Opération échouée');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showToast(`Erreur: ${error.message}`, 'danger');
+                    });
+                }
+            });
+        });
+        
+        // Configurer les boutons "Supprimer" dans l'historique
+        document.querySelectorAll('.btn-supprimer-historique').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Bouton Supprimer historique cliqué');
+                const alerteId = this.getAttribute('data-id');
+                const alerteRow = this.closest('tr');
+                
+                if (confirm('Êtes-vous sûr de vouloir supprimer définitivement cette alerte de l\'historique ?')) {
+                    fetch(`{% url 'fleet_app:alerte_supprimer' 0 %}`.replace('0', alerteId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({csrfmiddlewaretoken: getCookie('csrftoken')})
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur réseau: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Supprimer l'alerte de la liste
+                            alerteRow.remove();
+                            showToast(`L'alerte a été supprimée de l'historique.`, 'danger');
+                        } else {
+                            throw new Error('Opération échouée');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showToast(`Erreur: ${error.message}`, 'danger');
+                    });
+                }
+            });
+        });
+        
+        // Configurer les boutons "Détails" dans l'historique
+        document.querySelectorAll('.btn-details').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Bouton Détails cliqué');
+                const alerteId = this.getAttribute('data-id');
+                const alerteRow = this.closest('tr');
+                const alerteType = alerteRow.cells[1].textContent.trim();
+                const vehicule = alerteRow.cells[2].textContent.trim();
+                const niveau = alerteRow.cells[3].textContent.trim();
+                
+                // Créer une boîte de dialogue modale pour afficher les détails
+                const modalHtml = `
+                <div class="modal fade" id="alerteDetailsModal" tabindex="-1" aria-labelledby="alerteDetailsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="alerteDetailsModalLabel">Détails de l'alerte</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <table class="table">
+                                    <tr>
+                                        <th>Type d'alerte:</th>
+                                        <td>${alerteType}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Véhicule:</th>
+                                        <td>${vehicule}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Niveau d'urgence:</th>
+                                        <td>${niveau}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Statut:</th>
+                                        <td>${statut}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                
+                // Ajouter la modale au DOM
+                const modalContainer = document.createElement('div');
+                modalContainer.innerHTML = modalHtml;
+                document.body.appendChild(modalContainer);
+                
+                // Afficher la modale
+                const modal = new bootstrap.Modal(document.getElementById('alerteDetailsModal'));
+                modal.show();
+                
+                // Nettoyer la modale après sa fermeture
+                document.getElementById('alerteDetailsModal').addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modalContainer);
+                });
+            });
+        });
+    });
 </script>
 {% endblock %}

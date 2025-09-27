@@ -1,0 +1,138 @@
+{% extends 'fleet_app/base.html' %}
+{% block title %}Locations - Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row g-3">
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-toggle-on"></i>
+          <div class="stat-value">{{ actifs }}</div>
+          <div class="stat-label">Locations actives</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-toggle-off"></i>
+          <div class="stat-value">{{ inactifs }}</div>
+          <div class="stat-label">Locations inactives</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-briefcase"></i>
+          <div class="stat-value">{{ jours_travail }}</div>
+          <div class="stat-label">Jours travaillés</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-tools"></i>
+          <div class="stat-value">{{ jours_entretien }}</div>
+          <div class="stat-label">Jours d'entretien</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenus: jour, mois, année -->
+  <div class="row g-3 mt-1">
+    <div class="col-md-4">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-calendar-day"></i>
+          <div class="stat-value">{{ revenu_jour|floatformat:2 }}</div>
+          <div class="stat-label">Revenu du jour</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-calendar-alt"></i>
+          <div class="stat-value">{{ revenu_mois|floatformat:2 }}</div>
+          <div class="stat-label">Revenu du mois</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-calendar"></i>
+          <div class="stat-value">{{ revenu_annee|floatformat:2 }}</div>
+          <div class="stat-label">Revenu de l'année</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entretien: jours et montant perdu (mois courant) -->
+  <div class="row g-3 mt-1">
+    <div class="col-md-6">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-wrench"></i>
+          <div class="stat-value">{{ entretien_jours_mois }}</div>
+          <div class="stat-label">Jours d'entretien (mois)</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card stat-card">
+        <div class="card-body">
+          <i class="fas fa-money-bill-wave"></i>
+          <div class="stat-value">{{ entretien_perte_mois|floatformat:2 }}</div>
+          <div class="stat-label">Montant perdu (entretien, mois)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-car"></i> Dernières locations</span>
+          <a href="{% url 'fleet_app:location_list' %}" class="btn btn-sm btn-primary">Voir tout</a>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Véhicule</th>
+                  <th>Type</th>
+                  <th>Fournisseur</th>
+                  <th>Début</th>
+                  <th>Fin</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for loc in locations %}
+                <tr>
+                  <td>{{ loc.vehicule }}</td>
+                  <td>{{ loc.type_location }}</td>
+                  <td>{{ loc.fournisseur|default:'-' }}</td>
+                  <td>{{ loc.date_debut }}</td>
+                  <td>{{ loc.date_fin|default:'-' }}</td>
+                  <td><span class="badge bg-{% if loc.statut == 'Active' %}success{% else %}secondary{% endif %}">{{ loc.statut }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted">Aucune location pour l'instant.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,359 @@
+﻿{% extends 'fleet_app/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+ .select2-container--default .select2-selection--single {
+     height: 38px;
+     padding: 4px 8px;
+ }
+ .select2-container--default .select2-selection--single .select2-selection__rendered {
+     line-height: 28px;
+ }
+ .select2-container--default .select2-selection--single .select2-selection__arrow {
+     height: 36px;
+ }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-car"></i> {{ title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.vehicule|as_crispy_field }}
+                                <button type="button" class="btn btn-outline-primary btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#modalVehicule">
+                                    <i class="fas fa-plus"></i> Ajouter un vÃ©hicule
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.type_location|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.fournisseur|as_crispy_field }}
+                                <button type="button" class="btn btn-outline-primary btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#modalFournisseur">
+                                    <i class="fas fa-plus"></i> Ajouter un fournisseur
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.tarif_journalier|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.date_debut|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.date_fin|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.statut|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.motif|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'fleet_app:location_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal: Ajout rapide Fournisseur -->
+<div class="modal fade" id="modalFournisseur" tabindex="-1" aria-labelledby="modalFournisseurLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalFournisseurLabel">Nouveau fournisseur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formFournisseurQuick">
+          <div class="mb-3">
+            <label class="form-label">Nom du fournisseur *</label>
+            <input type="text" name="nom" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Contact</label>
+            <input type="text" name="contact" class="form-control">
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">TÃ©lÃ©phone</label>
+              <input type="text" name="telephone" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Adresse</label>
+            <input type="text" name="adresse" class="form-control">
+          </div>
+        </form>
+        <div class="alert alert-danger d-none" id="quickFournisseurError"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btnSaveFournisseur">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+ </div>
+<!-- Modal: Ajout rapide Véhicule -->
+<div class="modal fade" id="modalVehicule" tabindex="-1" aria-labelledby="modalVehiculeLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalVehiculeLabel">Nouveau véhicule</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formVehiculeQuick">
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Immatriculation *</label>
+              <input type="text" name="immatriculation" class="form-control" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Marque *</label>
+              <input type="text" name="marque" class="form-control" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Modèle *</label>
+              <input type="text" name="modele" class="form-control" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Type de moteur *</label>
+              <select name="type_moteur" class="form-select" required>
+                <option value="">-- Choisir --</option>
+                <option value="Essence">Essence</option>
+                <option value="Diesel" selected>Diesel</option>
+                <option value="Hybride">Hybride</option>
+                <option value="Électrique">Électrique</option>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Catégorie *</label>
+              <select name="categorie" class="form-select" required>
+                <option value="">-- Choisir --</option>
+                <option value="Voiture" selected>Voiture</option>
+                <option value="Moto">Moto</option>
+                <option value="4x4">4x4</option>
+                <option value="Camion">Camion</option>
+                <option value="Bus">Bus</option>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Statut actuel *</label>
+              <select name="statut_actuel" class="form-select" required>
+                <option value="">-- Choisir --</option>
+                <option value="Actif" selected>Actif</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Hors Service">Hors Service</option>
+              </select>
+            </div>
+          </div>
+        </form>
+        <div class="alert alert-danger d-none" id="quickVehiculeError"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btnSaveVehicule">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+  $(function() {
+    // CSRF: fetch token from cookie and set header for all AJAX
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    $.ajaxSetup({
+      beforeSend: function(xhr, settings) {
+        if (!(/^GET|HEAD|OPTIONS|TRACE$/i.test(settings.type))) {
+          xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+          xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+        }
+      }
+    });
+    // Init Select2 with AJAX for Vehicule
+    const $vehicule = $('#id_vehicule');
+    if ($vehicule.length) {
+      $vehicule.select2({
+        width: '100%',
+        placeholder: 'SÃ©lectionnez un vÃ©hicule',
+        allowClear: true,
+        minimumInputLength: 1,
+        dropdownParent: $('.card-body'),
+        ajax: {
+          url: '{% url "fleet_app:search_vehicules_ajax" %}',
+          dataType: 'json',
+          delay: 250,
+          data: function (params) {
+            return { term: params.term };
+          },
+          processResults: function (data) {
+            return { results: data.results };
+          }
+        }
+      });
+    }
+
+    // Init Select2 with AJAX for Fournisseur
+    const $fournisseur = $('#id_fournisseur');
+    if ($fournisseur.length) {
+      $fournisseur.select2({
+        width: '100%',
+        placeholder: 'SÃ©lectionnez un fournisseur',
+        allowClear: true,
+        minimumInputLength: 1,
+        dropdownParent: $('.card-body'),
+        ajax: {
+          url: '{% url "fleet_app:search_fournisseurs_ajax" %}',
+          dataType: 'json',
+          delay: 250,
+          data: function (params) {
+            return { term: params.term };
+          },
+          processResults: function (data) {
+            return { results: data.results };
+          }
+        }
+      });
+    }
+
+    // Focus auto sur immatriculation et uppercasing
+    const vehiculeModalEl = document.getElementById('modalVehicule');
+    if (vehiculeModalEl) {
+      vehiculeModalEl.addEventListener('shown.bs.modal', function () {
+        const input = document.querySelector('#formVehiculeQuick input[name="immatriculation"]');
+        if (input) input.focus();
+      });
+    }
+    $(document).on('input', '#formVehiculeQuick input[name="immatriculation"]', function() {
+      this.value = this.value.toUpperCase();
+    });
+
+    // Quick create Fournisseur
+    $('#btnSaveFournisseur').on('click', function() {
+      const $form = $('#formFournisseurQuick');
+      const payload = $form.serialize();
+      $('#quickFournisseurError').addClass('d-none').text('');
+      $.ajax({
+        url: '{% url "fleet_app:fournisseur_quick_create_ajax" %}',
+        method: 'POST',
+        data: payload,
+        success: function(resp) {
+          if (resp && resp.success) {
+            // Add new option to select and select it
+            const option = new Option(resp.text, resp.id, true, true);
+            $fournisseur.append(option).trigger('change');
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalFournisseur'));
+            modal.hide();
+            $form[0].reset();
+          }
+        },
+        error: function(xhr) {
+          let msg = 'Erreur lors de la crÃ©ation du fournisseur';
+          if (xhr.responseJSON && xhr.responseJSON.message) { msg = xhr.responseJSON.message; }
+          $('#quickFournisseurError').removeClass('d-none').text(msg);
+        }
+      });
+    });
+
+    // Quick create Vehicule
+    $('#btnSaveVehicule').on('click', function() {
+      const $form = $('#formVehiculeQuick');
+      const payload = $form.serialize();
+      $('#quickVehiculeError').addClass('d-none').text('');
+      // Validation simple cÃ´tÃ© client
+      const data = Object.fromEntries(new URLSearchParams(payload));
+      const required = ['immatriculation','marque','modele','type_moteur','categorie','statut_actuel'];
+      const missing = required.filter(k => !data[k] || !data[k].trim());
+      if (missing.length) {
+        $('#quickVehiculeError').removeClass('d-none').text('Veuillez remplir tous les champs requis (*)');
+        return;
+      }
+      // Optionnel: vÃ©rif format immatriculation
+      const plate = data['immatriculation'];
+      const plateOk = /^[A-Z0-9\-\s]+$/.test(plate);
+      if (!plateOk) {
+        $('#quickVehiculeError').removeClass('d-none').text("Format d'immatriculation invalide (lettres/chiffres, tirets, espaces)");
+        return;
+      }
+      $.ajax({
+        url: '{% url "fleet_app:vehicule_quick_create_ajax" %}',
+        method: 'POST',
+        data: payload,
+        success: function(resp) {
+          if (resp && resp.success) {
+            // Add new option to vehicule select and select it
+            const option = new Option(resp.text, resp.id, true, true);
+            $vehicule.append(option).trigger('change');
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalVehicule'));
+            modal.hide();
+            $form[0].reset();
+          }
+        },
+        error: function(xhr) {
+          let msg = 'Erreur lors de la crÃ©ation du vÃ©hicule';
+          if (xhr.responseJSON && xhr.responseJSON.message) { msg = xhr.responseJSON.message; }
+          $('#quickVehiculeError').removeClass('d-none').text(msg);
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

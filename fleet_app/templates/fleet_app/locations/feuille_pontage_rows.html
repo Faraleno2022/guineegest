@@ -1,0 +1,23 @@
+{% for f in feuilles %}
+<tr>
+  <td>{{ f.date }}</td>
+  <td>{{ f.location.vehicule }}</td>
+  <td>{{ f.location.type_location }}</td>
+  <td>
+    <span class="badge bg-{% if f.statut == 'Travail' %}success{% elif f.statut == 'Entretien' %}warning text-dark{% elif f.statut == 'Hors service' %}danger{% else %}secondary{% endif %}">{{ f.statut }}</span>
+  </td>
+  <td>{{ f.commentaire|default:'-' }}</td>
+  <td>
+    <div class="btn-group btn-group-sm" role="group">
+      <a href="{% url 'fleet_app:feuille_pontage_update' f.pk %}" class="btn btn-outline-warning" title="Modifier">
+        <i class="fas fa-edit"></i>
+      </a>
+      <a href="{% url 'fleet_app:feuille_pontage_delete' f.pk %}" class="btn btn-outline-danger" title="Supprimer">
+        <i class="fas fa-trash"></i>
+      </a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="6" class="text-center text-muted">Aucune feuille pour l'instant.</td></tr>
+{% endfor %}

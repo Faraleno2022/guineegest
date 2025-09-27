@@ -1,0 +1,90 @@
+{% extends 'fleet_app/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-invoice"></i> {{ title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.location|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.numero|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.date|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.statut|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.montant_ht|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.tva|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.montant_ttc|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'fleet_app:facture_location_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calcul automatique du montant TTC
+document.addEventListener('DOMContentLoaded', function() {
+    const montantHT = document.querySelector('#id_montant_ht');
+    const tva = document.querySelector('#id_tva');
+    const montantTTC = document.querySelector('#id_montant_ttc');
+    
+    function calculerTTC() {
+        const ht = parseFloat(montantHT.value) || 0;
+        const tvaMontant = parseFloat(tva.value) || 0;
+        montantTTC.value = (ht + tvaMontant).toFixed(2);
+    }
+    
+    function calculerTVA() {
+        const ht = parseFloat(montantHT.value) || 0;
+        tva.value = (ht * 0.18).toFixed(2); // TVA 18%
+        calculerTTC();
+    }
+    
+    if (montantHT && tva && montantTTC) {
+        montantHT.addEventListener('input', calculerTVA);
+        tva.addEventListener('input', calculerTTC);
+    }
+});
+</script>
+{% endblock %}

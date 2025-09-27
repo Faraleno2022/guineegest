@@ -1,0 +1,668 @@
+{% extends 'fleet_app/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Statistiques Véhicules - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filtres de période -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-filter"></i> Filtres de Période</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">Date de début</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">Date de fin</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Filtrer
+                            </button>
+                            <a href="{% url 'fleet_app:vehicule_comparaison_stats' %}" class="btn btn-outline-info">
+                                <i class="fas fa-chart-bar"></i> Comparaison
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-car fa-2x mb-2"></i>
+                    <h3>{{ stats_globales.total_vehicules }}</h3>
+                    <p>Total Véhicules</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3>{{ stats_globales.vehicules_actifs }}</h3>
+                    <p>Actifs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-tools fa-2x mb-2"></i>
+                    <h3>{{ stats_globales.vehicules_entretien }}</h3>
+                    <p>En Entretien</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-danger text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-times-circle fa-2x mb-2"></i>
+                    <h3>{{ stats_globales.vehicules_hors_service }}</h3>
+                    <p>Hors Service</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques d'entretien et location -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="fas fa-wrench"></i> Statistiques d'Entretien</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-warning">{{ stats_entretien.cout_total|floatformat:0 }}</h4>
+                                <small>Coût Total (GNF)</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-info">{{ stats_entretien.nombre_interventions }}</h4>
+                                <small>Interventions</small>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{ stats_entretien.pieces_utilisees }}</h5>
+                                <small>Pièces Utilisées</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{ stats_entretien.cout_moyen_intervention|floatformat:0 }}</h5>
+                                <small>Coût Moyen/Intervention</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-money-bill"></i> Statistiques de Location</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-success">{{ stats_location.revenus_totaux|floatformat:0 }}</h4>
+                                <small>Revenus Totaux (GNF)</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ stats_location.jours_location_totaux }}</h4>
+                                <small>Jours de Location</small>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{ stats_location.nombre_locations }}</h5>
+                                <small>Contrats Actifs</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{ stats_location.revenu_moyen_jour|floatformat:0 }}</h5>
+                                <small>Revenu Moyen/Jour</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques par véhicule -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Statistiques par Véhicule ({{ periode_jours }} jours)</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+                            <i class="fas fa-filter"></i> Filtres
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtres avancés -->
+                <div class="collapse" id="filtersCollapse">
+                    <div class="card-body border-bottom">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="searchInput" class="form-label">Recherche</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Immatriculation, marque...">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="statusFilter" class="form-label">Statut</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">Tous</option>
+                                    <option value="Actif">Actif</option>
+                                    <option value="Inactif">Inactif</option>
+                                    <option value="En entretien">En entretien</option>
+                                    <option value="Hors service">Hors service</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="categoryFilter" class="form-label">Catégorie</label>
+                                <select class="form-select" id="categoryFilter">
+                                    <option value="">Toutes</option>
+                                    <option value="Voiture">Voiture</option>
+                                    <option value="4x4">4x4</option>
+                                    <option value="Camion">Camion</option>
+                                    <option value="Moto">Moto</option>
+                                    <option value="Bus">Bus</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="minCostFilter" class="form-label">Coût min (GNF)</label>
+                                <input type="number" class="form-control" id="minCostFilter" placeholder="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="maxCostFilter" class="form-label">Coût max (GNF)</label>
+                                <input type="number" class="form-control" id="maxCostFilter" placeholder="1000000">
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Compteur de résultats -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <small class="text-muted">
+                            <span id="resultCount">{{ vehicules_stats|length }}</span> véhicule(s) affiché(s)
+                        </small>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="exportToCSV()">
+                                <i class="fas fa-download"></i> CSV
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="printTable()">
+                                <i class="fas fa-print"></i> Imprimer
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="vehiculesTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="sortable" data-column="vehicule">
+                                        Véhicule <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="jours_actifs">
+                                        Jours Actifs <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="jours_entretien">
+                                        Jours Entretien <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="jours_hs">
+                                        Jours H.S. <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="cout_entretien">
+                                        Coût Entretien <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="pieces">
+                                        Pièces Utilisées <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="consommation">
+                                        Consommation <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="frais_location">
+                                        Frais Location <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in vehicules_stats %}
+                                <tr data-immatriculation="{{ item.vehicule.immatriculation }}" 
+                                    data-marque="{{ item.vehicule.marque }}" 
+                                    data-modele="{{ item.vehicule.modele }}"
+                                    data-statut="{{ item.vehicule.statut_actuel }}"
+                                    data-categorie="{{ item.vehicule.categorie }}"
+                                    data-jours-actifs="{{ item.stats.jours_actifs }}"
+                                    data-jours-entretien="{{ item.stats.jours_entretien }}"
+                                    data-jours-hs="{{ item.stats.jours_hors_service }}"
+                                    data-cout-entretien="{{ item.stats.cout_entretien|add:item.stats.valeur_pieces }}"
+                                    data-pieces="{{ item.stats.pieces_utilisees }}"
+                                    data-consommation="{{ item.stats.consommation_litres }}"
+                                    data-frais-location="{{ item.stats.frais_location.total }}">
+                                    <td>
+                                        <strong>{{ item.vehicule.immatriculation }}</strong><br>
+                                        <small class="text-muted">{{ item.vehicule.marque }} {{ item.vehicule.modele }}</small>
+                                        <br><span class="badge bg-{% if item.vehicule.statut_actuel == 'Actif' %}success{% elif item.vehicule.statut_actuel == 'En entretien' %}warning{% else %}danger{% endif %} badge-sm">{{ item.vehicule.statut_actuel }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ item.stats.jours_actifs }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">{{ item.stats.jours_entretien }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-danger">{{ item.stats.jours_hors_service }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ item.stats.cout_entretien|floatformat:0 }}</strong> GNF<br>
+                                        <small class="text-muted">+ {{ item.stats.valeur_pieces|floatformat:0 }} pièces</small>
+                                    </td>
+                                    <td>
+                                        {{ item.stats.pieces_utilisees }} unités
+                                    </td>
+                                    <td>
+                                        {{ item.stats.consommation_litres|floatformat:1 }} L<br>
+                                        <small class="text-muted">{{ item.stats.cout_carburant|floatformat:0 }} GNF</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ item.stats.frais_location.total|floatformat:0 }}</strong> GNF<br>
+                                        <small class="text-muted">{{ item.stats.frais_location.jours_factures }} jours</small>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'fleet_app:vehicule_stats_detail' item.vehicule.pk %}?start_date={{ start_date }}&end_date={{ end_date }}" 
+                                           class="btn btn-sm btn-outline-primary" title="Détails">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">Aucun véhicule trouvé</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-card {
+    transition: transform 0.2s;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+.table th {
+    font-size: 0.9rem;
+}
+.table td {
+    vertical-align: middle;
+}
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.sortable i {
+    margin-left: 5px;
+    opacity: 0.5;
+}
+.sortable.sort-asc i:before {
+    content: "\f0de";
+    opacity: 1;
+}
+.sortable.sort-desc i:before {
+    content: "\f0dd";
+    opacity: 1;
+}
+.badge-sm {
+    font-size: 0.7rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    let currentSort = { column: null, direction: 'asc' };
+    let originalRows = [];
+    
+    // Sauvegarder les lignes originales
+    const tbody = document.querySelector('#vehiculesTable tbody');
+    originalRows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Initialiser les événements
+    initializeFilters();
+    initializeSorting();
+    
+    // Filtres en temps réel
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+    document.getElementById('minCostFilter').addEventListener('input', debounce(applyFilters, 500));
+    document.getElementById('maxCostFilter').addEventListener('input', debounce(applyFilters, 500));
+});
+
+function initializeFilters() {
+    // Pré-remplir les filtres avec les valeurs uniques des données
+    const rows = document.querySelectorAll('#vehiculesTable tbody tr');
+    const statuts = new Set();
+    const categories = new Set();
+    
+    rows.forEach(row => {
+        statuts.add(row.dataset.statut);
+        categories.add(row.dataset.categorie);
+    });
+    
+    // Mettre à jour les options des filtres si nécessaire
+    updateSelectOptions('statusFilter', Array.from(statuts));
+    updateSelectOptions('categoryFilter', Array.from(categories));
+}
+
+function updateSelectOptions(selectId, options) {
+    const select = document.getElementById(selectId);
+    const currentOptions = Array.from(select.options).slice(1).map(opt => opt.value);
+    
+    options.forEach(option => {
+        if (option && !currentOptions.includes(option)) {
+            const optionElement = document.createElement('option');
+            optionElement.value = option;
+            optionElement.textContent = option;
+            select.appendChild(optionElement);
+        }
+    });
+}
+
+function initializeSorting() {
+    document.querySelectorAll('.sortable').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            sortTable(column);
+        });
+    });
+}
+
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const minCost = parseFloat(document.getElementById('minCostFilter').value) || 0;
+    const maxCost = parseFloat(document.getElementById('maxCostFilter').value) || Infinity;
+    
+    const tbody = document.querySelector('#vehiculesTable tbody');
+    const rows = tbody.querySelectorAll('tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const immatriculation = row.dataset.immatriculation.toLowerCase();
+        const marque = row.dataset.marque.toLowerCase();
+        const modele = row.dataset.modele.toLowerCase();
+        const statut = row.dataset.statut;
+        const categorie = row.dataset.categorie;
+        const coutEntretien = parseFloat(row.dataset.coutEntretien) || 0;
+        
+        // Critères de filtrage
+        const matchesSearch = !searchTerm || 
+            immatriculation.includes(searchTerm) || 
+            marque.includes(searchTerm) || 
+            modele.includes(searchTerm);
+        
+        const matchesStatus = !statusFilter || statut === statusFilter;
+        const matchesCategory = !categoryFilter || categorie === categoryFilter;
+        const matchesCost = coutEntretien >= minCost && coutEntretien <= maxCost;
+        
+        // Afficher/masquer la ligne
+        if (matchesSearch && matchesStatus && matchesCategory && matchesCost) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Mettre à jour le compteur
+    document.getElementById('resultCount').textContent = visibleCount;
+    
+    // Réappliquer le tri si nécessaire
+    if (currentSort.column) {
+        sortTable(currentSort.column, false);
+    }
+}
+
+function sortTable(column, toggleDirection = true) {
+    const tbody = document.querySelector('#vehiculesTable tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => row.style.display !== 'none');
+    
+    // Déterminer la direction du tri
+    if (toggleDirection) {
+        if (currentSort.column === column) {
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.direction = 'asc';
+        }
+        currentSort.column = column;
+    }
+    
+    // Fonction de tri
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (column) {
+            case 'vehicule':
+                aValue = a.dataset.immatriculation;
+                bValue = b.dataset.immatriculation;
+                break;
+            case 'jours_actifs':
+                aValue = parseInt(a.dataset.joursActifs) || 0;
+                bValue = parseInt(b.dataset.joursActifs) || 0;
+                break;
+            case 'jours_entretien':
+                aValue = parseInt(a.dataset.joursEntretien) || 0;
+                bValue = parseInt(b.dataset.joursEntretien) || 0;
+                break;
+            case 'jours_hs':
+                aValue = parseInt(a.dataset.joursHs) || 0;
+                bValue = parseInt(b.dataset.joursHs) || 0;
+                break;
+            case 'cout_entretien':
+                aValue = parseFloat(a.dataset.coutEntretien) || 0;
+                bValue = parseFloat(b.dataset.coutEntretien) || 0;
+                break;
+            case 'pieces':
+                aValue = parseInt(a.dataset.pieces) || 0;
+                bValue = parseInt(b.dataset.pieces) || 0;
+                break;
+            case 'consommation':
+                aValue = parseFloat(a.dataset.consommation) || 0;
+                bValue = parseFloat(b.dataset.consommation) || 0;
+                break;
+            case 'frais_location':
+                aValue = parseFloat(a.dataset.fraisLocation) || 0;
+                bValue = parseFloat(b.dataset.fraisLocation) || 0;
+                break;
+            default:
+                return 0;
+        }
+        
+        // Comparaison
+        if (typeof aValue === 'string') {
+            aValue = aValue.toLowerCase();
+            bValue = bValue.toLowerCase();
+        }
+        
+        if (aValue < bValue) return currentSort.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return currentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    // Réorganiser les lignes
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Mettre à jour les icônes de tri
+    updateSortIcons(column, currentSort.direction);
+}
+
+function updateSortIcons(activeColumn, direction) {
+    document.querySelectorAll('.sortable').forEach(header => {
+        header.classList.remove('sort-asc', 'sort-desc');
+        if (header.dataset.column === activeColumn) {
+            header.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('categoryFilter').value = '';
+    document.getElementById('minCostFilter').value = '';
+    document.getElementById('maxCostFilter').value = '';
+    
+    // Réinitialiser le tri
+    currentSort = { column: null, direction: 'asc' };
+    document.querySelectorAll('.sortable').forEach(header => {
+        header.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    // Restaurer l'ordre original et afficher toutes les lignes
+    const tbody = document.querySelector('#vehiculesTable tbody');
+    originalRows.forEach(row => {
+        row.style.display = '';
+        tbody.appendChild(row);
+    });
+    
+    document.getElementById('resultCount').textContent = originalRows.length;
+}
+
+function exportToCSV() {
+    const table = document.getElementById('vehiculesTable');
+    const rows = Array.from(table.querySelectorAll('tr')).filter(row => 
+        row.style.display !== 'none' || row.parentElement.tagName === 'THEAD'
+    );
+    
+    let csv = [];
+    
+    rows.forEach(row => {
+        const cols = Array.from(row.querySelectorAll('th, td')).slice(0, -1); // Exclure la colonne Actions
+        const rowData = cols.map(col => {
+            let text = col.textContent.trim();
+            // Nettoyer le texte pour CSV
+            text = text.replace(/\s+/g, ' ').replace(/"/g, '""');
+            return `"${text}"`;
+        });
+        csv.push(rowData.join(','));
+    });
+    
+    // Télécharger le fichier
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'statistiques_vehicules.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function printTable() {
+    const printWindow = window.open('', '_blank');
+    const table = document.getElementById('vehiculesTable').cloneNode(true);
+    
+    // Supprimer la colonne Actions
+    table.querySelectorAll('th:last-child, td:last-child').forEach(cell => cell.remove());
+    
+    // Masquer les lignes filtrées
+    Array.from(table.querySelectorAll('tbody tr')).forEach(row => {
+        if (row.style.display === 'none') {
+            row.remove();
+        }
+    });
+    
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Statistiques Véhicules</title>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                .badge { padding: 2px 6px; border-radius: 3px; font-size: 0.8em; }
+                .bg-success { background-color: #28a745; color: white; }
+                .bg-warning { background-color: #ffc107; color: black; }
+                .bg-danger { background-color: #dc3545; color: white; }
+            </style>
+        </head>
+        <body>
+            <h1>Statistiques des Véhicules</h1>
+            <p>Date d'impression: ${new Date().toLocaleDateString()}</p>
+            ${table.outerHTML}
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

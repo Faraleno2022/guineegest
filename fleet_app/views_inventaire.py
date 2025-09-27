@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 from django.template.loader import get_template
 from decimal import Decimal
 from django.utils import timezone
+from .utils.decorators import queryset_filter_by_tenant
 
 from .models_inventaire import Produit, EntreeStock, SortieStock, MouvementStock, Commande, LigneCommande
 from .forms_inventaire import ProduitForm, EntreeStockForm, SortieStockForm, RechercheInventaireForm, RechercheCommandeForm, CommandeForm, LigneCommandeForm, DocumentSigneCommandeForm
@@ -62,7 +63,7 @@ WEASYPRINT_AVAILABLE = False
 @login_required
 def inventaire_dashboard(request):
     """Tableau de bord Inventaire avec KPIs clés: stock disponible, alertes, ventes récentes"""
-    produits = Produit.objects.filter(user=request.user)
+    produits = queryset_filter_by_tenant(Produit.objects.all(), request)
 
     # KPIs de stock
     total_produits = produits.count()
@@ -161,20 +162,13 @@ def produit_create(request):
     if request.method == 'POST':
         form = ProduitForm(request.POST)
         if form.is_valid():
-            # Associer l'utilisateur connecté avant de sauvegarder
+            # Associer l'utilisateur/entreprise connectés avant de sauvegarder
             produit = form.save(commit=False)
             produit.user = request.user
+            ent = getattr(getattr(request.user, 'profil', None), 'entreprise', None) or getattr(request.user, 'entreprise', None)
+            if hasattr(produit, 'entreprise'):
+                produit.entreprise = ent
             
-            # Récupérer l'entreprise de l'utilisateur si disponible
-            try:
-                from fleet_app.models_accounts import Profil
-                profil = Profil.objects.get(user=request.user)
-                if hasattr(profil, 'entreprise') and profil.entreprise:
-                    produit.entreprise = profil.entreprise
-            except Exception as e:
-                # En cas d'erreur, on continue sans associer d'entreprise
-                pass
-                
             produit.save()
             messages.success(request, "Le produit a été ajouté avec succès.")
             return redirect('fleet_app:produit_list')
@@ -211,14 +205,9 @@ def produit_update(request, pk):
                 
             # Conserver l'entreprise existante si déjà définie, sinon récupérer celle de l'utilisateur connecté
             if not form.instance.entreprise:
-                try:
-                    from fleet_app.models_accounts import Profil
-                    profil = Profil.objects.get(user=request.user)
-                    if hasattr(profil, 'entreprise') and profil.entreprise:
-                        form.instance.entreprise = profil.entreprise
-                except Exception as e:
-                    # En cas d'erreur, on continue sans associer d'entreprise
-                    pass
+                ent = getattr(getattr(request.user, 'profil', None), 'entreprise', None) or getattr(request.user, 'entreprise', None)
+                if ent:
+                    form.instance.entreprise = ent
                     
             form.save()
             messages.success(request, "Le produit a été mis à jour avec succès.")
@@ -288,7 +277,7 @@ def entree_stock_list(request):
     form_recherche = RechercheInventaireForm(request.GET)
     # Filtrer les entrées pour n'afficher que celles de l'utilisateur connecté
     # Nous filtrons sur le produit associé à l'entrée
-    entrees = EntreeStock.objects.filter(produit__user=request.user)
+    entrees = queryset_filter_by_tenant(EntreeStock.objects.all(), request)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -469,7 +458,7 @@ def sortie_stock_list(request):
     form_recherche = RechercheInventaireForm(request.GET)
     # Filtrer les sorties pour n'afficher que celles de l'utilisateur connecté
     # Nous filtrons sur le produit associé à la sortie
-    sorties = SortieStock.objects.filter(produit__user=request.user)
+    sorties = queryset_filter_by_tenant(SortieStock.objects.all(), request)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -690,7 +679,7 @@ def mouvement_stock_list(request):
     """
     form_recherche = RechercheInventaireForm(request.GET)
     # Récupérer tous les mouvements de stock
-    mouvements = MouvementStock.objects.filter(produit__user=request.user)
+    mouvements = queryset_filter_by_tenant(MouvementStock.objects.all(), request)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
