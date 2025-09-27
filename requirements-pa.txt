@@ -11,7 +11,7 @@ sqlparse==0.5.3
 tzdata==2025.2
 # PDF: vues de facturation
 # Pin to known compatible pair to avoid ShowBoundaryValue import error
-xhtml2pdf==0.2.10
+xhtml2pdf==0.2.8
 reportlab==3.5.67
 # PostgreSQL driver
 psycopg2-binary==2.9.10
