@@ -19,6 +19,7 @@ from . import views_presence_sync
 from . import views_paie_enhanced
 from . import views_location
 from . import views_vehicule_stats
+from . import views_vehicule_simple
 
 app_name = 'fleet_app'
 
@@ -39,6 +40,7 @@ urlpatterns = [
     path('vehicules/', views.VehiculeListView.as_view(), name='vehicule_list'),
     path('vehicules/export/pdf/', views.export_vehicules_pdf, name='export_vehicules_pdf'),
     path('vehicules/ajouter/', views.VehiculeCreateView.as_view(), name='vehicule_add'),
+    path('vehicules/nouveau-simple/', views_vehicule_simple.vehicule_create_simple, name='vehicule_create_simple'),
     path('vehicules/<str:id_vehicule>/', views.VehiculeDetailView.as_view(), name='vehicule_detail'),
     path('vehicules/modifier/<str:id_vehicule>/', views.VehiculeUpdateView.as_view(), name='vehicule_edit'),
     path('vehicules/supprimer/<str:id_vehicule>/', views.VehiculeDeleteView.as_view(), name='vehicule_delete'),

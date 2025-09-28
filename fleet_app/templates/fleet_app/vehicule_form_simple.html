@@ -1,0 +1,205 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}Nouveau Véhicule{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-car me-2"></i>Nouveau véhicule
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Champs obligatoires -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="id_vehicule" class="form-label">ID Véhicule *</label>
+                                <input type="text" class="form-control {% if errors.id_vehicule %}is-invalid{% endif %}" 
+                                       id="id_vehicule" name="id_vehicule" 
+                                       value="{{ form_data.id_vehicule|default:'' }}" 
+                                       placeholder="Ex: VH001" required>
+                                {% if errors.id_vehicule %}
+                                    <div class="invalid-feedback">{{ errors.id_vehicule }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="immatriculation" class="form-label">Immatriculation *</label>
+                                <input type="text" class="form-control {% if errors.immatriculation %}is-invalid{% endif %}" 
+                                       id="immatriculation" name="immatriculation" 
+                                       value="{{ form_data.immatriculation|default:'' }}" 
+                                       placeholder="Ex: ABC-123-GN" required>
+                                {% if errors.immatriculation %}
+                                    <div class="invalid-feedback">{{ errors.immatriculation }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="marque" class="form-label">Marque *</label>
+                                <input type="text" class="form-control {% if errors.marque %}is-invalid{% endif %}" 
+                                       id="marque" name="marque" 
+                                       value="{{ form_data.marque|default:'' }}" 
+                                       placeholder="Ex: Toyota" required>
+                                {% if errors.marque %}
+                                    <div class="invalid-feedback">{{ errors.marque }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="modele" class="form-label">Modèle *</label>
+                                <input type="text" class="form-control {% if errors.modele %}is-invalid{% endif %}" 
+                                       id="modele" name="modele" 
+                                       value="{{ form_data.modele|default:'' }}" 
+                                       placeholder="Ex: Hilux" required>
+                                {% if errors.modele %}
+                                    <div class="invalid-feedback">{{ errors.modele }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="type_moteur" class="form-label">Type de moteur *</label>
+                                <select class="form-select {% if errors.type_moteur %}is-invalid{% endif %}" 
+                                        id="type_moteur" name="type_moteur" required>
+                                    <option value="">-- Choisir --</option>
+                                    {% for value, label in moteur_choices %}
+                                        <option value="{{ value }}" {% if form_data.type_moteur == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if errors.type_moteur %}
+                                    <div class="invalid-feedback">{{ errors.type_moteur }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="categorie" class="form-label">Catégorie *</label>
+                                <select class="form-select {% if errors.categorie %}is-invalid{% endif %}" 
+                                        id="categorie" name="categorie" required>
+                                    <option value="">-- Choisir --</option>
+                                    {% for value, label in categorie_choices %}
+                                        <option value="{{ value }}" {% if form_data.categorie == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if errors.categorie %}
+                                    <div class="invalid-feedback">{{ errors.categorie }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="statut_actuel" class="form-label">Statut actuel *</label>
+                                <select class="form-select {% if errors.statut_actuel %}is-invalid{% endif %}" 
+                                        id="statut_actuel" name="statut_actuel" required>
+                                    <option value="">-- Choisir --</option>
+                                    {% for value, label in statut_choices %}
+                                        <option value="{{ value }}" {% if form_data.statut_actuel == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if errors.statut_actuel %}
+                                    <div class="invalid-feedback">{{ errors.statut_actuel }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Champs optionnels -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="date_acquisition" class="form-label">Date d'acquisition</label>
+                                <input type="date" class="form-control" 
+                                       id="date_acquisition" name="date_acquisition" 
+                                       value="{{ form_data.date_acquisition|default:'' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="date_mise_service" class="form-label">Date de mise en service</label>
+                                <input type="date" class="form-control" 
+                                       id="date_mise_service" name="date_mise_service" 
+                                       value="{{ form_data.date_mise_service|default:'' }}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="kilometrage_initial" class="form-label">Kilométrage initial</label>
+                                <input type="number" class="form-control {% if errors.kilometrage_initial %}is-invalid{% endif %}" 
+                                       id="kilometrage_initial" name="kilometrage_initial" 
+                                       value="{{ form_data.kilometrage_initial|default:'0' }}" 
+                                       min="0" placeholder="0">
+                                {% if errors.kilometrage_initial %}
+                                    <div class="invalid-feedback">{{ errors.kilometrage_initial }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="affectation" class="form-label">Affectation</label>
+                                <input type="text" class="form-control" 
+                                       id="affectation" name="affectation" 
+                                       value="{{ form_data.affectation|default:'' }}" 
+                                       placeholder="Ex: Direction générale">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="numero_chassis" class="form-label">Numéro de châssis</label>
+                                <input type="text" class="form-control" 
+                                       id="numero_chassis" name="numero_chassis" 
+                                       value="{{ form_data.numero_chassis|default:'' }}" 
+                                       placeholder="Optionnel">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="numero_moteur" class="form-label">Numéro de moteur</label>
+                                <input type="text" class="form-control" 
+                                       id="numero_moteur" name="numero_moteur" 
+                                       value="{{ form_data.numero_moteur|default:'' }}" 
+                                       placeholder="Optionnel">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="observations" class="form-label">Observations</label>
+                                <textarea class="form-control" id="observations" name="observations" 
+                                          rows="3" placeholder="Commentaires optionnels">{{ form_data.observations|default:'' }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'fleet_app:vehicule_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer le véhicule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-remplir les dates avec aujourd'hui si vides
+    const today = new Date().toISOString().split('T')[0];
+    if (!$('#date_acquisition').val()) {
+        $('#date_acquisition').val(today);
+    }
+    if (!$('#date_mise_service').val()) {
+        $('#date_mise_service').val(today);
+    }
+});
+</script>
+{% endblock %}
