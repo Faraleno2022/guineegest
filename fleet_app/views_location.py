@@ -7,8 +7,6 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string, get_template
 import calendar
-from io import BytesIO
-
 from .models_location import (
     FournisseurVehicule,
     LocationVehicule,
@@ -22,7 +20,7 @@ from .forms_location import (
     FactureLocationForm,
 )
 from .models import Vehicule
-from .utils.decorators import queryset_filter_by_tenant
+from .utils.decorators import queryset_filter_by_tenant, object_belongs_to_tenant
 
 
 @login_required
@@ -303,7 +301,7 @@ def facture_search_ajax(request):
 def location_list(request):
     user = request.user
     qs = queryset_filter_by_tenant(LocationVehicule.objects.all(), request).select_related("vehicule", "fournisseur")
-    
+
     # Filtres de recherche
     search_vehicule = request.GET.get('search_vehicule', '').strip()
     search_fournisseur = request.GET.get('search_fournisseur', '').strip()
@@ -311,7 +309,7 @@ def location_list(request):
     search_statut = request.GET.get('search_statut', '').strip()
     date_debut_min = request.GET.get('date_debut_min', '').strip()
     date_debut_max = request.GET.get('date_debut_max', '').strip()
-    
+
     # Application des filtres
     if search_vehicule:
         qs = qs.filter(
@@ -319,35 +317,36 @@ def location_list(request):
             Q(vehicule__marque__icontains=search_vehicule) |
             Q(vehicule__modele__icontains=search_vehicule)
         )
-    
+
     if search_fournisseur:
         qs = qs.filter(fournisseur__nom__icontains=search_fournisseur)
-    
+
     if search_type:
         qs = qs.filter(type_location=search_type)
-    
+
     if search_statut:
         qs = qs.filter(statut=search_statut)
-    
+
     if date_debut_min:
         qs = qs.filter(date_debut__gte=date_debut_min)
-    
+
     if date_debut_max:
         qs = qs.filter(date_debut__lte=date_debut_max)
-    
-    # Pagination
+
+    # Pagination (ensure stable ordering)
+    qs = qs.order_by('-date_debut', '-id')
     paginator = Paginator(qs, 20)
     page_number = request.GET.get('page')
     locations = paginator.get_page(page_number)
-    
-    # Données pour les filtres
-    fournisseurs = FournisseurVehicule.objects.filter(user=user).values_list('nom', flat=True).distinct()
+
+    # Données pour les filtres (tenant-aware)
+    fournisseurs = queryset_filter_by_tenant(FournisseurVehicule.objects.all(), request).values_list('nom', flat=True).distinct()
     types_location = LocationVehicule.TYPE_CHOICES
     statuts_location = LocationVehicule.STATUT_CHOICES
-    
+
     context = {
         "locations": locations,
-        "fournisseurs": fournisseurs,
+        "fournisseurs": list(fournisseurs),
         "types_location": types_location,
         "statuts_location": statuts_location,
         "search_vehicule": search_vehicule,
@@ -357,7 +356,7 @@ def location_list(request):
         "date_debut_min": date_debut_min,
         "date_debut_max": date_debut_max,
     }
-    
+
     return render(request, "fleet_app/locations/location_list.html", context)
 
 
@@ -486,7 +485,7 @@ def location_detail(request, pk):
 @login_required
 def fournisseur_create(request):
     if request.method == 'POST':
-        form = FournisseurVehiculeForm(request.POST)
+        form = FournisseurVehiculeForm(request.POST, user=request.user)
         if form.is_valid():
             fournisseur = form.save(commit=False)
             fournisseur.user = request.user
@@ -497,7 +496,7 @@ def fournisseur_create(request):
             messages.success(request, 'Fournisseur créé avec succès.')
             return redirect('fleet_app:fournisseur_location_list')
     else:
-        form = FournisseurVehiculeForm()
+        form = FournisseurVehiculeForm(user=request.user)
     
     return render(request, 'fleet_app/locations/fournisseur_form.html', {
         'form': form,
@@ -510,13 +509,13 @@ def fournisseur_update(request, pk):
     fournisseur = get_object_or_404(FournisseurVehicule, pk=pk, user=request.user)
     
     if request.method == 'POST':
-        form = FournisseurVehiculeForm(request.POST, instance=fournisseur)
+        form = FournisseurVehiculeForm(request.POST, instance=fournisseur, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Fournisseur modifié avec succès.')
             return redirect('fleet_app:fournisseur_location_list')
     else:
-        form = FournisseurVehiculeForm(instance=fournisseur)
+        form = FournisseurVehiculeForm(instance=fournisseur, user=request.user)
     
     return render(request, 'fleet_app/locations/fournisseur_form.html', {
         'form': form,

@@ -1056,9 +1056,9 @@ class FeuilleRouteListView(LoginRequiredMixin, ListView):
         # Filtre de période sur date_depart/date_retour
         start_date, end_date = get_period_filter(self.request)
         if start_date:
-            qs = qs.filter(date_depart__date__gte=start_date)
+            qs = qs.filter(date_depart__gte=start_date)
         if end_date:
-            qs = qs.filter(date_depart__date__lte=end_date)
+            qs = qs.filter(date_depart__lte=end_date)
         return qs
 
     def get_context_data(self, **kwargs):
@@ -1072,12 +1072,15 @@ class FeuilleRouteListView(LoginRequiredMixin, ListView):
 
 # ---------- PDF UTIL ----------
 def render_to_pdf(template_src, context_dict, filename):
-    if pisa is None:
-        return HttpResponse('xhtml2pdf non disponible sur ce serveur', status=500)
+    try:
+        from xhtml2pdf import pisa
+    except Exception:
+        return HttpResponse('Génération PDF indisponible (xhtml2pdf/reportlab manquants).', status=503)
+
     template = get_template(template_src)
     html = template.render(context_dict)
     result = BytesIO()
-    pdf = pisa.CreatePDF(src=html, dest=result)
+    pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
     if not pdf.err:
         response = HttpResponse(result.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -1118,9 +1121,9 @@ def export_feuilles_route_pdf(request):
             Q(destination__icontains=search)
         )
     if start_date:
-        qs = qs.filter(date_depart__date__gte=start_date)
+        qs = qs.filter(date_depart__gte=start_date)
     if end_date:
-        qs = qs.filter(date_depart__date__lte=end_date)
+        qs = qs.filter(date_depart__lte=end_date)
     context = {
         'feuilles_route': qs,
         'generated_at': timezone.now(),
@@ -1457,6 +1460,11 @@ class VehiculeCreateView(LoginRequiredMixin, CreateView):
     template_name = 'fleet_app/vehicule_form.html'
     success_url = reverse_lazy('fleet_app:vehicule_list')
     
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+    
     def form_valid(self, form):
         messages.success(self.request, 'Véhicule ajouté avec succès.')
         return super().form_valid(form)
@@ -1467,6 +1475,11 @@ class VehiculeUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'fleet_app/vehicule_form.html'
     success_url = reverse_lazy('fleet_app:vehicule_list')
     pk_url_kwarg = 'id_vehicule'
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
     
     def get_queryset(self):
         return Vehicule.objects.filter(user=self.request.user)

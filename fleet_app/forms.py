@@ -91,8 +91,23 @@ class VehiculeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        # Keep reference for save()
+        self._user = user
         if user:
             self.fields['chauffeur_principal'].queryset = Chauffeur.objects.filter(user=user)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Attach tenant context if not already set
+        if getattr(instance, 'user_id', None) is None and getattr(self, '_user', None):
+            instance.user = self._user
+            # Try to set entreprise if model has the field
+            ent = getattr(getattr(self._user, 'profil', None), 'entreprise', None) or getattr(self._user, 'entreprise', None)
+            if hasattr(instance, 'entreprise') and ent is not None:
+                instance.entreprise = ent
+        if commit:
+            instance.save()
+        return instance
     
     class Meta:
         model = Vehicule

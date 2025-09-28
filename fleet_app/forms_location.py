@@ -11,6 +11,22 @@ from .models import Vehicule
 
 
 class FournisseurVehiculeForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        self._user = user
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Assigner automatiquement le tenant si non défini
+        if getattr(instance, 'user_id', None) is None and getattr(self, '_user', None):
+            instance.user = self._user
+            ent = getattr(getattr(self._user, 'profil', None), 'entreprise', None) or getattr(self._user, 'entreprise', None)
+            if hasattr(instance, 'entreprise') and ent is not None:
+                instance.entreprise = ent
+        if commit:
+            instance.save()
+        return instance
     class Meta:
         model = FournisseurVehicule
         fields = ["nom", "contact", "telephone", "email", "adresse"]

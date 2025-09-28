@@ -50,9 +50,24 @@ def object_belongs_to_tenant(model, lookup_kwarg='pk', entreprise_field='entrepr
 
 
 def queryset_filter_by_tenant(qs, request, entreprise_field='entreprise', user_field='user'):
-    """Filter a queryset by entreprise when available, else by user."""
+    """Filter a queryset by entreprise when available, else by user. Avoid FieldError when fields are missing."""
     model = qs.model
+    # Check model fields
+    has_ent = hasattr(model, '_meta') and any(f.name == entreprise_field for f in model._meta.fields)
+    has_user = hasattr(model, '_meta') and any(f.name == user_field for f in model._meta.fields)
+
     user_ent = _get_user_entreprise(request.user)
-    if hasattr(model, '_meta') and any(f.name == entreprise_field for f in model._meta.fields) and user_ent is not None:
-        return qs.filter(**{entreprise_field: user_ent})
-    return qs.filter(**{user_field: request.user})
+
+    # Prefer entreprise scoping when available
+    if has_ent:
+        if user_ent is not None:
+            return qs.filter(**{entreprise_field: user_ent})
+        # Model is tenant-aware via entreprise but user has no entreprise: safest is to return none
+        return qs.none()
+
+    # Fallback to user scoping if field exists
+    if has_user:
+        return qs.filter(**{user_field: request.user})
+
+    # As a last resort, return the queryset unfiltered (model not tenant-scoped)
+    return qs
