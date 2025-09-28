@@ -12,6 +12,13 @@
                     <h5 class="mb-0">Ajouter un nouveau véhicule</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Affichage des erreurs générales du formulaire -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
                     <form method="post" novalidate>
                         {% csrf_token %}
                         

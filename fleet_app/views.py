@@ -1468,6 +1468,16 @@ class VehiculeCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         messages.success(self.request, 'Véhicule ajouté avec succès.')
         return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        # Debug: afficher les erreurs dans les messages pour diagnostic
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(self.request, f"Erreur {field}: {error}")
+        if form.non_field_errors():
+            for error in form.non_field_errors():
+                messages.error(self.request, f"Erreur générale: {error}")
+        return super().form_invalid(form)
 
 class VehiculeUpdateView(LoginRequiredMixin, UpdateView):
     model = Vehicule
