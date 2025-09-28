@@ -28,6 +28,7 @@ from .utils.decorators import queryset_filter_by_tenant
 @login_required
 def locations_dashboard(request):
     user = request.user
+
     locations = queryset_filter_by_tenant(LocationVehicule.objects.all(), request).select_related("vehicule", "fournisseur")
     actifs = locations.filter(statut="Active").count()
     inactifs = locations.filter(statut__in=["Inactive", "Clôturée"]).count()
