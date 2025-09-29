@@ -277,7 +277,7 @@ def entree_stock_list(request):
     form_recherche = RechercheInventaireForm(request.GET)
     # Filtrer les entrées pour n'afficher que celles de l'utilisateur connecté
     # Nous filtrons sur le produit associé à l'entrée
-    entrees = queryset_filter_by_tenant(EntreeStock.objects.all(), request)
+    entrees = EntreeStock.objects.filter(produit__user=request.user)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():
@@ -458,7 +458,7 @@ def sortie_stock_list(request):
     form_recherche = RechercheInventaireForm(request.GET)
     # Filtrer les sorties pour n'afficher que celles de l'utilisateur connecté
     # Nous filtrons sur le produit associé à la sortie
-    sorties = queryset_filter_by_tenant(SortieStock.objects.all(), request)
+    sorties = SortieStock.objects.filter(produit__user=request.user)
     
     # Filtrage selon les critères de recherche
     if form_recherche.is_valid():

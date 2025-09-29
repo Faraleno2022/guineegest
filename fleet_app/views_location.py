@@ -840,7 +840,8 @@ def location_search_ajax(request):
         except:
             pass
     
-    # Pagination
+    # Pagination (ensure stable ordering)
+    qs = qs.order_by('-date_debut', '-id')
     paginator = Paginator(qs, 20)
     page_number = request.GET.get('page', 1)
     locations = paginator.get_page(page_number)
