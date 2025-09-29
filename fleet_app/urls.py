@@ -20,6 +20,7 @@ from . import views_paie_enhanced
 from . import views_location
 from . import views_vehicule_stats
 from . import views_vehicule_simple
+from . import views_fournisseur_simple
 
 app_name = 'fleet_app'
 
@@ -253,6 +254,7 @@ urlpatterns = [
     # Fournisseurs
     path('locations/fournisseurs/', views_location.fournisseur_list, name='fournisseur_location_list'),
     path('locations/fournisseurs/nouveau/', views_location.fournisseur_create, name='fournisseur_create'),
+    path('locations/fournisseurs/nouveau-simple/', views_fournisseur_simple.fournisseur_create_simple, name='fournisseur_create_simple'),
     path('locations/fournisseurs/<int:pk>/modifier/', views_location.fournisseur_update, name='fournisseur_update'),
     path('locations/fournisseurs/<int:pk>/supprimer/', views_location.fournisseur_delete, name='fournisseur_delete'),
     
