@@ -1,4 +1,4 @@
-﻿{% extends 'fleet_app/base.html' %}
+{% extends 'fleet_app/base.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}{{ title }}{% endblock %}
@@ -36,9 +36,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 {{ form.vehicule|as_crispy_field }}
-                                <button type="button" class="btn btn-outline-primary btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#modalVehicule">
-                                    <i class="fas fa-plus"></i> Ajouter un vÃ©hicule
-                                </button>
+                                <small class="text-muted">Sélectionnez un véhicule existant ou <a href="{% url 'fleet_app:vehicule_create_simple' %}" target="_blank">créez-en un nouveau</a></small>
                             </div>
                             <div class="col-md-6">
                                 {{ form.type_location|as_crispy_field }}
@@ -131,72 +129,6 @@
     </div>
   </div>
  </div>
-<!-- Modal: Ajout rapide Véhicule -->
-<div class="modal fade" id="modalVehicule" tabindex="-1" aria-labelledby="modalVehiculeLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalVehiculeLabel">Nouveau véhicule</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="formVehiculeQuick">
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Immatriculation *</label>
-              <input type="text" name="immatriculation" class="form-control" required>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Marque *</label>
-              <input type="text" name="marque" class="form-control" required>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Modèle *</label>
-              <input type="text" name="modele" class="form-control" required>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Type de moteur *</label>
-              <select name="type_moteur" class="form-select" required>
-                <option value="">-- Choisir --</option>
-                <option value="Essence">Essence</option>
-                <option value="Diesel" selected>Diesel</option>
-                <option value="Hybride">Hybride</option>
-                <option value="Électrique">Électrique</option>
-              </select>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Catégorie *</label>
-              <select name="categorie" class="form-select" required>
-                <option value="">-- Choisir --</option>
-                <option value="Voiture" selected>Voiture</option>
-                <option value="Moto">Moto</option>
-                <option value="4x4">4x4</option>
-                <option value="Camion">Camion</option>
-                <option value="Bus">Bus</option>
-              </select>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label">Statut actuel *</label>
-              <select name="statut_actuel" class="form-select" required>
-                <option value="">-- Choisir --</option>
-                <option value="Actif" selected>Actif</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Hors Service">Hors Service</option>
-              </select>
-            </div>
-          </div>
-        </form>
-        <div class="alert alert-danger d-none" id="quickVehiculeError"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary" id="btnSaveVehicule">Enregistrer</button>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -272,17 +204,6 @@
       });
     }
 
-    // Focus auto sur immatriculation et uppercasing
-    const vehiculeModalEl = document.getElementById('modalVehicule');
-    if (vehiculeModalEl) {
-      vehiculeModalEl.addEventListener('shown.bs.modal', function () {
-        const input = document.querySelector('#formVehiculeQuick input[name="immatriculation"]');
-        if (input) input.focus();
-      });
-    }
-    $(document).on('input', '#formVehiculeQuick input[name="immatriculation"]', function() {
-      this.value = this.value.toUpperCase();
-    });
 
     // Quick create Fournisseur
     $('#btnSaveFournisseur').on('click', function() {
@@ -312,48 +233,6 @@
       });
     });
 
-    // Quick create Vehicule
-    $('#btnSaveVehicule').on('click', function() {
-      const $form = $('#formVehiculeQuick');
-      const payload = $form.serialize();
-      $('#quickVehiculeError').addClass('d-none').text('');
-      // Validation simple cÃ´tÃ© client
-      const data = Object.fromEntries(new URLSearchParams(payload));
-      const required = ['immatriculation','marque','modele','type_moteur','categorie','statut_actuel'];
-      const missing = required.filter(k => !data[k] || !data[k].trim());
-      if (missing.length) {
-        $('#quickVehiculeError').removeClass('d-none').text('Veuillez remplir tous les champs requis (*)');
-        return;
-      }
-      // Optionnel: vÃ©rif format immatriculation
-      const plate = data['immatriculation'];
-      const plateOk = /^[A-Z0-9\-\s]+$/.test(plate);
-      if (!plateOk) {
-        $('#quickVehiculeError').removeClass('d-none').text("Format d'immatriculation invalide (lettres/chiffres, tirets, espaces)");
-        return;
-      }
-      $.ajax({
-        url: '{% url "fleet_app:vehicule_quick_create_ajax" %}',
-        method: 'POST',
-        data: payload,
-        success: function(resp) {
-          if (resp && resp.success) {
-            // Add new option to vehicule select and select it
-            const option = new Option(resp.text, resp.id, true, true);
-            $vehicule.append(option).trigger('change');
-            // Close modal and reset form
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalVehicule'));
-            modal.hide();
-            $form[0].reset();
-          }
-        },
-        error: function(xhr) {
-          let msg = 'Erreur lors de la crÃ©ation du vÃ©hicule';
-          if (xhr.responseJSON && xhr.responseJSON.message) { msg = xhr.responseJSON.message; }
-          $('#quickVehiculeError').removeClass('d-none').text(msg);
-        }
-      });
-    });
   });
 </script>
 {% endblock %}
