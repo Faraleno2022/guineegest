@@ -6,9 +6,10 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string, get_template
+from django.contrib import messages
 import calendar
+from .models import FournisseurVehicule, Vehicule
 from .models_location import (
-    FournisseurVehicule,
     LocationVehicule,
     FeuillePontageLocation,
     FactureLocation,
@@ -19,7 +20,6 @@ from .forms_location import (
     FeuillePontageLocationForm,
     FactureLocationForm,
 )
-from .models import Vehicule
 from .utils.decorators import queryset_filter_by_tenant, object_belongs_to_tenant
 
 
