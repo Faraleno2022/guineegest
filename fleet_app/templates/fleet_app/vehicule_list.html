@@ -26,7 +26,7 @@
             <a class="btn btn-sm btn-outline-dark" href="{% url 'fleet_app:export_vehicules_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}&search={{ request.GET.search }}">
                 <i class="fas fa-file-pdf"></i> PDF
             </a>
-            <a href="{% url 'fleet_app:vehicule_add' %}" class="btn btn-sm btn-primary">
+            <a href="{% url 'fleet_app:vehicule_create_simple' %}" class="btn btn-sm btn-primary">
                 <i class="fas fa-plus"></i> Ajouter un véhicule
             </a>
         </div>
