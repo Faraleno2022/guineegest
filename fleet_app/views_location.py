@@ -868,8 +868,7 @@ def search_vehicules_ajax(request):
         return JsonResponse({'error': 'Requête non autorisée'}, status=400)
 
     term = request.GET.get('term', '').strip()
-    from .utils.decorators import queryset_filter_by_tenant
-    qs = queryset_filter_by_tenant(Vehicule.objects.all(), request)
+    qs = Vehicule.objects.filter(user=request.user)
     if term:
         qs = qs.filter(
             Q(immatriculation__icontains=term) |
@@ -893,8 +892,7 @@ def search_fournisseurs_ajax(request):
         return JsonResponse({'error': 'Requête non autorisée'}, status=400)
 
     term = request.GET.get('term', '').strip()
-    from .utils.decorators import queryset_filter_by_tenant
-    qs = queryset_filter_by_tenant(FournisseurVehicule.objects.all(), request)
+    qs = FournisseurVehicule.objects.filter(user=request.user)
     if term:
         qs = qs.filter(nom__icontains=term)
     results = [
