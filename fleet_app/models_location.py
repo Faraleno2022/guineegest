@@ -3,24 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from .models_accounts import Entreprise
 
-from .models import Vehicule
-
-
-class FournisseurVehicule(models.Model):
-    nom = models.CharField(max_length=150, verbose_name="Nom du fournisseur")
-    contact = models.CharField(max_length=150, blank=True, null=True, verbose_name="Contact")
-    telephone = models.CharField(max_length=30, blank=True, null=True, verbose_name="Téléphone")
-    email = models.EmailField(blank=True, null=True, verbose_name="Email")
-    adresse = models.CharField(max_length=255, blank=True, null=True, verbose_name="Adresse")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Utilisateur")
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
-
-    def __str__(self):
-        return self.nom
-
-    class Meta:
-        verbose_name = "Fournisseur de véhicule"
-        verbose_name_plural = "Fournisseurs de véhicules"
+from .models import Vehicule, FournisseurVehicule
 
 
 class LocationVehicule(models.Model):

@@ -10,7 +10,27 @@ from .models_entreprise import (
     FicheOr, EntreeFicheOr
 )
 
+# Import des modèles de location - éviter l'import circulaire
+# from .models_location import FournisseurVehicule
+
 # Modèles basés sur la structure de la base de données existante
+
+class FournisseurVehicule(models.Model):
+    nom = models.CharField(max_length=150, verbose_name="Nom du fournisseur")
+    contact = models.CharField(max_length=150, blank=True, null=True, verbose_name="Contact")
+    telephone = models.CharField(max_length=30, blank=True, null=True, verbose_name="Téléphone")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email")
+    adresse = models.CharField(max_length=255, blank=True, null=True, verbose_name="Adresse")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Utilisateur")
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
+
+    def __str__(self):
+        return self.nom
+
+    class Meta:
+        verbose_name = "Fournisseur de véhicule"
+        verbose_name_plural = "Fournisseurs de véhicules"
+
 
 class Vehicule(models.Model):
     MOTEUR_CHOICES = [
@@ -49,7 +69,7 @@ class Vehicule(models.Model):
     numero_moteur = models.CharField(max_length=50, blank=True, verbose_name="Numéro de moteur")
     observations = models.TextField(blank=True, verbose_name="Observations")
     chauffeur_principal = models.ForeignKey('Chauffeur', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules_assignes', verbose_name="Chauffeur principal")
-    fournisseur = models.ForeignKey('fleet_app.FournisseurVehicule', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules', verbose_name="Fournisseur")
+    fournisseur = models.ForeignKey(FournisseurVehicule, on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules', verbose_name="Fournisseur")
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     
