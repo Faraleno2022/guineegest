@@ -46,9 +46,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 {{ form.fournisseur|as_crispy_field }}
-                                <button type="button" class="btn btn-outline-primary btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#modalFournisseur">
-                                    <i class="fas fa-plus"></i> Ajouter un fournisseur
-                                </button>
+                                <small class="text-muted">Le fournisseur sera automatiquement sélectionné selon le véhicule choisi</small>
                             </div>
                             <div class="col-md-6">
                                 {{ form.tarif_journalier|as_crispy_field }}
@@ -87,48 +85,6 @@
         </div>
     </div>
 </div>
-<!-- Modal: Ajout rapide Fournisseur -->
-<div class="modal fade" id="modalFournisseur" tabindex="-1" aria-labelledby="modalFournisseurLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalFournisseurLabel">Nouveau fournisseur</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="formFournisseurQuick">
-          <div class="mb-3">
-            <label class="form-label">Nom du fournisseur *</label>
-            <input type="text" name="nom" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Contact</label>
-            <input type="text" name="contact" class="form-control">
-          </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">TÃ©lÃ©phone</label>
-              <input type="text" name="telephone" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" name="email" class="form-control">
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Adresse</label>
-            <input type="text" name="adresse" class="form-control">
-          </div>
-        </form>
-        <div class="alert alert-danger d-none" id="quickFournisseurError"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary" id="btnSaveFournisseur">Enregistrer</button>
-      </div>
-    </div>
-  </div>
- </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -204,33 +160,36 @@
       });
     }
 
-
-    // Quick create Fournisseur
-    $('#btnSaveFournisseur').on('click', function() {
-      const $form = $('#formFournisseurQuick');
-      const payload = $form.serialize();
-      $('#quickFournisseurError').addClass('d-none').text('');
-      $.ajax({
-        url: '{% url "fleet_app:fournisseur_quick_create_ajax" %}',
-        method: 'POST',
-        data: payload,
-        success: function(resp) {
-          if (resp && resp.success) {
-            // Add new option to select and select it
-            const option = new Option(resp.text, resp.id, true, true);
-            $fournisseur.append(option).trigger('change');
-            // Close modal and reset form
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalFournisseur'));
-            modal.hide();
-            $form[0].reset();
+    // Auto-sélection du fournisseur quand un véhicule est choisi
+    $vehicule.on('select2:select', function(e) {
+      const vehiculeId = e.params.data.id;
+      if (vehiculeId) {
+        // Récupérer le fournisseur du véhicule
+        $.ajax({
+          url: '{% url "fleet_app:get_vehicule_fournisseur_ajax" %}',
+          method: 'GET',
+          data: { vehicule_id: vehiculeId },
+          success: function(resp) {
+            if (resp.fournisseur_id) {
+              // Créer une option pour le fournisseur et la sélectionner
+              const option = new Option(resp.fournisseur_nom, resp.fournisseur_id, true, true);
+              $fournisseur.empty().append(option).trigger('change');
+              
+              // Afficher un message informatif
+              if (resp.fournisseur_contact) {
+                console.log('Fournisseur auto-sélectionné:', resp.fournisseur_nom, '- Contact:', resp.fournisseur_contact);
+              }
+            } else {
+              // Aucun fournisseur associé au véhicule
+              $fournisseur.val(null).trigger('change');
+            }
+          },
+          error: function(xhr) {
+            console.error('Erreur lors de la récupération du fournisseur:', xhr.responseText);
+            // Ne pas bloquer l'utilisateur, juste ne pas auto-sélectionner
           }
-        },
-        error: function(xhr) {
-          let msg = 'Erreur lors de la crÃ©ation du fournisseur';
-          if (xhr.responseJSON && xhr.responseJSON.message) { msg = xhr.responseJSON.message; }
-          $('#quickFournisseurError').removeClass('d-none').text(msg);
-        }
-      });
+        });
+      }
     });
 
   });

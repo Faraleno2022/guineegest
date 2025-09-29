@@ -112,7 +112,65 @@
                             </div>
                         </div>
 
+                        <!-- Informations Fournisseur -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-muted border-bottom pb-2 mb-3">
+                                    <i class="fas fa-building me-2"></i>Informations Fournisseur (Optionnel)
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="fournisseur_nom" class="form-label">Nom du fournisseur</label>
+                                <input type="text" class="form-control" 
+                                       id="fournisseur_nom" name="fournisseur_nom" 
+                                       value="{{ form_data.fournisseur_nom|default:'' }}" 
+                                       placeholder="Ex: Location Auto Conakry">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="fournisseur_contact" class="form-label">Personne de contact</label>
+                                <input type="text" class="form-control" 
+                                       id="fournisseur_contact" name="fournisseur_contact" 
+                                       value="{{ form_data.fournisseur_contact|default:'' }}" 
+                                       placeholder="Ex: Mamadou Diallo">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="fournisseur_telephone" class="form-label">Téléphone</label>
+                                <input type="text" class="form-control" 
+                                       id="fournisseur_telephone" name="fournisseur_telephone" 
+                                       value="{{ form_data.fournisseur_telephone|default:'' }}" 
+                                       placeholder="Ex: +224 123 456 789">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="fournisseur_email" class="form-label">Email</label>
+                                <input type="email" class="form-control" 
+                                       id="fournisseur_email" name="fournisseur_email" 
+                                       value="{{ form_data.fournisseur_email|default:'' }}" 
+                                       placeholder="contact@fournisseur.com">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="fournisseur_adresse" class="form-label">Adresse</label>
+                                <input type="text" class="form-control" 
+                                       id="fournisseur_adresse" name="fournisseur_adresse" 
+                                       value="{{ form_data.fournisseur_adresse|default:'' }}" 
+                                       placeholder="Quartier, Commune">
+                            </div>
+                        </div>
+
                         <!-- Champs optionnels -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-muted border-bottom pb-2 mb-3">
+                                    <i class="fas fa-calendar me-2"></i>Dates et Informations Complémentaires
+                                </h6>
+                            </div>
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="date_acquisition" class="form-label">Date d'acquisition</label>

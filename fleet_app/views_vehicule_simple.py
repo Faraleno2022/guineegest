@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from .models import Vehicule
+from .models_location import FournisseurVehicule
 from .forms import VehiculeForm
 
 
@@ -28,6 +29,12 @@ def vehicule_create_simple(request):
                 'numero_chassis': request.POST.get('numero_chassis', '').strip(),
                 'numero_moteur': request.POST.get('numero_moteur', '').strip(),
                 'observations': request.POST.get('observations', '').strip(),
+                # Données fournisseur
+                'fournisseur_nom': request.POST.get('fournisseur_nom', '').strip(),
+                'fournisseur_contact': request.POST.get('fournisseur_contact', '').strip(),
+                'fournisseur_telephone': request.POST.get('fournisseur_telephone', '').strip(),
+                'fournisseur_email': request.POST.get('fournisseur_email', '').strip(),
+                'fournisseur_adresse': request.POST.get('fournisseur_adresse', '').strip(),
             }
             
             # Validation manuelle
@@ -117,7 +124,45 @@ def vehicule_create_simple(request):
                 except:
                     pass
             
-            # Sauvegarder
+            # Créer le fournisseur si des informations sont fournies
+            fournisseur = None
+            if data['fournisseur_nom']:
+                try:
+                    # Vérifier si le fournisseur existe déjà
+                    fournisseur = FournisseurVehicule.objects.filter(
+                        nom=data['fournisseur_nom'],
+                        user=request.user
+                    ).first()
+                    
+                    if not fournisseur:
+                        # Créer un nouveau fournisseur
+                        fournisseur = FournisseurVehicule(
+                            nom=data['fournisseur_nom'],
+                            contact=data['fournisseur_contact'],
+                            telephone=data['fournisseur_telephone'],
+                            email=data['fournisseur_email'],
+                            adresse=data['fournisseur_adresse'],
+                            user=request.user,
+                        )
+                        
+                        # Assigner l'entreprise si disponible
+                        ent = getattr(getattr(request.user, 'profil', None), 'entreprise', None) or getattr(request.user, 'entreprise', None)
+                        if ent:
+                            fournisseur.entreprise = ent
+                        
+                        fournisseur.save()
+                        messages.success(request, f'Fournisseur {fournisseur.nom} créé avec succès!')
+                    else:
+                        messages.info(request, f'Fournisseur {fournisseur.nom} existant utilisé.')
+                        
+                except Exception as e:
+                    messages.warning(request, f'Erreur lors de la création du fournisseur: {str(e)}')
+            
+            # Assigner le fournisseur au véhicule
+            if fournisseur:
+                vehicule.fournisseur = fournisseur
+            
+            # Sauvegarder le véhicule
             vehicule.save()
             
             messages.success(request, f'Véhicule {vehicule.immatriculation} créé avec succès!')

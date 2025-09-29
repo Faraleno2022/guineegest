@@ -49,6 +49,7 @@ class Vehicule(models.Model):
     numero_moteur = models.CharField(max_length=50, blank=True, verbose_name="Numéro de moteur")
     observations = models.TextField(blank=True, verbose_name="Observations")
     chauffeur_principal = models.ForeignKey('Chauffeur', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules_assignes', verbose_name="Chauffeur principal")
+    fournisseur = models.ForeignKey('fleet_app.FournisseurVehicule', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules', verbose_name="Fournisseur")
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur")
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Entreprise")
     

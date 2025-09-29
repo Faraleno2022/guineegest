@@ -281,6 +281,7 @@ urlpatterns = [
     path('ajax/search-fournisseurs/', views_location.search_fournisseurs_ajax, name='search_fournisseurs_ajax'),
     path('ajax/fournisseur/quick-create/', views_location.fournisseur_quick_create_ajax, name='fournisseur_quick_create_ajax'),
     path('ajax/vehicule/quick-create/', views_location.vehicule_quick_create_ajax, name='vehicule_quick_create_ajax'),
+    path('ajax/vehicule/get-fournisseur/', views_location.get_vehicule_fournisseur_ajax, name='get_vehicule_fournisseur_ajax'),
     
     # URLs pour les statistiques des véhicules
     path('stats/vehicules/', views_vehicule_stats.vehicule_stats_dashboard, name='vehicule_stats_dashboard'),

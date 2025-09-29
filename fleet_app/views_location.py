@@ -1130,3 +1130,31 @@ def factures_batch_pdf(request):
         return response
     
     return JsonResponse({'error': 'Erreur lors de la génération du PDF'}, status=500)
+
+
+@login_required
+def get_vehicule_fournisseur_ajax(request):
+    """Vue AJAX pour récupérer le fournisseur d'un véhicule"""
+    vehicule_id = request.GET.get('vehicule_id', '')
+    
+    if not vehicule_id:
+        return JsonResponse({'error': 'ID véhicule manquant'}, status=400)
+    
+    try:
+        vehicule = Vehicule.objects.filter(id_vehicule=vehicule_id, user=request.user).first()
+        
+        if not vehicule:
+            return JsonResponse({'error': 'Véhicule non trouvé'}, status=404)
+        
+        if vehicule.fournisseur:
+            return JsonResponse({
+                'fournisseur_id': vehicule.fournisseur.id,
+                'fournisseur_nom': vehicule.fournisseur.nom,
+                'fournisseur_contact': vehicule.fournisseur.contact or '',
+                'fournisseur_telephone': vehicule.fournisseur.telephone or '',
+            })
+        else:
+            return JsonResponse({'fournisseur_id': None})
+            
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
