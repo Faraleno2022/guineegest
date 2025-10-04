@@ -1,0 +1,28 @@
+# COMMANDES RAPIDES PYTHONANYWHERE - Correction Images
+
+# 1. Connexion
+ssh gestionnairedeparc@ssh.pythonanywhere.com
+
+# 2. Aller au projet
+cd ~/guineegest
+
+# 3. Pull avec force
+git fetch origin
+git reset --hard origin/main
+
+# 4. Vérifier les images
+ls -la media/images/
+ls -la media/images/team/
+
+# 5. Permissions
+chmod 755 media/ media/images/ media/images/team/
+chmod 644 media/images/*.jpg media/images/*.webp
+chmod 644 media/images/team/*.png media/images/team/*.jpg
+
+# 6. Reload
+touch /var/www/gestionnairedeparc_pythonanywhere_com_wsgi.py
+
+# 7. Tester
+curl -I https://gestionnairedeparc.pythonanywhere.com/media/images/Acces_optimized.jpg
+
+# Résultat attendu: HTTP/1.1 200 OK
