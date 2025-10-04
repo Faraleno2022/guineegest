@@ -8,6 +8,7 @@ from django.core.paginator import Paginator
 from django.template.loader import render_to_string, get_template
 from django.contrib import messages
 import calendar
+from decimal import Decimal
 from .models import FournisseurVehicule, Vehicule
 from .models_location import (
     LocationVehicule,
@@ -679,7 +680,7 @@ def generer_facture_automatique(request, location_pk):
     
     # Calculer le montant
     montant_ht = jours_travail * location.tarif_journalier
-    tva = montant_ht * 0.18  # TVA 18%
+    tva = montant_ht * Decimal('0.18')  # TVA 18%
     montant_ttc = montant_ht + tva
     
     # Générer le numéro de facture
@@ -757,9 +758,9 @@ def generer_factures_mensuelles(request):
         jours_non_travail = max(jours_couverts - jours_travail, 0)
 
         # Montants
-        tarif = loc.tarif_journalier or 0
+        tarif = loc.tarif_journalier or Decimal('0')
         montant_ht = jours_travail * tarif
-        tva = montant_ht * 0.18
+        tva = montant_ht * Decimal('0.18')
         montant_ttc = montant_ht + tva
 
         numero = f"LOC-{loc.pk}-{year}{month:02d}"
