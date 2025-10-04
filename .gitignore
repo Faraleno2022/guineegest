@@ -28,6 +28,8 @@ db.sqlite3
 django_fleet.db
 parc_auto.db
 media/*
+!media/images/
+!media/images/**
 staticfiles/
 static_root/
 
