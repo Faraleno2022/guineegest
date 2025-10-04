@@ -1,7 +1,7 @@
-# ✅ Module Bus/Km - Résumé d'Implémentation
+# ✅ Module Bonus/Km - Résumé d'Implémentation
 
 ## 🎯 Objectif
-Créer un module de gestion des frais kilométriques (Bus/Km) dans Management, après Heures supplémentaires, avec calcul automatique des totaux par chauffeur et groupement par mois.
+Créer un module de gestion des frais kilométriques (Bonus/Km) dans Management, après Heures supplémentaires, avec calcul automatique des totaux par chauffeur et groupement par mois.
 
 ---
 
@@ -73,7 +73,7 @@ Les totaux sont affichés dans des cartes en haut de la liste :
   - Filtres par mois/année
   - Modals de modification/suppression
 - ✅ **Template formulaire** : `frais_kilometrique_form.html`
-- ✅ **Menu** : Ajouté dans Management > Bus/Km
+- ✅ **Menu** : Ajouté dans Management > Bonus/Km
 
 ### Base de Données
 - ✅ **Migration** : `0018_add_frais_kilometrique.py`
@@ -123,14 +123,14 @@ Les totaux sont affichés dans des cartes en haut de la liste :
 4. Enregistrer
 
 ### Étape 2 : Ajouter un frais
-1. Aller dans **Management > Bus/Km**
+1. Aller dans **Management > Bonus/Km**
 2. Cliquer sur **"Ajouter des frais km"**
 3. Remplir le formulaire
 4. Le total est calculé automatiquement
 5. Enregistrer
 
 ### Étape 3 : Consulter les totaux mensuels
-1. Dans **Management > Bus/Km**
+1. Dans **Management > Bonus/Km**
 2. Sélectionner un mois et une année
 3. Cliquer sur **"Filtrer"**
 4. Les totaux par employé s'affichent en haut
@@ -173,7 +173,7 @@ Les totaux sont affichés dans des cartes en haut de la liste :
 
 1. Démarrer le serveur : `python manage.py runserver`
 2. Se connecter à l'application
-3. Aller dans **Management > Bus/Km**
+3. Aller dans **Management > Bonus/Km**
 4. Tester l'ajout de frais kilométriques
 5. Vérifier les calculs automatiques
 6. Tester les filtres par mois
@@ -200,7 +200,7 @@ Les totaux sont affichés dans des cartes en haut de la liste :
 
 ## ✅ CONCLUSION
 
-Le module **Bus/Km** est **entièrement fonctionnel** et prêt à l'emploi. Il permet de :
+Le module **Bonus/Km** est **entièrement fonctionnel** et prêt à l'emploi. Il permet de :
 - ✅ Gérer les frais kilométriques des employés
 - ✅ Calculer automatiquement les totaux
 - ✅ Grouper les données par employé et par mois

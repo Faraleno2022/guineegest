@@ -755,7 +755,7 @@ class FicheBordMachineForm(forms.ModelForm):
 
 class FraisKilometriqueForm(forms.ModelForm):
     """
-    Formulaire pour ajouter des frais kilométriques (Bus/Km)
+    Formulaire pour ajouter des frais kilométriques (Bonus/Km)
     """
     
     class Meta:

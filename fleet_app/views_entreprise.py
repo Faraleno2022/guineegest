@@ -341,7 +341,7 @@ def config_charges_sociales(request):
     return render(request, 'fleet_app/entreprise/configuration_temp.html', context)
 
 
-# Vues pour FraisKilometrique (Bus/Km)
+# Vues pour FraisKilometrique (Bonus/Km)
 class FraisKilometriqueListView(LoginRequiredMixin, ListView):
     model = FraisKilometrique
     template_name = 'fleet_app/entreprise/frais_kilometrique_list.html'

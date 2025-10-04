@@ -1,0 +1,84 @@
+# ========================================
+# COMMANDES GIT - Renommage Bus/Km → Bonus/Km
+# ========================================
+
+# 1. Vérifier l'état actuel
+git status
+
+# 2. Voir les différences
+git diff --stat
+
+# 3. Ajouter tous les fichiers modifiés
+git add -A
+
+# 4. Vérifier ce qui sera commité
+git status
+
+# 5. Commiter avec message descriptif
+git commit -m "Refactor: Renommage Bus/Km → Bonus/Km dans l'interface utilisateur
+
+- Mise à jour du menu : Bus/Km → Bonus/Km avec icône cadeau (fa-gift)
+- Mise à jour des titres de pages dans les templates
+- Mise à jour de la documentation complète
+- Mise à jour des commentaires dans le code
+- Aucun changement de structure technique (pas de migration)
+- Changement purement cosmétique pour plus de clarté
+- Compatible avec toutes les données existantes
+
+Fichiers modifiés :
+- Templates : base.html, frais_kilometrique_list.html, frais_kilometrique_form.html
+- Backend : models_entreprise.py, forms_entreprise.py, views_entreprise.py, urls.py
+- Documentation : DOCUMENTATION_BUS_KM.md, RESUME_BUS_KM.md
+- Nouveaux fichiers : CHANGEMENTS_BUS_TO_BONUS.md, AVANT_APRES_BONUS_KM.md, RESUME_FINAL_BONUS_KM.md"
+
+# 6. Pousser sur GitHub
+git push origin main
+
+# 7. Vérifier le push
+git log -1
+
+# ========================================
+# COMMANDES ALTERNATIVES (si besoin)
+# ========================================
+
+# Si vous voulez voir les changements détaillés avant de commiter
+git diff
+
+# Si vous voulez commiter en plusieurs étapes
+git add fleet_app/templates/
+git add fleet_app/*.py
+git add *.md
+git commit -m "Refactor: Renommage Bus/Km → Bonus/Km"
+
+# Si vous voulez annuler les changements (ATTENTION : perte des modifications)
+git reset --hard HEAD
+
+# Si vous voulez créer une branche pour tester
+git checkout -b refactor/bonus-km
+git add -A
+git commit -m "Refactor: Renommage Bus/Km → Bonus/Km"
+git push origin refactor/bonus-km
+
+# ========================================
+# VÉRIFICATIONS POST-COMMIT
+# ========================================
+
+# Vérifier que tout est commité
+git status
+
+# Vérifier le dernier commit
+git log -1 --stat
+
+# Vérifier sur GitHub
+# Aller sur : https://github.com/Faraleno2022/guineegest
+
+# ========================================
+# NOTES
+# ========================================
+
+# Fichiers modifiés : 9 fichiers
+# Lignes changées : 21 insertions, 21 suppressions
+# Type : Refactoring UI (cosmétique)
+# Impact : Faible (aucun changement fonctionnel)
+# Migration : Non nécessaire
+# Compatibilité : 100% avec données existantes

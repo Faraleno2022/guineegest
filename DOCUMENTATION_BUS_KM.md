@@ -1,8 +1,8 @@
-# 📋 Documentation - Module Bus/Km (Frais Kilométriques)
+# 📋 Documentation - Module Bonus/Km (Frais Kilométriques)
 
 ## 🎯 Vue d'ensemble
 
-Le module **Bus/Km** permet de gérer les frais kilométriques des employés (chauffeurs). Il calcule automatiquement le montant à payer en fonction des kilomètres parcourus et de la valeur par kilomètre configurée.
+Le module **Bonus/Km** permet de gérer les frais kilométriques des employés (chauffeurs). Il calcule automatiquement le montant à payer en fonction des kilomètres parcourus et de la valeur par kilomètre configurée.
 
 ---
 
@@ -133,7 +133,7 @@ Le module **Bus/Km** permet de gérer les frais kilométriques des employés (ch
 
 ### 2. **Ajouter un frais kilométrique**
 
-1. Aller dans **Management > Bus/Km**
+1. Aller dans **Management > Bonus/Km**
 2. Cliquer sur **"Ajouter des frais km"**
 3. Remplir le formulaire :
    - Sélectionner l'employé
@@ -145,7 +145,7 @@ Le module **Bus/Km** permet de gérer les frais kilométriques des employés (ch
 
 ### 3. **Consulter les frais par mois**
 
-1. Aller dans **Management > Bus/Km**
+1. Aller dans **Management > Bonus/Km**
 2. Utiliser les filtres **Mois** et **Année**
 3. Cliquer sur **"Filtrer"**
 4. Les totaux par employé s'affichent en haut
@@ -361,7 +361,7 @@ def test_isolation_donnees_utilisateur()
    - Vérifier que la migration 0018 est appliquée
    - Recréer la migration si nécessaire
 
-3. **Menu Bus/Km invisible** :
+3. **Menu Bonus/Km invisible** :
    - Vider le cache du navigateur
    - Vérifier que l'utilisateur est authentifié
 
@@ -389,7 +389,7 @@ def test_isolation_donnees_utilisateur()
 
 ## 📞 Contact
 
-Pour toute question ou suggestion concernant le module Bus/Km, veuillez contacter l'équipe de développement.
+Pour toute question ou suggestion concernant le module Bonus/Km, veuillez contacter l'équipe de développement.
 
 ---
 

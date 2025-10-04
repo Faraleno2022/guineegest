@@ -448,7 +448,7 @@ class HeureSupplementaire(models.Model):
 
 
 class FraisKilometrique(models.Model):
-    """Frais kilométriques (Bus/Km) des employés"""
+    """Frais kilométriques (Bonus/Km) des employés"""
     employe = models.ForeignKey(Employe, on_delete=models.CASCADE, verbose_name="Employé")
     date = models.DateField(verbose_name="Date")
     kilometres = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Kilomètres parcourus")

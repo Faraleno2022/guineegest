@@ -1,5 +1,14 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /media/private/
+Disallow: /accounts/login/
+Disallow: /accounts/logout/
 
 # GuinéeGest - Système de gestion de parc automobile
-# Sitemap: https://gestionnairedeparc.pythonanywhere.com/sitemap.xml
+# Sitemap
+Sitemap: https://www.guineegest.space/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 10

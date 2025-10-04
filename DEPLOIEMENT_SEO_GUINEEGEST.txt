@@ -1,0 +1,208 @@
+# ========================================
+# DÉPLOIEMENT SEO - GuineeGest.space
+# ========================================
+
+# ÉTAPE 1 : COMMITER LES CHANGEMENTS LOCAUX
+# ==========================================
+
+# Vérifier les fichiers modifiés
+git status
+
+# Ajouter tous les changements
+git add -A
+
+# Commiter
+git commit -m "SEO: Optimisation pour guineegest.space
+
+- Mise à jour robots.txt avec nouveau domaine
+- Documentation SEO complète
+- Guide d'implémentation rapide
+- Configuration HTTPS et méta-tags
+- Sitemap et Google Search Console
+
+Fichiers modifiés:
+- static/robots.txt
+- SEO_REFERENCEMENT_GUINEEGEST.md (nouveau)
+- IMPLEMENTATION_SEO_RAPIDE.md (nouveau)
+- DEPLOIEMENT_SEO_GUINEEGEST.txt (nouveau)"
+
+# Pousser sur GitHub
+git push origin main
+
+# ========================================
+# ÉTAPE 2 : DÉPLOYER SUR PYTHONANYWHERE
+# ========================================
+
+# Se connecter à PythonAnywhere
+# Ouvrir une console Bash
+
+# 1. Aller dans le projet
+cd ~/guineegest
+
+# 2. Activer l'environnement virtuel
+source .venv/bin/activate
+
+# 3. Récupérer les dernières modifications
+git pull origin main
+
+# 4. Vérifier les changements
+git log -1
+
+# 5. Collecter les fichiers statiques
+python manage.py collectstatic --noinput
+
+# 6. Vérifier la configuration
+python manage.py check
+
+# 7. Recharger l'application web
+touch /var/www/gestionnairedeparc_pythonanywhere_com_wsgi.py
+
+# ========================================
+# ÉTAPE 3 : MODIFICATIONS MANUELLES
+# ========================================
+
+# A. Mettre à jour settings.py
+nano gestion_parc/settings.py
+
+# Ajouter dans ALLOWED_HOSTS :
+ALLOWED_HOSTS = [
+    'www.guineegest.space',
+    'guineegest.space',
+    'gestionnairedeparc.pythonanywhere.com',
+]
+
+# Ajouter à la fin du fichier :
+if 'guineegest.space' in ALLOWED_HOSTS:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# Sauvegarder : Ctrl+O, Enter, Ctrl+X
+
+# B. Mettre à jour base.html
+nano fleet_app/templates/fleet_app/base.html
+
+# Ajouter les méta-tags SEO dans <head>
+# (Voir IMPLEMENTATION_SEO_RAPIDE.md pour le code complet)
+
+# C. Créer sitemaps.py
+nano fleet_app/sitemaps.py
+
+# Copier le code du sitemap
+# (Voir IMPLEMENTATION_SEO_RAPIDE.md)
+
+# D. Mettre à jour urls.py
+nano gestion_parc/urls.py
+
+# Ajouter le sitemap
+# (Voir IMPLEMENTATION_SEO_RAPIDE.md)
+
+# ========================================
+# ÉTAPE 4 : VÉRIFICATIONS
+# ========================================
+
+# Tester le site
+curl -I https://www.guineegest.space/
+
+# Vérifier robots.txt
+curl https://www.guineegest.space/robots.txt
+
+# Vérifier sitemap (après implémentation)
+curl https://www.guineegest.space/sitemap.xml
+
+# Vérifier les logs
+tail -f /var/log/gestionnairedeparc.pythonanywhere.com.error.log
+
+# ========================================
+# ÉTAPE 5 : GOOGLE SEARCH CONSOLE
+# ========================================
+
+# 1. Aller sur https://search.google.com/search-console
+# 2. Ajouter la propriété : https://www.guineegest.space
+# 3. Méthode de vérification : Balise HTML
+# 4. Copier le code de vérification
+# 5. Ajouter dans base.html :
+#    <meta name="google-site-verification" content="VOTRE_CODE" />
+# 6. Recharger l'application
+# 7. Cliquer sur "Vérifier" dans Search Console
+# 8. Soumettre le sitemap : https://www.guineegest.space/sitemap.xml
+
+# ========================================
+# ÉTAPE 6 : GOOGLE ANALYTICS (OPTIONNEL)
+# ========================================
+
+# 1. Aller sur https://analytics.google.com
+# 2. Créer une propriété pour guineegest.space
+# 3. Obtenir l'ID de suivi (G-XXXXXXXXXX)
+# 4. Ajouter le code dans base.html
+# 5. Recharger l'application
+
+# ========================================
+# ÉTAPE 7 : TESTS FINAUX
+# ========================================
+
+# Test 1 : Accessibilité
+curl -I https://www.guineegest.space/
+
+# Test 2 : Redirection HTTPS
+curl -I http://www.guineegest.space/
+
+# Test 3 : Robots.txt
+curl https://www.guineegest.space/robots.txt
+
+# Test 4 : Sitemap
+curl https://www.guineegest.space/sitemap.xml
+
+# Test 5 : Méta-tags
+curl -s https://www.guineegest.space/ | grep -i "meta name"
+
+# ========================================
+# COMMANDES DE MAINTENANCE
+# ========================================
+
+# Voir les logs d'erreur
+tail -f /var/log/gestionnairedeparc.pythonanywhere.com.error.log
+
+# Voir les logs d'accès
+tail -f /var/log/gestionnairedeparc.pythonanywhere.com.access.log
+
+# Recharger l'application après modifications
+touch /var/www/gestionnairedeparc_pythonanywhere_com_wsgi.py
+
+# Collecter les fichiers statiques
+python manage.py collectstatic --noinput
+
+# Vérifier la configuration
+python manage.py check
+
+# ========================================
+# NOTES IMPORTANTES
+# ========================================
+
+# 1. Toujours tester en local avant de déployer
+# 2. Faire un backup avant les modifications majeures
+# 3. Vérifier les logs après chaque déploiement
+# 4. Tester le site après chaque modification
+# 5. Soumettre le sitemap à Google Search Console
+
+# ========================================
+# DOCUMENTATION
+# ========================================
+
+# Documentation complète : SEO_REFERENCEMENT_GUINEEGEST.md
+# Guide rapide : IMPLEMENTATION_SEO_RAPIDE.md
+# Ce fichier : DEPLOIEMENT_SEO_GUINEEGEST.txt
+
+# ========================================
+# SUPPORT
+# ========================================
+
+# En cas de problème :
+# 1. Vérifier les logs d'erreur
+# 2. Vérifier la configuration dans settings.py
+# 3. Vérifier que le domaine pointe vers PythonAnywhere
+# 4. Contacter le support PythonAnywhere si nécessaire
+
+# Date : 04 Octobre 2025
+# Domaine : https://www.guineegest.space/
+# Statut : Prêt à déployer
