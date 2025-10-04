@@ -1015,9 +1015,9 @@ def facture_pdf(request, pk):
     
     # Récupérer les informations de l'entreprise
     entreprise = None
-    if hasattr(request.user, 'profil') and request.user.profil.entreprise:
-        entreprise = request.user.profil.entreprise
-    elif hasattr(request.user, 'entreprise'):
+    if hasattr(request.user, 'profil'):
+        entreprise = getattr(request.user.profil, 'entreprise', None)
+    if not entreprise and hasattr(request.user, 'entreprise'):
         entreprise = request.user.entreprise
     
     # Récupérer les détails des feuilles de pontage pour cette facture
@@ -1109,17 +1109,18 @@ def factures_batch_pdf(request):
     if not factures.exists():
         return JsonResponse({'error': 'Aucune facture trouvée'}, status=404)
     
-    # Récupérer les informations de l'entreprise
+    # Récupérer les informations de l'entreprise pour le lot
     entreprise = None
-    if hasattr(request.user, 'profil') and request.user.profil.entreprise:
-        entreprise = request.user.profil.entreprise
-    elif hasattr(request.user, 'entreprise'):
+    if hasattr(request.user, 'profil'):
+        entreprise = getattr(request.user.profil, 'entreprise', None)
+    if not entreprise and hasattr(request.user, 'entreprise'):
         entreprise = request.user.entreprise
     
     context = {
         'factures': factures,
         'entreprise': entreprise,
-        'today': timezone.now().date(),
+        'lot': factures.first().location,
+{{ ... }}
         'total_ht': factures.aggregate(total=Sum('montant_ht'))['total'] or 0,
         'total_tva': factures.aggregate(total=Sum('tva'))['total'] or 0,
         'total_ttc': factures.aggregate(total=Sum('montant_ttc'))['total'] or 0,
