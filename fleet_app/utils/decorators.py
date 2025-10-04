@@ -59,13 +59,10 @@ def queryset_filter_by_tenant(qs, request, entreprise_field='entreprise', user_f
     user_ent = _get_user_entreprise(request.user)
 
     # Prefer entreprise scoping when available
-    if has_ent:
-        if user_ent is not None:
-            return qs.filter(**{entreprise_field: user_ent})
-        # Model is tenant-aware via entreprise but user has no entreprise: safest is to return none
-        return qs.none()
+    if has_ent and user_ent is not None:
+        return qs.filter(**{entreprise_field: user_ent})
 
-    # Fallback to user scoping if field exists
+    # Fallback to user scoping if field exists (even if model has entreprise field but user has no entreprise)
     if has_user:
         return qs.filter(**{user_field: request.user})
 
