@@ -1120,7 +1120,7 @@ def factures_batch_pdf(request):
         'factures': factures,
         'entreprise': entreprise,
         'lot': factures.first().location,
-{{ ... }}
+        'today': timezone.now().date(),
         'total_ht': factures.aggregate(total=Sum('montant_ht'))['total'] or 0,
         'total_tva': factures.aggregate(total=Sum('tva'))['total'] or 0,
         'total_ttc': factures.aggregate(total=Sum('montant_ttc'))['total'] or 0,
