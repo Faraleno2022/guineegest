@@ -686,6 +686,9 @@ def generer_facture_automatique(request, location_pk):
     import datetime
     numero = f"FACT-{location.pk}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
     
+    # Récupérer l'entreprise de l'utilisateur
+    ent = getattr(getattr(request.user, 'profil', None), 'entreprise', None) or getattr(request.user, 'entreprise', None)
+    
     # Créer la facture
     facture = FactureLocation.objects.create(
         location=location,
@@ -693,7 +696,10 @@ def generer_facture_automatique(request, location_pk):
         montant_ht=montant_ht,
         tva=tva,
         montant_ttc=montant_ttc,
-        user=request.user
+        user=request.user,
+        entreprise=ent,
+        jours_travail_mois=jours_travail,
+        jours_non_travail_mois=0
     )
     
     return JsonResponse({
@@ -729,7 +735,7 @@ def generer_factures_mensuelles(request):
     first_day = timezone.datetime(year, month, 1).date()
     last_day = timezone.datetime(year, month, calendar.monthrange(year, month)[1]).date()
 
-    locations = LocationVehicule.objects.filter(user=user).select_related('vehicule')
+    locations = queryset_filter_by_tenant(LocationVehicule.objects.all(), request).select_related('vehicule')
     results = []
     total_factures = 0
 
@@ -757,6 +763,9 @@ def generer_factures_mensuelles(request):
         montant_ttc = montant_ht + tva
 
         numero = f"LOC-{loc.pk}-{year}{month:02d}"
+        
+        # Récupérer l'entreprise de l'utilisateur
+        ent = getattr(getattr(user, 'profil', None), 'entreprise', None) or getattr(user, 'entreprise', None)
 
         # Créer ou mettre à jour la facture du mois
         facture, created = FactureLocation.objects.update_or_create(
@@ -771,6 +780,7 @@ def generer_factures_mensuelles(request):
                 'jours_travail_mois': jours_travail,
                 'jours_non_travail_mois': jours_non_travail,
                 'statut': getattr(FactureLocation, 'STATUT_BROUILLON', 'Brouillon'),
+                'entreprise': ent,
             }
         )
 

@@ -36,6 +36,12 @@
       </div>
     </div>
     <div class="card-body">
+      <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-info-circle"></i> <strong>Génération automatique :</strong> 
+        Sélectionnez un mois et une année, puis cliquez sur <i class="fas fa-cogs"></i> pour générer automatiquement les factures basées sur les jours travaillés (feuilles de pontage avec statut "Travail"). 
+        Le calcul est : <code>Jours travaillés × Tarif journalier + TVA 18%</code>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
       <div class="mb-3">
         <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#searchPanel" aria-expanded="false">
           <i class="fas fa-search"></i> Recherche avancée
@@ -198,7 +204,25 @@
     $btnGenMonthly.addEventListener('click', async function() {
       const month = parseInt($genMonth.value || '0', 10);
       const year = parseInt($genYear.value || '0', 10);
-      if (!month || !year) { alert('Veuillez choisir un mois et une année valides.'); return; }
+      if (!month || !year) { 
+        alert('⚠️ Veuillez choisir un mois et une année valides.'); 
+        return; 
+      }
+      
+      const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+      const confirmMsg = `Générer les factures pour ${monthNames[month]} ${year} ?\n\n` +
+                         `Le système va :\n` +
+                         `✓ Compter les jours "Travail" de vos locations\n` +
+                         `✓ Calculer : Jours × Tarif journalier + TVA 18%\n` +
+                         `✓ Créer ou mettre à jour les factures`;
+      
+      if (!confirm(confirmMsg)) return;
+      
+      // Afficher un indicateur de chargement
+      $btnGenMonthly.disabled = true;
+      $btnGenMonthly.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      
       try {
         const resp = await fetch(`{% url 'fleet_app:generer_factures_mensuelles' %}`, {
           method: 'POST',
@@ -213,13 +237,26 @@
         if (data && data.success) {
           // Rafraîchir la liste et le total
           await runSearch({ page: 1 });
-          alert(data.message + `\nTotal du mois: ${Math.round(data.total_mois).toLocaleString('fr-FR')} GNF`);
+          
+          // Message détaillé
+          let detailMsg = `✅ ${data.message}\n\n`;
+          detailMsg += `💰 Total du mois: ${Math.round(data.total_mois).toLocaleString('fr-FR')} GNF\n\n`;
+          if (data.details && data.details.length > 0) {
+            detailMsg += `Détails :\n`;
+            data.details.forEach(d => {
+              detailMsg += `• ${d.vehicule}: ${d.jours_travail} jours → ${Math.round(d.montant_ttc).toLocaleString('fr-FR')} GNF\n`;
+            });
+          }
+          alert(detailMsg);
         } else {
-          alert((data && data.message) || 'Erreur lors de la génération des factures.');
+          alert('❌ ' + ((data && data.message) || 'Erreur lors de la génération des factures.'));
         }
       } catch (e) {
         console.error(e);
-        alert('Erreur réseau lors de la génération des factures.');
+        alert('❌ Erreur réseau lors de la génération des factures.');
+      } finally {
+        $btnGenMonthly.disabled = false;
+        $btnGenMonthly.innerHTML = '<i class="fas fa-cogs"></i>';
       }
     });
 
