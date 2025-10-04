@@ -1,0 +1,66 @@
+Feature: Bloc véhicules en location dans le dashboard principal
+
+NOUVELLE FONCTIONNALITÉ:
+- Ajout d'un bloc "Véhicules en Location - État du Jour" dans le dashboard
+- Affichage centralisé de l'état des véhicules en location
+- Statistiques rapides et liste détaillée des 10 premiers véhicules
+
+COMPOSANTS AJOUTÉS:
+
+1. STATISTIQUES RAPIDES (4 cartes):
+   ✅ Total véhicules en location
+   ✅ Véhicules en activité (badge vert)
+   ✅ Véhicules en panne (badge rouge)
+   ✅ Véhicules en entretien (badge jaune)
+
+2. TABLEAU DÉTAILLÉ:
+   ✅ Immatriculation et modèle du véhicule
+   ✅ Propriétaire avec téléphone
+   ✅ Type de location (Interne/Externe)
+   ✅ Statut du jour avec badge coloré
+   ✅ Tarif journalier en GNF
+   ✅ Période de location
+   ✅ Bouton "Voir détails"
+
+3. BOUTONS D'ACTION:
+   ✅ "Voir toutes les locations" → Liste complète
+   ✅ "Feuilles de pontage" → Gestion quotidienne
+   ✅ "Vue Publique" → Page /accueil/ (nouvel onglet)
+
+FICHIERS MODIFIÉS:
+- fleet_app/views.py (ajout données locations dans dashboard)
+- fleet_app/templates/fleet_app/dashboard.html (nouveau bloc HTML)
+
+DONNÉES AJOUTÉES AU CONTEXTE:
+- vehicules_location_info: Liste des 10 premiers véhicules
+- total_locations: Nombre total de locations actives
+- locations_travail: Véhicules en activité
+- locations_panne: Véhicules en panne
+- locations_entretien: Véhicules en entretien
+
+FONCTIONNALITÉS:
+✅ Filtrage par tenant (isolation des données)
+✅ Requêtes optimisées avec select_related()
+✅ Badges colorés par statut (vert/rouge/jaune/gris)
+✅ Lien vers page publique pour propriétaires
+✅ Affichage commentaires tronqués
+✅ Responsive design
+
+AVANTAGES:
+- Vue centralisée dans le dashboard principal
+- Accès rapide à l'état des véhicules en location
+- Lien direct vers la vue publique
+- Statistiques en temps réel
+- Interface intuitive avec badges colorés
+
+POSITION:
+- Placé après la section KPI
+- Avant le {% endblock %} du dashboard
+- Visible immédiatement après les services principaux
+
+TESTS:
+✅ Affichage correct des statistiques
+✅ Tableau des véhicules fonctionnel
+✅ Badges de statut corrects
+✅ Liens d'action opérationnels
+✅ Vue publique s'ouvre dans nouvel onglet

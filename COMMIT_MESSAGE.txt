@@ -1,0 +1,43 @@
+Feature: Page d'accueil publique pour suivi véhicules en location
+
+NOUVELLE FONCTIONNALITÉ:
+- Page publique accessible sans authentification (/accueil/)
+- Permet aux propriétaires de consulter l'état de leurs véhicules
+- Interface moderne et responsive avec Bootstrap 5
+- Auto-refresh toutes les 5 minutes
+
+FONCTIONNALITÉS:
+✅ Statistiques globales (total, actifs, panne, entretien)
+✅ Informations détaillées par véhicule
+✅ Badges colorés par statut (vert/rouge/jaune/gris)
+✅ Affichage propriétaire (nom, contact, téléphone)
+✅ Commentaires et période de location
+✅ Design responsive (mobile/desktop)
+
+FICHIERS CRÉÉS:
+- fleet_app/templates/fleet_app/locations/accueil_public.html
+- ACCUEIL_PUBLIC.md (documentation technique)
+- RESUME_ACCUEIL_PUBLIC.md (résumé)
+- GUIDE_PROPRIETAIRES.md (guide utilisateur)
+- CHANGELOG_ACCUEIL.md (changelog)
+- README_ACCUEIL_PUBLIC.md (readme)
+- RESUME_SESSION_2025-10-04.md (résumé session)
+
+FICHIERS MODIFIÉS:
+- fleet_app/views_location.py (ajout fonction accueil_public)
+- fleet_management/urls.py (ajout route /accueil/)
+- fleet_app/context_processors.py (fix pour requêtes sans auth)
+- fleet_app/templates/fleet_app/locations/accueil_public.html
+
+CORRECTIONS INCLUSES:
+✅ Fix context processor pour requêtes non authentifiées
+✅ Correction format date (suppression heure pour objet date)
+
+TESTS:
+✅ Accès sans authentification: OK
+✅ Affichage statistiques: OK
+✅ Cartes véhicules: OK
+✅ Badges statuts: OK
+✅ Responsive: OK
+
+URL: /accueil/

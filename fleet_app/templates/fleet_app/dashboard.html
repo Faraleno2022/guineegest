@@ -893,6 +893,149 @@
 {% include 'fleet_app/dashboard_feuilles_route.html' %}
 {% include 'fleet_app/dashboard_chauffeurs.html' %}
 
+<!-- Section Véhicules en Location -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-car-side me-2"></i> Véhicules en Location - État du Jour
+                </div>
+                <a href="/accueil/" target="_blank" class="btn btn-sm btn-light">
+                    <i class="fas fa-external-link-alt me-1"></i> Vue Publique
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Statistiques rapides -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded">
+                            <h3 class="mb-0">{{ total_locations }}</h3>
+                            <small class="text-muted">Total en location</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                            <h3 class="mb-0 text-success">{{ locations_travail }}</h3>
+                            <small class="text-muted">En activité</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-danger bg-opacity-10 rounded">
+                            <h3 class="mb-0 text-danger">{{ locations_panne }}</h3>
+                            <small class="text-muted">En panne</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
+                            <h3 class="mb-0 text-warning">{{ locations_entretien }}</h3>
+                            <small class="text-muted">En entretien</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Liste des véhicules -->
+                {% if vehicules_location_info %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Véhicule</th>
+                                <th>Propriétaire</th>
+                                <th>Type Location</th>
+                                <th>Statut du Jour</th>
+                                <th>Tarif Journalier</th>
+                                <th>Période</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for info in vehicules_location_info %}
+                            <tr>
+                                <td>
+                                    <strong>{{ info.vehicule.immatriculation }}</strong><br>
+                                    <small class="text-muted">{{ info.vehicule.marque }} {{ info.vehicule.modele }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ info.fournisseur.nom }}</strong><br>
+                                    {% if info.fournisseur.telephone %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-phone"></i> {{ info.fournisseur.telephone }}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if info.location.type_location == 'Interne' %}primary{% else %}secondary{% endif %}">
+                                        {{ info.location.type_location }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if info.a_travaille %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle"></i> En activité
+                                        </span>
+                                    {% elif info.en_panne %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> En panne
+                                        </span>
+                                    {% elif info.en_entretien %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-tools"></i> En entretien
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-question-circle"></i> Non renseigné
+                                        </span>
+                                    {% endif %}
+                                    {% if info.feuille.commentaire %}
+                                    <br><small class="text-muted">{{ info.feuille.commentaire|truncatewords:5 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ info.location.tarif_journalier|floatformat:0|intcomma }} GNF</strong>
+                                </td>
+                                <td>
+                                    <small>
+                                        Du {{ info.location.date_debut|date:"d/m/Y" }}<br>
+                                        {% if info.location.date_fin %}
+                                            au {{ info.location.date_fin|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-muted">(en cours)</span>
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <a href="{% url 'fleet_app:location_detail' info.location.pk %}" class="btn btn-sm btn-outline-primary" title="Voir détails">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Lien vers la page complète -->
+                <div class="text-center mt-3">
+                    <a href="{% url 'fleet_app:location_list' %}" class="btn btn-primary">
+                        <i class="fas fa-list me-1"></i> Voir toutes les locations
+                    </a>
+                    <a href="{% url 'fleet_app:feuille_pontage_location_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-calendar-check me-1"></i> Feuilles de pontage
+                    </a>
+                </div>
+                {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucun véhicule en location active pour le moment.
+                    <a href="{% url 'fleet_app:location_create' %}" class="alert-link">Créer une location</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}

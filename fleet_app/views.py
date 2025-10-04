@@ -62,11 +62,59 @@ def home(request):
     except Exception:
         latest_gallery = []
 
+    # Données des véhicules en location (si utilisateur connecté)
+    vehicules_location_info = []
+    total_locations = 0
+    locations_travail = 0
+    locations_panne = 0
+    locations_entretien = 0
+    
+    if request.user.is_authenticated:
+        from .models_location import LocationVehicule, FeuillePontageLocation
+        
+        today_date = timezone.now().date()
+        
+        # Récupérer les locations actives (6 premières pour la page d'accueil)
+        locations_actives = queryset_filter_by_tenant(LocationVehicule.objects.all(), request).filter(
+            statut='Active'
+        ).select_related('vehicule', 'fournisseur').order_by('vehicule__immatriculation')[:6]
+        
+        # Récupérer les feuilles de pontage du jour
+        feuilles_today = queryset_filter_by_tenant(FeuillePontageLocation.objects.all(), request).filter(
+            date=today_date
+        ).select_related('location', 'location__vehicule')
+        
+        # Créer un dictionnaire des véhicules en location avec leurs infos
+        for location in locations_actives:
+            feuille = feuilles_today.filter(location=location).first()
+            vehicules_location_info.append({
+                'location': location,
+                'vehicule': location.vehicule,
+                'fournisseur': location.fournisseur,
+                'feuille': feuille,
+                'statut_jour': feuille.statut if feuille else 'Non renseigné',
+                'a_travaille': feuille and feuille.statut == 'Travail',
+                'en_panne': feuille and feuille.statut in ['Hors service', 'Panne'],
+                'en_entretien': feuille and feuille.statut == 'Entretien',
+            })
+        
+        # Statistiques locations
+        total_locations = queryset_filter_by_tenant(LocationVehicule.objects.all(), request).filter(statut='Active').count()
+        locations_travail = sum(1 for v in vehicules_location_info if v['a_travaille'])
+        locations_panne = sum(1 for v in vehicules_location_info if v['en_panne'])
+        locations_entretien = sum(1 for v in vehicules_location_info if v['en_entretien'])
+
     context = {
         'titre': 'Accueil',
         'description': 'Bienvenue dans le système de gestion du parc automobile',
         'MEDIA_URL': settings.MEDIA_URL,
         'gallery_images': latest_gallery,
+        # Données véhicules en location
+        'vehicules_location_info': vehicules_location_info,
+        'total_locations': total_locations,
+        'locations_travail': locations_travail,
+        'locations_panne': locations_panne,
+        'locations_entretien': locations_entretien,
     }
     return render(request, 'fleet_app/home.html', context)
 
@@ -877,6 +925,42 @@ def dashboard(request):
         consommation_moyenne=Avg('consommation'),
         nb_feuilles=Count('id')
     ).order_by('-consommation_moyenne')[:5]
+    # Données des véhicules en location
+    from .models_location import LocationVehicule, FeuillePontageLocation
+    
+    today_date = timezone.now().date()
+    
+    # Récupérer les locations actives
+    locations_actives = queryset_filter_by_tenant(LocationVehicule.objects.all(), request).filter(
+        statut='Active'
+    ).select_related('vehicule', 'fournisseur').order_by('vehicule__immatriculation')[:10]
+    
+    # Récupérer les feuilles de pontage du jour
+    feuilles_today = queryset_filter_by_tenant(FeuillePontageLocation.objects.all(), request).filter(
+        date=today_date
+    ).select_related('location', 'location__vehicule')
+    
+    # Créer un dictionnaire des véhicules en location avec leurs infos
+    vehicules_location_info = []
+    for location in locations_actives:
+        feuille = feuilles_today.filter(location=location).first()
+        vehicules_location_info.append({
+            'location': location,
+            'vehicule': location.vehicule,
+            'fournisseur': location.fournisseur,
+            'feuille': feuille,
+            'statut_jour': feuille.statut if feuille else 'Non renseigné',
+            'a_travaille': feuille and feuille.statut == 'Travail',
+            'en_panne': feuille and feuille.statut in ['Hors service', 'Panne'],
+            'en_entretien': feuille and feuille.statut == 'Entretien',
+        })
+    
+    # Statistiques locations
+    total_locations = queryset_filter_by_tenant(LocationVehicule.objects.all(), request).filter(statut='Active').count()
+    locations_travail = sum(1 for v in vehicules_location_info if v['a_travaille'])
+    locations_panne = sum(1 for v in vehicules_location_info if v['en_panne'])
+    locations_entretien = sum(1 for v in vehicules_location_info if v['en_entretien'])
+    
     context = {
         'total_vehicules': total_vehicules,
         'vehicules_actifs': vehicules_actifs,
@@ -925,6 +1009,12 @@ def dashboard(request):
         'feuilles_route_completees': feuilles_route_completees,
         'feuilles_route_en_attente': feuilles_route_en_attente,
         'consommation_par_chauffeur': consommation_par_chauffeur,
+        # Données des véhicules en location
+        'vehicules_location_info': vehicules_location_info,
+        'total_locations': total_locations,
+        'locations_travail': locations_travail,
+        'locations_panne': locations_panne,
+        'locations_entretien': locations_entretien,
     }
     
     return render(request, 'fleet_app/dashboard.html', context)

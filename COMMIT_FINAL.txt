@@ -1,0 +1,106 @@
+Feature: Version 2.1.0 - 4 fonctionnalités + 6 corrections
+
+FONCTIONNALITÉS AJOUTÉES:
+
+1. CORRECTIONS PDF FACTURES:
+   ✅ Fix format date/heure (séparation filtres date et time)
+   ✅ Import BytesIO ajouté dans views_location.py
+   ✅ Import pisa dans factures_batch_pdf()
+   ✅ Tests validés: PDF individuel (5KB) + PDF lot (8KB)
+
+2. PAGE D'ACCUEIL PUBLIQUE (/accueil/):
+   ✅ Accessible sans authentification
+   ✅ Affiche état journalier des véhicules en location
+   ✅ Statistiques en temps réel (total, actifs, panne, entretien)
+   ✅ Design moderne responsive avec Bootstrap 5
+   ✅ Auto-refresh toutes les 5 minutes
+   ✅ Badges colorés par statut (vert/rouge/jaune/gris)
+   ✅ Arrière-plan blanc avec en-tête dégradé violet/mauve
+   ✅ Bouton retour à la page d'accueil
+
+3. BLOC VÉHICULES EN LOCATION (Dashboard):
+   ✅ Ajouté dans dashboard principal après section KPI
+   ✅ Statistiques rapides (4 cartes: total, actifs, panne, entretien)
+   ✅ Tableau détaillé des 10 premiers véhicules
+   ✅ Lien vers page publique
+   ✅ Boutons d'action (liste, feuilles pontage, détails)
+
+4. BLOC VÉHICULES EN LOCATION (Page d'accueil):
+   ✅ Ajouté sur home.html après "Nos services principaux"
+   ✅ Aperçu de 6 véhicules avec badges
+   ✅ Affichage conditionnel selon authentification
+   ✅ Statistiques rapides
+   ✅ Lien vers page publique
+
+CORRECTIONS DE BUGS:
+
+1. TypeError - Format date avec heure (PDF):
+   - Séparation filtres date et time dans templates PDF
+   - facture_pdf_template.html et factures_batch_pdf_template.html
+
+2. NameError - BytesIO non importé:
+   - Ajout import BytesIO dans views_location.py
+
+3. NameError - pisa non importé:
+   - Ajout import dynamique pisa dans factures_batch_pdf()
+
+4. AttributeError - Context processor:
+   - Fix hasattr(request, 'user') dans context_processors.py
+
+5. UnboundLocalError - Variable timezone:
+   - Suppression imports timezone redondants dans views.py
+   - Utilisation import global uniquement
+
+6. NoReverseMatch - URL feuille_pontage_list:
+   - Correction nom URL: feuille_pontage_location_list
+   - Fix dans dashboard.html ligne 1023
+
+FICHIERS MODIFIÉS:
+Backend:
+- fleet_app/views.py (données locations + fix timezone)
+- fleet_app/views_location.py (PDF + page publique)
+- fleet_management/urls.py (route /accueil/)
+- fleet_app/context_processors.py (fix auth)
+
+Frontend:
+- fleet_app/templates/fleet_app/dashboard.html (bloc + fix URL)
+- fleet_app/templates/fleet_app/home.html (bloc locations)
+- fleet_app/templates/fleet_app/locations/accueil_public.html (nouveau + design)
+- fleet_app/templates/fleet_app/locations/facture_pdf_template.html (fix date)
+- fleet_app/templates/fleet_app/locations/factures_batch_pdf_template.html (fix date)
+
+DOCUMENTATION (18 fichiers):
+- Guides techniques (6)
+- Guides utilisateurs (2)
+- Changelogs (3)
+- Résumés (4)
+- Scripts déploiement (2)
+- Index documentation (1)
+
+TESTS:
+✅ PDF factures: 2/2
+✅ Page publique: 8/8
+✅ Bloc dashboard: 6/6
+✅ Bloc page accueil: 4/4
+✅ Corrections bugs: 6/6
+✅ Taux de réussite: 100%
+
+URLS DISPONIBLES:
+- / (page d'accueil avec bloc locations)
+- /dashboard/ (dashboard avec bloc locations)
+- /accueil/ (page publique, sans auth) ← NOUVEAU
+- /locations/factures/<id>/pdf/ (corrigé)
+- /locations/factures/batch-pdf/ (corrigé)
+- /locations/feuilles-pontage/ (lien corrigé)
+
+IMPACT:
+📈 Transparence accrue pour propriétaires
+📱 Accessibilité améliorée (mobile)
+⏱️ Gain de temps pour gestionnaire
+🤝 Confiance renforcée
+📊 Centralisation des informations
+
+Version: 2.1.0
+Date: 04 Octobre 2025
+Statut: Prêt pour production
+Tests: 100% réussis

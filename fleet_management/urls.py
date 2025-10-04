@@ -20,9 +20,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from django.views.generic.base import RedirectView
+from fleet_app.views_location import accueil_public
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Page d'accueil publique pour les propriétaires de véhicules
+    path('accueil/', accueil_public, name='accueil_public'),
     path('', include('fleet_app.urls')),
     path('login/', auth_views.LoginView.as_view(template_name='fleet_app/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='fleet_app/logout.html'), name='logout'),

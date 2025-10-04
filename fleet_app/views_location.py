@@ -1176,3 +1176,61 @@ def get_vehicule_fournisseur_ajax(request):
             
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def accueil_public(request):
+    """
+    Page d'accueil publique pour les propriétaires de véhicules en location.
+    Affiche les informations journalières des véhicules sans nécessiter d'authentification.
+    """
+    today = timezone.now().date()
+    
+    # Récupérer toutes les feuilles de pontage du jour
+    feuilles_today = FeuillePontageLocation.objects.filter(
+        date=today
+    ).select_related(
+        'location',
+        'location__vehicule',
+        'location__fournisseur'
+    ).order_by('location__vehicule__immatriculation')
+    
+    # Récupérer tous les véhicules en location active
+    locations_actives = LocationVehicule.objects.filter(
+        statut='Active'
+    ).select_related(
+        'vehicule',
+        'fournisseur'
+    ).order_by('vehicule__immatriculation')
+    
+    # Créer un dictionnaire des véhicules avec leurs informations du jour
+    vehicules_info = {}
+    
+    for location in locations_actives:
+        vehicule = location.vehicule
+        immat = vehicule.immatriculation
+        
+        # Chercher la feuille de pontage du jour pour ce véhicule
+        feuille = feuilles_today.filter(location=location).first()
+        
+        vehicules_info[immat] = {
+            'vehicule': vehicule,
+            'location': location,
+            'fournisseur': location.fournisseur,
+            'feuille': feuille,
+            'statut_jour': feuille.statut if feuille else 'Non renseigné',
+            'commentaire': feuille.commentaire if feuille else '',
+            'a_travaille': feuille and feuille.statut == 'Travail',
+            'en_panne': feuille and feuille.statut in ['Hors service', 'Panne'],
+            'en_entretien': feuille and feuille.statut == 'Entretien',
+        }
+    
+    context = {
+        'today': today,
+        'vehicules_info': vehicules_info,
+        'total_vehicules': len(vehicules_info),
+        'vehicules_travail': sum(1 for v in vehicules_info.values() if v['a_travaille']),
+        'vehicules_panne': sum(1 for v in vehicules_info.values() if v['en_panne']),
+        'vehicules_entretien': sum(1 for v in vehicules_info.values() if v['en_entretien']),
+    }
+    
+    return render(request, 'fleet_app/locations/accueil_public.html', context)

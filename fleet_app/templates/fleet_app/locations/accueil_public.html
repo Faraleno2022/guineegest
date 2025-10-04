@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>État des Véhicules - {{ today|date:"d/m/Y" }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .header-card h1 {
+            color: white;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .btn-retour {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-retour:hover {
+            background: #f8f9fa;
+            color: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .stats-row {
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .stat-card.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .stat-card.danger {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        }
+        .stat-card.warning {
+            background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+        }
+        .stat-card h3 {
+            font-size: 2.5rem;
+            margin: 0;
+            font-weight: bold;
+        }
+        .stat-card p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        .vehicle-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .vehicle-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .vehicle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .vehicle-immat {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .vehicle-info {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        .status-badge {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+        .status-travail {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-panne {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-entretien {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-non-renseigne {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .fournisseur-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .fournisseur-info h6 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .commentaire-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: scale(1.1);
+        }
+        .no-vehicles {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 10px;
+            color: #666;
+        }
+        .no-vehicles i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .vehicle-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .status-badge {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- En-tête -->
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="mb-0"><i class="bi bi-calendar-check"></i> État des Véhicules en Location</h1>
+                <a href="/" class="btn btn-retour">
+                    <i class="bi bi-house-door me-2"></i>Retour à l'accueil
+                </a>
+            </div>
+            <p class="mb-0" style="opacity: 0.9;">
+                <i class="bi bi-clock"></i> Dernière mise à jour : {{ today|date:"l d F Y" }}
+            </p>
+            
+            <!-- Statistiques -->
+            <div class="row stats-row">
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card">
+                        <h3>{{ total_vehicules }}</h3>
+                        <p>Véhicules en location</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card success">
+                        <h3>{{ vehicules_travail }}</h3>
+                        <p>En activité</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card danger">
+                        <h3>{{ vehicules_panne }}</h3>
+                        <p>En panne / HS</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card warning">
+                        <h3>{{ vehicules_entretien }}</h3>
+                        <p>En entretien</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des véhicules -->
+        {% if vehicules_info %}
+            <div class="row">
+                {% for immat, info in vehicules_info.items %}
+                <div class="col-lg-6 col-md-12">
+                    <div class="vehicle-card">
+                        <div class="vehicle-header">
+                            <div>
+                                <div class="vehicle-immat">
+                                    <i class="bi bi-truck"></i> {{ info.vehicule.immatriculation }}
+                                </div>
+                                <div class="vehicle-info">
+                                    {{ info.vehicule.marque }} {{ info.vehicule.modele }}
+                                    {% if info.vehicule.annee %}
+                                        - {{ info.vehicule.annee }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                {% if info.a_travaille %}
+                                    <span class="status-badge status-travail">
+                                        <i class="bi bi-check-circle"></i> En activité
+                                    </span>
+                                {% elif info.en_panne %}
+                                    <span class="status-badge status-panne">
+                                        <i class="bi bi-exclamation-triangle"></i> En panne
+                                    </span>
+                                {% elif info.en_entretien %}
+                                    <span class="status-badge status-entretien">
+                                        <i class="bi bi-tools"></i> En entretien
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-non-renseigne">
+                                        <i class="bi bi-question-circle"></i> Non renseigné
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Informations fournisseur -->
+                        {% if info.fournisseur %}
+                        <div class="fournisseur-info">
+                            <h6><i class="bi bi-person-badge"></i> Propriétaire</h6>
+                            <p class="mb-1"><strong>{{ info.fournisseur.nom }}</strong></p>
+                            {% if info.fournisseur.contact %}
+                                <p class="mb-1"><i class="bi bi-person"></i> {{ info.fournisseur.contact }}</p>
+                            {% endif %}
+                            {% if info.fournisseur.telephone %}
+                                <p class="mb-0">
+                                    <i class="bi bi-telephone"></i> 
+                                    <a href="tel:{{ info.fournisseur.telephone }}">{{ info.fournisseur.telephone }}</a>
+                                </p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Commentaire -->
+                        {% if info.commentaire %}
+                        <div class="commentaire-box">
+                            <strong><i class="bi bi-chat-left-text"></i> Commentaire :</strong>
+                            <p class="mb-0 mt-1">{{ info.commentaire }}</p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Informations location -->
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-range"></i> 
+                                Location du {{ info.location.date_debut|date:"d/m/Y" }}
+                                {% if info.location.date_fin %}
+                                    au {{ info.location.date_fin|date:"d/m/Y" }}
+                                {% else %}
+                                    (en cours)
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-vehicles">
+                <i class="bi bi-inbox"></i>
+                <h3>Aucun véhicule en location</h3>
+                <p>Il n'y a actuellement aucun véhicule en location active.</p>
+            </div>
+        {% endif %}
+
+        <!-- Bouton de rafraîchissement -->
+        <button class="refresh-btn" onclick="location.reload()" title="Actualiser">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-refresh toutes les 5 minutes
+        setTimeout(function() {
+            location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>
