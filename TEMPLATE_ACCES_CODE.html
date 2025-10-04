@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Accès Propriétaires - GuinéeGest{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <h3 class="mb-0">
+                        <i class="bi bi-shield-lock me-2"></i>
+                        Accès Propriétaires
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-center text-muted mb-4">
+                        Veuillez entrer votre code d'accès personnel pour consulter l'état de vos véhicules
+                    </p>
+                    
+                    {% if error %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {{ error }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endif %}
+                    
+                    <form method="get" action="{% url 'fleet_app:accueil_public' %}">
+                        <div class="mb-4">
+                            <label for="code" class="form-label">Code d'accès</label>
+                            <input 
+                                type="text" 
+                                name="code" 
+                                id="code"
+                                class="form-control form-control-lg text-center" 
+                                placeholder="Entrez votre code" 
+                                required
+                                autofocus
+                                style="letter-spacing: 2px; font-family: monospace;"
+                            >
+                            <small class="form-text text-muted">
+                                Le code vous a été envoyé par email ou SMS
+                            </small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Accéder à mes véhicules
+                        </button>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="text-muted small mb-2">Vous n'avez pas reçu votre code ?</p>
+                        <a href="mailto:support@guineegest.com" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-envelope me-1"></i>
+                            Contacter le support
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center py-3">
+                    <small class="text-muted">
+                        <i class="bi bi-lock me-1"></i>
+                        Connexion sécurisée - Vos données sont protégées
+                    </small>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <a href="/" class="text-muted">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Retour à l'accueil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-bottom: none;
+    }
+    
+    #code:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+</style>
+{% endblock %}
