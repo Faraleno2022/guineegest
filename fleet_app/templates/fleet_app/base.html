@@ -411,6 +411,11 @@
                                 </a>
                             </li>
                             <li>
+                                <a href="{% url 'fleet_app:frais_kilometrique_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'frais_kilometrique_list' %}active{% endif %}">
+                                    <i class="fas fa-bus"></i> Bus/Km
+                                </a>
+                            </li>
+                            <li>
                                 <a href="{% url 'fleet_app:parametre_paie_list' %}" class="dropdown-item {% if request.resolver_match.url_name == 'parametre_paie_list' %}active{% endif %}">
                                     <i class="fas fa-cogs"></i> Paramètres de Paie
                                 </a>

@@ -12,6 +12,7 @@ from .models_entreprise import (
     PresenceJournaliere,
     SalaireMensuel,
     HeureSupplementaire,
+    FraisKilometrique,
     ConfigurationMontantStatut,
     ConfigurationMontantEmploye,
     ConfigurationSalaire,
@@ -172,6 +173,15 @@ class HeureSupplementaireAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
     list_filter = ('type_jour',)
     search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom')
     date_hierarchy = 'date'
+
+
+@admin.register(FraisKilometrique)
+class FraisKilometriqueAdmin(UserOwnedAdminMixin, admin.ModelAdmin):
+    list_display = ('employe', 'date', 'kilometres', 'valeur_par_km', 'total_a_payer', 'description')
+    list_filter = ('date',)
+    search_fields = ('employe__matricule', 'employe__prenom', 'employe__nom', 'description')
+    date_hierarchy = 'date'
+    readonly_fields = ('total_a_payer',)
 
 
 @admin.register(ConfigurationMontantStatut)

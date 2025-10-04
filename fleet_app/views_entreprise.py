@@ -11,8 +11,8 @@ from decimal import Decimal, InvalidOperation
 import csv
 import datetime
 
-from .models_entreprise import HeureSupplementaire, Employe, PaieEmploye
-from .forms_entreprise import HeureSupplementaireForm
+from .models_entreprise import HeureSupplementaire, FraisKilometrique, Employe, PaieEmploye
+from .forms_entreprise import HeureSupplementaireForm, FraisKilometriqueForm
 
 # Vues pour HeureSupplementaire
 class HeureSupplementaireListView(LoginRequiredMixin, ListView):
@@ -339,3 +339,215 @@ def config_charges_sociales(request):
     
     # Retourner une page temporaire ou rediriger vers une autre vue
     return render(request, 'fleet_app/entreprise/configuration_temp.html', context)
+
+
+# Vues pour FraisKilometrique (Bus/Km)
+class FraisKilometriqueListView(LoginRequiredMixin, ListView):
+    model = FraisKilometrique
+    template_name = 'fleet_app/entreprise/frais_kilometrique_list.html'
+    context_object_name = 'frais_km'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        """
+        Filtre les frais kilométriques par utilisateur et période
+        """
+        queryset = FraisKilometrique.objects.filter(
+            employe__user=self.request.user
+        ).select_related('employe').order_by('-date', '-id')
+        
+        # Filtrage par mois et année si spécifiés
+        mois = self.request.GET.get('mois')
+        annee = self.request.GET.get('annee')
+        
+        if mois and annee:
+            try:
+                queryset = queryset.filter(date__month=int(mois), date__year=int(annee))
+            except ValueError:
+                pass
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        """
+        Ajoute des données contextuelles pour le template
+        """
+        context = super().get_context_data(**kwargs)
+        
+        # Ajouter la liste des employés pour les formulaires
+        context['employes'] = Employe.objects.filter(user=self.request.user)
+        
+        # Calculer les totaux par employé pour le mois sélectionné
+        from django.db.models import Sum, Count
+        from collections import defaultdict
+        
+        mois = self.request.GET.get('mois')
+        annee = self.request.GET.get('annee')
+        
+        if mois and annee:
+            # Filtrer par mois/année
+            frais_mois = FraisKilometrique.objects.filter(
+                employe__user=self.request.user,
+                date__month=int(mois),
+                date__year=int(annee)
+            ).select_related('employe')
+        else:
+            # Tous les frais
+            frais_mois = FraisKilometrique.objects.filter(
+                employe__user=self.request.user
+            ).select_related('employe')
+        
+        # Grouper par employé
+        totaux_par_employe = defaultdict(lambda: {'km': 0, 'total': 0, 'count': 0})
+        for frais in frais_mois:
+            emp_id = frais.employe.id
+            totaux_par_employe[emp_id]['km'] += float(frais.kilometres)
+            totaux_par_employe[emp_id]['total'] += float(frais.total_a_payer)
+            totaux_par_employe[emp_id]['count'] += 1
+            totaux_par_employe[emp_id]['employe'] = frais.employe
+        
+        context['totaux_par_employe'] = dict(totaux_par_employe)
+        context['mois_filtre'] = mois
+        context['annee_filtre'] = annee
+        
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        """
+        Gère les actions POST
+        """
+        action = request.POST.get('action')
+        
+        if action == 'definir_valeur':
+            return self.definir_valeur_personnalisee(request)
+        elif action == 'delete':
+            return self.supprimer_frais(request)
+        elif action == 'edit':
+            return self.modifier_frais(request)
+        
+        # Si l'action n'est pas reconnue, retourner à la vue normale
+        return self.get(request, *args, **kwargs)
+    
+    def definir_valeur_personnalisee(self, request):
+        """
+        Définit une valeur par km personnalisée pour un frais kilométrique
+        """
+        try:
+            frais_id = request.POST.get('frais_id')
+            valeur_manuelle = request.POST.get('valeur_manuelle')
+            
+            if not frais_id:
+                messages.error(request, "ID du frais kilométrique manquant.")
+                return redirect('fleet_app:frais_kilometrique_list')
+            
+            # Récupérer le frais kilométrique
+            frais_km = get_object_or_404(FraisKilometrique, 
+                                         id=frais_id, 
+                                         employe__user=request.user)
+            
+            # Si valeur_manuelle est vide, réinitialiser à la valeur globale
+            if not valeur_manuelle or valeur_manuelle.strip() == '':
+                frais_km.valeur_par_km = None
+                frais_km.save()
+                messages.success(request, "Valeur par km réinitialisée à la valeur configurée.")
+                return redirect('fleet_app:frais_kilometrique_list')
+            
+            # Valider la valeur
+            try:
+                valeur_personnalisee = Decimal(str(valeur_manuelle))
+                if valeur_personnalisee <= 0:
+                    messages.error(request, "La valeur doit être supérieure à zéro.")
+                    return redirect('fleet_app:frais_kilometrique_list')
+            except (ValueError, InvalidOperation):
+                messages.error(request, "Format de valeur invalide.")
+                return redirect('fleet_app:frais_kilometrique_list')
+            
+            # Définir la valeur par km personnalisée
+            frais_km.valeur_par_km = valeur_personnalisee
+            
+            # Sauvegarder avec protection contre l'écrasement automatique
+            frais_km.save(skip_auto_calc=True)
+            
+            messages.success(request, 
+                           f"Valeur par km personnalisée définie: {valeur_personnalisee:,.0f} GNF")
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la définition de la valeur: {str(e)}")
+        
+        return redirect('fleet_app:frais_kilometrique_list')
+    
+    def supprimer_frais(self, request):
+        """
+        Supprime un frais kilométrique
+        """
+        try:
+            frais_id = request.POST.get('frais_id')
+            frais_km = get_object_or_404(FraisKilometrique, 
+                                         id=frais_id, 
+                                         employe__user=request.user)
+            frais_km.delete()
+            messages.success(request, "Frais kilométrique supprimé avec succès.")
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la suppression: {str(e)}")
+        
+        return redirect('fleet_app:frais_kilometrique_list')
+    
+    def modifier_frais(self, request):
+        """
+        Modifie un frais kilométrique via le modal
+        """
+        try:
+            frais_id = request.POST.get('frais_id')
+            frais_km = get_object_or_404(FraisKilometrique, 
+                                         id=frais_id, 
+                                         employe__user=request.user)
+            
+            # Récupérer les données du formulaire
+            date = request.POST.get('date')
+            kilometres = request.POST.get('kilometres')
+            valeur_par_km = request.POST.get('valeur_par_km')
+            description = request.POST.get('description')
+            
+            # Mettre à jour les champs
+            if date:
+                frais_km.date = date
+            if kilometres:
+                frais_km.kilometres = Decimal(str(kilometres))
+            if valeur_par_km and valeur_par_km.strip():
+                frais_km.valeur_par_km = Decimal(str(valeur_par_km))
+            else:
+                frais_km.valeur_par_km = None
+            if description is not None:
+                frais_km.description = description
+            
+            frais_km.save()
+            messages.success(request, "Frais kilométrique modifié avec succès.")
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la modification: {str(e)}")
+        
+        return redirect('fleet_app:frais_kilometrique_list')
+
+
+@login_required
+def frais_kilometrique_ajouter(request):
+    """
+    Vue pour ajouter un nouveau frais kilométrique
+    """
+    if request.method == 'POST':
+        form = FraisKilometriqueForm(request.POST, user=request.user)
+        if form.is_valid():
+            frais_km = form.save(commit=False)
+            frais_km.user = request.user
+            frais_km.save()
+            messages.success(request, 
+                           f"Frais kilométrique ajouté: {frais_km.kilometres} km pour {frais_km.employe.prenom} {frais_km.employe.nom}")
+            return redirect('fleet_app:frais_kilometrique_list')
+    else:
+        form = FraisKilometriqueForm(user=request.user)
+    
+    context = {
+        'form': form,
+        'title': 'Ajouter un frais kilométrique'
+    }
+    
+    return render(request, 'fleet_app/entreprise/frais_kilometrique_form.html', context)

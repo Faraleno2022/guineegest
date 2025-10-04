@@ -1,0 +1,111 @@
+{% extends 'fleet_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-bus me-2"></i>{{ title }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.employe.id_for_label }}" class="form-label">{{ form.employe.label }} <span class="text-danger">*</span></label>
+                                {{ form.employe }}
+                                {% if form.employe.errors %}
+                                    <div class="text-danger small">{{ form.employe.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.date.id_for_label }}" class="form-label">{{ form.date.label }} <span class="text-danger">*</span></label>
+                                {{ form.date }}
+                                {% if form.date.errors %}
+                                    <div class="text-danger small">{{ form.date.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.kilometres.id_for_label }}" class="form-label">{{ form.kilometres.label }} <span class="text-danger">*</span></label>
+                                {{ form.kilometres }}
+                                {% if form.kilometres.errors %}
+                                    <div class="text-danger small">{{ form.kilometres.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Nombre de kilomètres parcourus</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.valeur_par_km.id_for_label }}" class="form-label">{{ form.valeur_par_km.label }}</label>
+                                {{ form.valeur_par_km }}
+                                {% if form.valeur_par_km.errors %}
+                                    <div class="text-danger small">{{ form.valeur_par_km.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Laisser vide pour utiliser la valeur configurée pour l'employé</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Description du trajet (optionnel)</small>
+                        </div>
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'fleet_app:frais_kilometrique_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Aide -->
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Aide</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Comment utiliser ce formulaire :</h6>
+                    <ul>
+                        <li><strong>Employé :</strong> Sélectionnez l'employé concerné par les frais kilométriques</li>
+                        <li><strong>Date :</strong> Date du trajet</li>
+                        <li><strong>Kilomètres :</strong> Nombre de kilomètres parcourus</li>
+                        <li><strong>Valeur par km :</strong> 
+                            <ul>
+                                <li>Laisser vide pour utiliser la valeur configurée dans le profil de l'employé</li>
+                                <li>Ou saisir une valeur spécifique pour ce trajet</li>
+                            </ul>
+                        </li>
+                        <li><strong>Description :</strong> Détails du trajet (optionnel)</li>
+                    </ul>
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Note :</strong> Le total à payer sera calculé automatiquement : Kilomètres × Valeur par km
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

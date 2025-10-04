@@ -40,6 +40,9 @@ class Employe(models.Model):
     mode_calcul_heures_supp = models.CharField(max_length=50, default='standard', verbose_name="Mode calcul heures supp.")
     taux_horaire_specifique = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Taux horaire spécifique")
     
+    # Configuration frais kilométriques
+    valeur_km = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Valeur par km (GNF)")
+    
     # Configuration charges sociales et taxes
     taux_cnss_salarie_custom = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Taux CNSS salarié personnalisé")
     taux_cnss_employeur_custom = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Taux CNSS employeur personnalisé")
@@ -442,6 +445,64 @@ class HeureSupplementaire(models.Model):
             self.total_a_payer = round(float(self.duree) * montant_horaire, 2)
         
         super().save(*args, **kwargs)
+
+
+class FraisKilometrique(models.Model):
+    """Frais kilométriques (Bus/Km) des employés"""
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, verbose_name="Employé")
+    date = models.DateField(verbose_name="Date")
+    kilometres = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Kilomètres parcourus")
+    valeur_par_km = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Valeur par km (GNF)")
+    total_a_payer = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Total à payer")
+    description = models.TextField(blank=True, null=True, verbose_name="Description/Trajet")
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'FraisKilometriques'
+        verbose_name = 'Frais kilométrique'
+        verbose_name_plural = 'Frais kilométriques'
+        ordering = ['-date', '-id']
+    
+    def __str__(self):
+        return f"{self.employe.matricule} - {self.date} ({self.kilometres}km)"
+    
+    def obtenir_valeur_km_employe(self):
+        """Obtient la valeur par km configurée pour l'employé"""
+        return self.employe.valeur_km or 0
+    
+    def get_valeur_km(self):
+        """Retourne la valeur par km à utiliser (manuelle ou configurée)"""
+        if self.valeur_par_km and self.valeur_par_km > 0:
+            return float(self.valeur_par_km)
+        return float(self.obtenir_valeur_km_employe())
+    
+    def get_valeur_pour_saisie(self):
+        """Retourne la valeur pour le champ de saisie manuelle"""
+        if self.valeur_par_km and self.valeur_par_km > 0:
+            return float(self.valeur_par_km)
+        return None
+    
+    def get_total_calcule(self):
+        """Retourne le total calculé dynamiquement: kilometres * valeur_par_km"""
+        try:
+            return round(float(self.kilometres or 0) * float(self.get_valeur_km() or 0), 2)
+        except Exception:
+            return 0
+    
+    def save(self, *args, **kwargs):
+        """Calcul automatique du total lors de la sauvegarde"""
+        skip_auto_calc = kwargs.pop('skip_auto_calc', False)
+        
+        if not skip_auto_calc:
+            # Calcul du total à payer
+            valeur_km = self.get_valeur_km()
+            self.total_a_payer = round(float(self.kilometres) * valeur_km, 2)
+        
+        super().save(*args, **kwargs)
+
 
 class ConfigurationMontantStatut(models.Model):
     """Configuration des montants par statut"""

@@ -2,7 +2,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from .models_entreprise import (
     PeseeCamion, ParametrePaie, Employe, PresenceJournaliere, PaieEmploye,
-    HeureSupplementaire, SalaireMensuel, FicheBordMachine, EntreeFicheBord,
+    HeureSupplementaire, FraisKilometrique, SalaireMensuel, FicheBordMachine, EntreeFicheBord,
     FicheOr, EntreeFicheOr, ConfigurationHeureSupplementaire
 )
 
@@ -751,3 +751,81 @@ class FicheBordMachineForm(forms.ModelForm):
             'carburant_consomme': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+
+class FraisKilometriqueForm(forms.ModelForm):
+    """
+    Formulaire pour ajouter des frais kilométriques (Bus/Km)
+    """
+    
+    class Meta:
+        model = FraisKilometrique
+        fields = ['employe', 'date', 'kilometres', 'valeur_par_km', 'description']
+        widgets = {
+            'employe': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True,
+                'id': 'id_employe_km'
+            }),
+            'date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control',
+                'required': True
+            }),
+            'kilometres': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': 'Kilomètres parcourus'
+            }),
+            'valeur_par_km': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': 'Laisser vide pour utiliser la valeur configurée'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Description du trajet (optionnel)'
+            })
+        }
+        labels = {
+            'employe': 'Employé',
+            'date': 'Date',
+            'kilometres': 'Kilomètres parcourus',
+            'valeur_par_km': 'Valeur par km (GNF)',
+            'description': 'Description/Trajet'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        if user:
+            # Récupérer tous les employés de l'utilisateur
+            employes = Employe.objects.filter(user=user).order_by('matricule')
+            
+            # Construire les choices
+            choices = [('', 'Sélectionnez un employé')]
+            for emp in employes:
+                choice_label = f"{emp.prenom} {emp.nom} ({emp.matricule})"
+                choices.append((emp.id, choice_label))
+            
+            # Appliquer les choices au widget
+            self.fields['employe'].choices = choices
+            
+            # Rendre valeur_par_km optionnel
+            self.fields['valeur_par_km'].required = False
+            self.fields['description'].required = False
+        else:
+            self.fields['employe'].choices = [('', 'Aucun employé disponible')]
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        kilometres = cleaned_data.get('kilometres')
+        
+        if kilometres and kilometres <= 0:
+            raise forms.ValidationError("Le nombre de kilomètres doit être supérieur à zéro.")
+        
+        return cleaned_data

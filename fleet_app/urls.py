@@ -307,6 +307,10 @@ urlpatterns = [
     path('management/heures-supplementaires/', views_management.heure_supplementaire_list, name='management_heure_supplementaire_list'),
     path('management/parametres-paie/', views_management.parametre_paie_list, name='management_parametre_paie_list'),
     
+    # URLs pour les frais kilométriques (Bus/Km)
+    path('frais-kilometriques/', views_entreprise.FraisKilometriqueListView.as_view(), name='frais_kilometrique_list'),
+    path('frais-kilometriques/ajouter/', views_entreprise.frais_kilometrique_ajouter, name='frais_kilometrique_ajouter'),
+    
     # Configuration des montants pour les présences (AJAX)
     path('configuration_montant_statut/', views_entreprise.configuration_montant_statut, name='configuration_montant_statut'),
     
