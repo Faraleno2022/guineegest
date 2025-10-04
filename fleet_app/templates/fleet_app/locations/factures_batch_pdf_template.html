@@ -194,7 +194,7 @@
             {% endif %}
         </div>
         <h1>LOT DE FACTURES</h1>
-        <p><strong>Date de génération:</strong> {{ today|date:"d/m/Y à H:i" }}</p>
+        <p><strong>Date de génération:</strong> {{ today|date:"d/m/Y" }} à {{ today|time:"H:i" }}</p>
     </div>
 
     <!-- Résumé -->
@@ -323,7 +323,7 @@
         </ul>
         <p><strong>Note:</strong> Ce document est généré automatiquement par le système GuinéeGest.</p>
         <p style="text-align: center; margin-top: 20px; font-style: italic;">
-            Document généré le {{ today|date:"d/m/Y à H:i" }}
+            Document généré le {{ today|date:"d/m/Y" }} à {{ today|time:"H:i" }}
         </p>
     </div>
 </body>

@@ -9,6 +9,7 @@ from django.template.loader import render_to_string, get_template
 from django.contrib import messages
 import calendar
 from decimal import Decimal
+from io import BytesIO
 from .models import FournisseurVehicule, Vehicule
 from .models_location import (
     LocationVehicule,
@@ -1064,7 +1065,7 @@ def facture_pdf(request, pk):
         'feuilles_autres': feuilles_autres,
         'jours_travail': feuilles_travail.count(),
         'jours_autres': feuilles_autres.count(),
-        'today': timezone.now().date(),
+        'today': timezone.now(),
     }
     
     # Rendu du template HTML
@@ -1120,7 +1121,7 @@ def factures_batch_pdf(request):
         'factures': factures,
         'entreprise': entreprise,
         'lot': factures.first().location,
-        'today': timezone.now().date(),
+        'today': timezone.now(),
         'total_ht': factures.aggregate(total=Sum('montant_ht'))['total'] or 0,
         'total_tva': factures.aggregate(total=Sum('tva'))['total'] or 0,
         'total_ttc': factures.aggregate(total=Sum('montant_ttc'))['total'] or 0,
@@ -1131,6 +1132,11 @@ def factures_batch_pdf(request):
     html = template.render(context)
     
     # Création du PDF
+    try:
+        from xhtml2pdf import pisa
+    except Exception:
+        return JsonResponse({'error': 'Génération PDF indisponible: dépendances non installées'}, status=500)
+    
     result = BytesIO()
     pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
     
