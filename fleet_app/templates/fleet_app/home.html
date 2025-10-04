@@ -265,25 +265,6 @@
         </div>
     </div>
 
-    {% if media_images %}
-    <div class="row mt-5 mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-4">
-                    <h2 class="text-center mb-4">Images Media récentes</h2>
-                    <div class="row g-3">
-                        {% for img in media_images %}
-                        <div class="col-6 col-md-3">
-                            <img src="{{ img }}" alt="Image Media" class="img-fluid rounded shadow-sm">
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     {% if gallery_images %}
     <div class="row mt-5 mb-4">
         <div class="col-12">
