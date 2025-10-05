@@ -1408,10 +1408,21 @@ def bulletin_paie_list(request):
         from decimal import Decimal
         from django.core.paginator import Paginator
         from django.contrib import messages
+        from dateutil.relativedelta import relativedelta
         
         # Paramètres de filtre avec valeurs par défaut sûres
         mois_actuel = int(request.GET.get('mois', datetime.now().month))
         annee_actuelle = int(request.GET.get('annee', datetime.now().year))
+        
+        # Calculer le mois précédent et suivant
+        date_actuelle = datetime(annee_actuelle, mois_actuel, 1)
+        mois_precedent = date_actuelle - relativedelta(months=1)
+        mois_suivant = date_actuelle + relativedelta(months=1)
+        
+        # Nom du mois actuel
+        mois_noms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+        nom_mois_actuel = mois_noms[mois_actuel]
         
         # Récupération des employés avec gestion d'erreur
         try:

@@ -50,6 +50,45 @@ class HeureSupplementaireListView(LoginRequiredMixin, ListView):
         # Ajouter la liste des employés pour les formulaires
         context['employes'] = Employe.objects.filter(user=self.request.user)
         
+        # Navigation entre les mois
+        from datetime import datetime
+        from dateutil.relativedelta import relativedelta
+        
+        mois = self.request.GET.get('mois')
+        annee = self.request.GET.get('annee')
+        
+        # Si pas de mois/année spécifié, utiliser le mois actuel
+        if not mois or not annee:
+            now = timezone.now()
+            mois = str(now.month)
+            annee = str(now.year)
+        
+        try:
+            mois_int = int(mois)
+            annee_int = int(annee)
+            
+            # Calculer le mois précédent et suivant
+            date_actuelle = datetime(annee_int, mois_int, 1)
+            mois_precedent = date_actuelle - relativedelta(months=1)
+            mois_suivant = date_actuelle + relativedelta(months=1)
+            
+            context['mois_precedent'] = mois_precedent.month
+            context['annee_precedent'] = mois_precedent.year
+            context['mois_suivant'] = mois_suivant.month
+            context['annee_suivant'] = mois_suivant.year
+            
+            # Nom du mois actuel
+            mois_noms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+            context['nom_mois_actuel'] = mois_noms[mois_int]
+            
+        except (ValueError, IndexError):
+            mois_int = timezone.now().month
+            annee_int = timezone.now().year
+        
+        context['mois_filtre'] = mois
+        context['annee_filtre'] = annee
+        
         return context
     
     def post(self, request, *args, **kwargs):
