@@ -310,6 +310,7 @@ urlpatterns = [
     # URLs pour les frais kilométriques (Bonus/Km)
     path('frais-kilometriques/', views_entreprise.FraisKilometriqueListView.as_view(), name='frais_kilometrique_list'),
     path('frais-kilometriques/ajouter/', views_entreprise.frais_kilometrique_ajouter, name='frais_kilometrique_ajouter'),
+    path('frais-kilometriques/export-csv/', views_entreprise.frais_kilometrique_export_csv, name='frais_kilometrique_export_csv'),
     
     # Configuration des montants pour les présences (AJAX)
     path('configuration_montant_statut/', views_entreprise.configuration_montant_statut, name='configuration_montant_statut'),

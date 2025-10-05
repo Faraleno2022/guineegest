@@ -103,6 +103,9 @@ class PaieEmploye(models.Model):
     montant_heures_supplementaires = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Montant heures supplémentaires")
     montant_heures_supplement_dimanches = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Montant heures supp. dimanches")
     
+    # Frais kilométriques (Bonus/Km)
+    montant_frais_kilometriques = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Frais kilométriques (Bonus/Km)")
+    
     # Indemnités
     indemnite_transport = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Indemnité transport")
     indemnite_logement = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Indemnité logement")
@@ -502,6 +505,40 @@ class FraisKilometrique(models.Model):
             self.total_a_payer = round(float(self.kilometres) * valeur_km, 2)
         
         super().save(*args, **kwargs)
+    
+    @staticmethod
+    def get_total_mois_employe(employe, mois, annee):
+        """
+        Calcule le total des frais kilométriques pour un employé sur un mois donné
+        Utilisé pour l'intégration avec PaieEmploye
+        """
+        from django.db.models import Sum
+        
+        total = FraisKilometrique.objects.filter(
+            employe=employe,
+            date__month=mois,
+            date__year=annee
+        ).aggregate(total=Sum('total_a_payer'))['total']
+        
+        return float(total or 0)
+    
+    @staticmethod
+    def get_details_mois_employe(employe, mois, annee):
+        """
+        Retourne les détails des frais kilométriques pour un employé sur un mois
+        """
+        frais = FraisKilometrique.objects.filter(
+            employe=employe,
+            date__month=mois,
+            date__year=annee
+        ).order_by('date')
+        
+        return {
+            'frais': list(frais),
+            'total_km': sum(float(f.kilometres) for f in frais),
+            'total_montant': sum(float(f.total_a_payer) for f in frais),
+            'nombre_trajets': frais.count()
+        }
 
 
 class ConfigurationMontantStatut(models.Model):
