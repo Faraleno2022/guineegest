@@ -4,14 +4,11 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
-
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('fleet_app', '0017_vehicule_fournisseur'),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('fleet_app', '0019_add_frais_km_to_paie'),
     ]
-
     operations = [
         migrations.AddField(
             model_name='employe',

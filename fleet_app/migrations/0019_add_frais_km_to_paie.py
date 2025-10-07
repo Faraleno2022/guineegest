@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('fleet_app', '0018_add_frais_kilometrique'),
+        ('fleet_app', '0017_vehicule_fournisseur'),
     ]
 
     operations = [
