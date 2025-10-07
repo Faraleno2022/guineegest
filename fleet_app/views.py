@@ -2261,7 +2261,9 @@ def kpi_consommation(request):
     if request.method == 'POST':
         form = ConsommationCarburantForm(request.POST)
         if form.is_valid():
-            form.save()
+            instance = form.save(commit=False)
+            instance.user = request.user
+            instance.save()
             messages.success(request, 'La consommation de carburant a été ajoutée avec succès.')
             return redirect('fleet_app:kpi_consommation')
     else:
@@ -2440,7 +2442,9 @@ def kpi_disponibilite(request):
             try:
                 form = DisponibiliteForm(request.POST)
                 if form.is_valid():
-                    form.save()
+                    instance = form.save(commit=False)
+                    instance.user = request.user
+                    instance.save()
                     messages.success(request, 'La période de disponibilité a été ajoutée avec succès.')
                     return redirect('fleet_app:kpi_disponibilite')
             except Exception as e:
@@ -3652,7 +3656,9 @@ def kpi_incidents(request):
     if request.method == 'POST':
         form = IncidentSecuriteForm(request.POST)
         if form.is_valid():
-            form.save()
+            instance = form.save(commit=False)
+            instance.user = request.user
+            instance.save()
             messages.success(request, 'Incident de sécurité ajouté avec succès.')
             return redirect('fleet_app:kpi_incidents')
     else:
@@ -3802,7 +3808,9 @@ def kpi_distance(request):
     if request.method == 'POST':
         form = DistanceForm(request.POST)
         if form.is_valid():
-            form.save()
+            instance = form.save(commit=False)
+            instance.user = request.user
+            instance.save()
             messages.success(request, "La distance parcourue a été ajoutée avec succès.")
             return redirect('fleet_app:kpi_distance')
     else:

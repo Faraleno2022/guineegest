@@ -93,7 +93,9 @@ def facture_create(request):
         form = FactureForm(request.POST, user=request.user)
         if form.is_valid():
             try:
-                facture = form.save()
+                facture = form.save(commit=False)
+                facture.user = request.user
+                facture.save()
                 messages.success(request, f"La facture {facture.numero} a été créée avec succès.")
                 return redirect('fleet_app:facture_detail', pk=facture.numero)
             except Exception as e:
