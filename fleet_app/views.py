@@ -1087,6 +1087,7 @@ class ChauffeurCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('fleet_app:chauffeur_list')
     
     def form_valid(self, form):
+        form.instance.user = self.request.user
         messages.success(self.request, 'Chauffeur ajouté avec succès.')
         return super().form_valid(form)
 
@@ -1220,6 +1221,7 @@ def feuille_route_add(request):
         form = FeuilleRouteForm(request.POST)
         if form.is_valid():
             feuille_route = form.save(commit=False)
+            feuille_route.user = request.user  # Assigner l'utilisateur
             feuille_route.date_creation = timezone.now()
             feuille_route.save()
             messages.success(request, 'Feuille de route créée avec succès.')
@@ -1705,6 +1707,8 @@ def kpi_distance(request):
             form = DistanceForm(request.POST)
             if form.is_valid():
                 instance = form.save(commit=False)
+                instance.user = request.user  # Assigner l'utilisateur
+                
                 # Calculer automatiquement la distance parcourue si elle n'est pas fournie
                 if not instance.distance_parcourue and instance.km_debut is not None and instance.km_fin is not None:
                     instance.distance_parcourue = max(0, instance.km_fin - instance.km_debut)
@@ -1757,7 +1761,9 @@ def kpi_consommation(request):
             try:
                 form = ConsommationCarburantForm(request.POST)
                 if form.is_valid():
-                    form.save()
+                    instance = form.save(commit=False)
+                    instance.user = request.user  # Assigner l'utilisateur
+                    instance.save()
                     messages.success(request, 'Données de consommation ajoutées avec succès.')
                     return redirect('fleet_app:kpi_consommation')
             except Exception as e:
@@ -1827,6 +1833,8 @@ def kpi_disponibilite(request):
                 form = DisponibiliteForm(request.POST)
                 if form.is_valid():
                     disponibilite = form.save(commit=False)
+                    disponibilite.user = request.user  # Assigner l'utilisateur
+                    
                     # Calcul automatique du pourcentage de disponibilité
                     if disponibilite.heures_totales > 0:
                         disponibilite.disponibilite_pourcentage = (disponibilite.heures_disponibles / disponibilite.heures_totales) * 100
@@ -2184,6 +2192,7 @@ def feuille_route_create(request):
         form = FeuilleDeRouteForm(request.POST)
         if form.is_valid():
             feuille = form.save(commit=False)
+            feuille.user = request.user  # Assigner l'utilisateur
             feuille.signature_gestionnaire = True  # Le gestionnaire signe en créant la feuille
             feuille.save()
             messages.success(request, "La feuille de route a été créée avec succès.")
@@ -3706,7 +3715,9 @@ def kpi_utilisation(request):
             try:
                 form = UtilisationVehiculeForm(request.POST)
                 if form.is_valid():
-                    form.save()
+                    instance = form.save(commit=False)
+                    instance.user = request.user  # Assigner l'utilisateur
+                    instance.save()
                     messages.success(request, "L'utilisation a été ajoutée avec succès.")
                     return redirect('fleet_app:kpi_utilisation')
             except Exception as e:
