@@ -1083,7 +1083,7 @@ class ChauffeurDetailView(LoginRequiredMixin, DetailView):
 class ChauffeurCreateView(LoginRequiredMixin, CreateView):
     model = Chauffeur
     template_name = 'fleet_app/chauffeur_form.html'
-    fields = ['nom', 'prenom', 'date_naissance', 'numero_permis', 'date_validite_permis', 'telephone', 'email', 'adresse', 'photo']
+    fields = ['nom', 'prenom', 'numero_permis', 'date_embauche', 'date_expiration_permis', 'telephone', 'email', 'statut']
     success_url = reverse_lazy('fleet_app:chauffeur_list')
     
     def form_valid(self, form):
@@ -1094,7 +1094,7 @@ class ChauffeurCreateView(LoginRequiredMixin, CreateView):
 class ChauffeurUpdateView(LoginRequiredMixin, UpdateView):
     model = Chauffeur
     template_name = 'fleet_app/chauffeur_form.html'
-    fields = ['nom', 'prenom', 'date_naissance', 'numero_permis', 'date_validite_permis', 'telephone', 'email', 'adresse', 'photo']
+    fields = ['nom', 'prenom', 'numero_permis', 'date_embauche', 'date_expiration_permis', 'telephone', 'email', 'statut']
     success_url = reverse_lazy('fleet_app:chauffeur_list')
     pk_url_kwarg = 'id_chauffeur'
     
