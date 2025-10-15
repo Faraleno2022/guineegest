@@ -5,18 +5,18 @@
 
 {% block content %}
 <div class="container-fluid">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4 gap-3">
         <h1 class="h3 mb-0 text-gray-800">Feuille de Route N°{{ feuille_route.id }}</h1>
-        <div>
+        <div class="d-flex flex-wrap gap-2">
             {% if not feuille_route.signature_chauffeur %}
-            <a href="{% url 'fleet_app:feuille_route_edit' feuille_route.id %}" class="d-none d-sm-inline-block btn btn-sm btn-warning shadow-sm">
+            <a href="{% url 'fleet_app:feuille_route_edit' feuille_route.id %}" class="btn btn-sm btn-warning shadow-sm">
                 <i class="fas fa-edit fa-sm text-white-50"></i> Compléter
             </a>
             {% endif %}
-            <a href="{% url 'fleet_app:feuille_route_print' feuille_route.id %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm ml-2">
+            <a href="{% url 'fleet_app:feuille_route_print' feuille_route.id %}" class="btn btn-sm btn-primary shadow-sm">
                 <i class="fas fa-print fa-sm text-white-50"></i> Imprimer
             </a>
-            <a href="{% url 'fleet_app:feuille_route_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm ml-2">
+            <a href="{% url 'fleet_app:feuille_route_list' %}" class="btn btn-sm btn-secondary shadow-sm">
                 <i class="fas fa-arrow-left fa-sm text-white-50"></i> Retour à la liste
             </a>
         </div>
@@ -24,14 +24,14 @@
 
     <div class="row">
         <!-- Informations du gestionnaire -->
-        <div class="col-lg-6">
+        <div class="col-12 col-lg-6 mb-4">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Informations du gestionnaire</h6>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered">
+                        <table class="table table-bordered table-sm">
                             <tr>
                                 <th style="width: 30%">Véhicule</th>
                                 <td>{{ feuille_route.vehicule.marque }} {{ feuille_route.vehicule.modele }} ({{ feuille_route.vehicule.immatriculation }})</td>
@@ -73,7 +73,7 @@
         </div>
 
         <!-- Informations du chauffeur -->
-        <div class="col-lg-6">
+        <div class="col-12 col-lg-6 mb-4">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Informations du chauffeur</h6>
@@ -81,7 +81,7 @@
                 <div class="card-body">
                     {% if feuille_route.signature_chauffeur %}
                     <div class="table-responsive">
-                        <table class="table table-bordered">
+                        <table class="table table-bordered table-sm">
                             <tr>
                                 <th style="width: 30%">Kilométrage au départ</th>
                                 <td>{{ feuille_route.km_depart }} km</td>
@@ -127,7 +127,7 @@
                     </div>
                     <!-- Affichage en lecture seule des informations de départ pour cohérence -->
                     <div class="table-responsive mt-3">
-                        <table class="table table-bordered">
+                        <table class="table table-bordered table-sm">
                             <tr>
                                 <th style="width: 30%">Kilométrage au départ</th>
                                 <td>{{ feuille_route.km_depart }} km</td>
@@ -154,7 +154,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-12 col-md-4 mb-3">
                             <div class="card border-left-primary shadow h-100 py-2">
                                 <div class="card-body">
                                     <div class="row no-gutters align-items-center">
@@ -171,7 +171,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-12 col-md-4 mb-3">
                             <div class="card border-left-success shadow h-100 py-2">
                                 <div class="card-body">
                                     <div class="row no-gutters align-items-center">
@@ -188,7 +188,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-12 col-md-4 mb-3">
                             <div class="card {% if feuille_route.alerte_surconsommation %}border-left-danger{% else %}border-left-info{% endif %} shadow h-100 py-2">
                                 <div class="card-body">
                                     <div class="row no-gutters align-items-center">

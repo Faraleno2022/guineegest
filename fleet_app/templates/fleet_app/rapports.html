@@ -7,14 +7,14 @@
 {% block content %}
 <div class="row">
     <!-- Filtres et options d'exportation -->
-    <div class="col-md-12 mb-4">
+    <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header">
                 <i class="fas fa-filter me-2"></i> Filtres et options d'exportation
             </div>
             <div class="card-body">
                 <form class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <label for="typeRapport" class="form-label">Type de rapport</label>
                         <select id="typeRapport" class="form-select">
                             <option value="global">Rapport global</option>
@@ -24,15 +24,15 @@
                             <option value="maintenance">Maintenance et réparations</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <label for="periodeDebut" class="form-label">Période début</label>
                         <input type="date" class="form-control" id="periodeDebut">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <label for="periodeFin" class="form-label">Période fin</label>
                         <input type="date" class="form-control" id="periodeFin">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <label for="vehiculeSelect" class="form-label">Véhicule</label>
                         <select id="vehiculeSelect" class="form-select">
                             <option value="tous">Tous les véhicules</option>
@@ -41,7 +41,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <label for="formatExport" class="form-label">Format d'exportation</label>
                         <select id="formatExport" class="form-select">
                             <option value="pdf">PDF</option>
@@ -49,7 +49,7 @@
                             <option value="csv">CSV</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <label for="groupeBy" class="form-label">Grouper par</label>
                         <select id="groupeBy" class="form-select">
                             <option value="vehicule">Véhicule</option>
@@ -58,7 +58,7 @@
                             <option value="marque">Marque</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <label for="comparerAvec" class="form-label">Comparer avec</label>
                         <select id="comparerAvec" class="form-select">
                             <option value="aucun">Aucune comparaison</option>
@@ -67,7 +67,7 @@
                             <option value="objectifs">Objectifs</option>
                         </select>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
+                    <div class="col-12 col-md-6 col-lg-3 d-flex align-items-end">
                         <button type="button" class="btn btn-primary w-100" id="genererRapport">
                             <i class="fas fa-file-alt me-2"></i> Générer le rapport
                         </button>
@@ -80,22 +80,24 @@
 
 <div class="row">
     <!-- Aperçu du rapport -->
-    <div class="col-md-12 mb-4">
+    <div class="col-12 mb-4">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-chart-line me-2"></i> Aperçu du rapport
-                </div>
-                <div>
-                    <button class="btn btn-sm btn-outline-secondary" id="printReport">
-                        <i class="fas fa-print me-1"></i> Imprimer
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary" id="exportReport">
-                        <i class="fas fa-file-export me-1"></i> Exporter
-                    </button>
-                    <button class="btn btn-sm btn-outline-success" id="shareReport">
-                        <i class="fas fa-share-alt me-1"></i> Partager
-                    </button>
+            <div class="card-header">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                    <div>
+                        <i class="fas fa-chart-line me-2"></i> Aperçu du rapport
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" id="printReport">
+                            <i class="fas fa-print me-1"></i> Imprimer
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" id="exportReport">
+                            <i class="fas fa-file-export me-1"></i> Exporter
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" id="shareReport">
+                            <i class="fas fa-share-alt me-1"></i> Partager
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-body" id="reportPreview">
@@ -119,7 +121,7 @@
                         
                         <div class="row">
                             <!-- Graphique principal -->
-                            <div class="col-md-8 mb-4">
+                            <div class="col-12 col-lg-8 mb-4">
                                 <div class="card">
                                     <div class="card-header">
                                         <i class="fas fa-chart-bar me-2"></i> <span id="chartTitle">Évolution des coûts</span>
@@ -131,7 +133,7 @@
                             </div>
                             
                             <!-- Statistiques clés -->
-                            <div class="col-md-4 mb-4">
+                            <div class="col-12 col-lg-4 mb-4">
                                 <div class="card">
                                     <div class="card-header">
                                         <i class="fas fa-tachometer-alt me-2"></i> Indicateurs clés

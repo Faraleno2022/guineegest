@@ -6,29 +6,31 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-3">
-            <span><i class="fas fa-car me-2"></i> Tous les véhicules</span>
-            <form method="get" class="d-flex gap-2 align-items-center mb-0">
-                <select name="period" class="form-select form-select-sm">
-                    <option value="" {% if not period %}selected{% endif %}>Toutes</option>
-                    <option value="month" {% if period == 'month' %}selected{% endif %}>Dernier mois</option>
-                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
-                    <option value="year" {% if period == 'year' %}selected{% endif %}>Dernière année</option>
-                </select>
-                <input type="date" name="start" class="form-control form-control-sm" value="{{ request.GET.start }}" placeholder="Du">
-                <input type="date" name="end" class="form-control form-control-sm" value="{{ request.GET.end }}" placeholder="Au">
-                <input type="hidden" name="search" value="{{ request.GET.search }}">
-                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="fas fa-filter"></i></button>
-            </form>
-        </div>
-        <div class="d-flex gap-2">
-            <a class="btn btn-sm btn-outline-dark" href="{% url 'fleet_app:export_vehicules_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}&search={{ request.GET.search }}">
-                <i class="fas fa-file-pdf"></i> PDF
-            </a>
-            <a href="{% url 'fleet_app:vehicule_create_simple' %}" class="btn btn-sm btn-primary">
-                <i class="fas fa-plus"></i> Ajouter un véhicule
-            </a>
+    <div class="card-header">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3 w-100 w-lg-auto">
+                <span><i class="fas fa-car me-2"></i> Tous les véhicules</span>
+                <form method="get" class="d-flex flex-wrap gap-2 align-items-center mb-0 w-100 w-md-auto">
+                    <select name="period" class="form-select form-select-sm flex-grow-1 flex-md-grow-0" style="min-width: 120px;">
+                        <option value="" {% if not period %}selected{% endif %}>Toutes</option>
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>Dernier mois</option>
+                        <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>Dernier trimestre</option>
+                        <option value="year" {% if period == 'year' %}selected{% endif %}>Dernière année</option>
+                    </select>
+                    <input type="date" name="start" class="form-control form-control-sm flex-grow-1 flex-md-grow-0" value="{{ request.GET.start }}" placeholder="Du">
+                    <input type="date" name="end" class="form-control form-control-sm flex-grow-1 flex-md-grow-0" value="{{ request.GET.end }}" placeholder="Au">
+                    <input type="hidden" name="search" value="{{ request.GET.search }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="fas fa-filter"></i></button>
+                </form>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm btn-outline-dark" href="{% url 'fleet_app:export_vehicules_pdf' %}?period={{ request.GET.period }}&start={{ request.GET.start }}&end={{ request.GET.end }}&search={{ request.GET.search }}">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                <a href="{% url 'fleet_app:vehicule_create_simple' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Ajouter un véhicule
+                </a>
+            </div>
         </div>
     </div>
     <div class="card-body">
